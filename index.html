@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <!-- Közvetlenül beégetett neon zöld ikon (nem kell hozzá külső link vagy Drive) -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='neonGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300FF00'/><stop offset='15%25' stop-color='%2300FF00'/><stop offset='35%25' stop-color='%23003300'/><stop offset='65%25' stop-color='%23003300'/><stop offset='85%25' stop-color='%2300FF00'/><stop offset='100%25' stop-color='%2300FF00'/></linearGradient></defs><rect width='512' height='512' rx='100' fill='%23000000'/><circle cx='256' cy='256' r='180' stroke='%23333333' stroke-width='40' fill='none'/><circle cx='256' cy='256' r='180' stroke='url(%23neonGradient)' stroke-width='40' stroke-linecap='round' fill='none' stroke-dasharray='1131' stroke-dashoffset='565' transform='rotate(-90 256 256)'/><path d='M 180 256 L 236 312 L 348 200' stroke='%23FFFFFF' stroke-width='40' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Habit Tracker</title>
 
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='neonGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300FF00'/><stop offset='15%25' stop-color='%2300FF00'/><stop offset='35%25' stop-color='%23003300'/><stop offset='65%25' stop-color='%23003300'/><stop offset='85%25' stop-color='%2300FF00'/><stop offset='100%25' stop-color='%2300FF00'/></linearGradient></defs><rect width='512' height='512' rx='100' fill='%23000000'/><circle cx='256' cy='256' r='180' stroke='%23333333' stroke-width='40' fill='none'/><circle cx='256' cy='256' r='180' stroke='url(%23neonGradient)' stroke-width='40' stroke-linecap='round' fill='none' stroke-dasharray='1131' stroke-dashoffset='565' transform='rotate(-90 256 256)'/><path d='M 180 256 L 236 312 L 348 200' stroke='%23FFFFFF' stroke-width='40' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+  <!-- Közvetlenül beégetett neon zöld ikon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='neonGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300FF00'/><stop offset='15%25' stop-color='%2300FF00'/><stop offset='35%25' stop-color='%23003300'/><stop offset='65%25' stop-color='%23003300'/><stop offset='85%25' stop-color='%2300FF00'/><stop offset='100%25' stop-color='%2300FF00'/></linearGradient></defs><rect width='512' height='512' rx='100' fill='%23000000'/><circle cx='256' cy='256' r='180' stroke='%23333333' stroke-width='40' fill='none'/><circle cx='256' cy='256' r='180' stroke='url(%23neonGradient)' stroke-width='40' stroke-linecap='round' fill='none' stroke-dasharray='1131' stroke-dashoffset='565' transform='rotate(-90 256 256)'/><path d='M 180 256 L 236 312 L 348 200' stroke='%23FFFFFF' stroke-width='40' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='neonGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300FF00'/><stop offset='15%25' stop-color='%2300FF00'/><stop offset='35%25' stop-color='%23003300'/><stop offset='65%25' stop-color='%23003300'/><stop offset='85%25' stop-color='%2300FF00'/><stop offset='100%25' stop-color='%2300FF00'/></linearGradient></defs><rect width='512' height='512' rx='100' fill='%23000000'/><circle cx='256' cy='256' r='180' stroke='%23333333' stroke-width='40' fill='none'/><circle cx='256' cy='256' r='180' stroke='url(%23neonGradient)' stroke-width='40' stroke-linecap='round' fill='none' stroke-dasharray='1131' stroke-dashoffset='565' transform='rotate(-90 256 256)'/><path d='M 180 256 L 236 312 L 348 200' stroke='%23FFFFFF' stroke-width='40' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+  
   <!-- Mobil nézet beállításai -->
-  <base target="_top">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Habits">
   <meta name="theme-color" content="#0f172a">  
+  
   <style>
     :root {
       --bg-color: #0f172a;
@@ -231,6 +235,7 @@
       padding: 40px 0;
       color: var(--text-sub);
     }
+    
     .stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -256,7 +261,7 @@
 </head>
 <body>
 
- <div class="card">
+<div class="card">
   <div class="header">
     <h1>Habit Tracker</h1>
     <div class="date" id="date-display">Dátum betöltése...</div>
@@ -271,7 +276,7 @@
     <div class="progress-bar-bg">
       <div class="progress-bar-fill" id="progress-bar"></div>
     </div>
-  </div> <!-- <-- ITT ZÁRUL A PROGRESS-BOX -->
+  </div>
 
   <!-- Statisztikai kártyák -->
   <div class="stats-grid" id="stats-grid" style="display: none;">
@@ -295,7 +300,7 @@
       <span class="stat-value" id="monthly-avg">0%</span>
       <span class="stat-label">Havi átlag</span>
     </div>
-  </div> <!-- <-- ITT ZÁRUL A STATS-GRID -->
+  </div>
 
   <div id="content">
     <div class="loader">Mai adatok betöltése...</div>
@@ -304,66 +309,52 @@
   <button id="save-btn" class="save-btn" style="display:none;" onclick="saveData()">Mentés</button>
   <div id="status"></div>
 </div>
-  <script>
+
+<script>
+// A Google Apps Script Web App URL-ed
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyn0oPJOeF7-V430Nf4zTy7PGi1sfIbOA9pW58wLZZSqaEP97s9yXns05mFpd7sgbCfTQ/exec";
 
 let globalRowIndex = -1;
 let totalHabitsCount = 0;
-
 let saveTimeout;
 let saving = false;
 
 window.onload = function () {
-
   const now = new Date();
-
   const formattedDate =
     String(now.getDate()).padStart(2, '0') + "." +
     String(now.getMonth() + 1).padStart(2, '0') + "." +
     now.getFullYear();
 
-  google.script.run
-    .withSuccessHandler(renderHabits)
-    .getTodayData(formattedDate);
+  // GET kérés küldése az adatokért
+  fetch(`${SCRIPT_URL}?action=getTodayData&clientDate=${encodeURIComponent(formattedDate)}`)
+    .then(response => response.json())
+    .then(data => renderHabits(data))
+    .catch(err => {
+      console.error("Hiba az adatok betöltésekor:", err);
+      document.getElementById('content').innerHTML =
+        '<p style="text-align:center;color:#ef4444;">Hiba történt az adatok betöltésekor!</p>';
+    });
 };
 
 function updateLocalProgress() {
+  const inputs = document.querySelectorAll('#content input[type="checkbox"]');
+  const checkedCount = Array.from(inputs).filter(input => input.checked).length;
 
-  const inputs =
-    document.querySelectorAll(
-      '#content input[type="checkbox"]'
-    );
+  const percent = totalHabitsCount > 0
+    ? Math.round((checkedCount / totalHabitsCount) * 100)
+    : 0;
 
-  const checkedCount =
-    Array.from(inputs)
-      .filter(input => input.checked)
-      .length;
-
-  const percent =
-    totalHabitsCount > 0
-      ? Math.round(
-          (checkedCount / totalHabitsCount) * 100
-        )
-      : 0;
-
-  document.getElementById('progress-text').innerText =
-    percent + '%';
-
-  document.getElementById('progress-bar').style.width =
-    percent + '%';
+  document.getElementById('progress-text').innerText = percent + '%';
+  document.getElementById('progress-bar').style.width = percent + '%';
 }
 
 function queueSave() {
-
   console.log("QUEUE SAVE");
-
   clearTimeout(saveTimeout);
-
   saveTimeout = setTimeout(() => {
-
     console.log("SAVE DATA");
-
     saveData();
-
   }, 1000);
 }
 
@@ -404,12 +395,8 @@ function renderHabits(data) {
 
   // Progress sáv megjelenítése
   document.getElementById('progress-box').style.display = 'block';
-
-  document.getElementById('progress-text').innerText =
-    data.progress + '%';
-
-  document.getElementById('progress-bar').style.width =
-    data.progress + '%';
+  document.getElementById('progress-text').innerText = data.progress + '%';
+  document.getElementById('progress-bar').style.width = data.progress + '%';
 
   // Habit lista összeállítása
   let html = '<div class="habit-list">';
@@ -420,7 +407,6 @@ function renderHabits(data) {
     html += `
       <div class="habit-item">
         <span class="habit-name">${header}</span>
-
         <label class="switch">
           <input
             type="checkbox"
@@ -435,10 +421,8 @@ function renderHabits(data) {
   });
 
   html += '</div>';
-
   document.getElementById('content').innerHTML = html;
 
-  // Mentés gomb elrejtése (mivel automata mentés van)
   const saveBtn = document.getElementById('save-btn');
   if (saveBtn) {
     saveBtn.style.display = 'none';
@@ -451,68 +435,42 @@ function saveData() {
 
   saving = true;
 
-  const statusDiv =
-    document.getElementById('status');
-
+  const statusDiv = document.getElementById('status');
   statusDiv.style.color = '#94a3b8';
   statusDiv.innerText = 'Automatikus mentés...';
 
-  const inputs =
-    document.querySelectorAll(
-      '#content input[type="checkbox"]'
-    );
+  const inputs = document.querySelectorAll('#content input[type="checkbox"]');
+  const states = Array.from(inputs).map(input => input.checked);
 
-  const states =
-    Array.from(inputs)
-      .map(input => input.checked);
-
-  google.script.run
-    .withSuccessHandler(function (response) {
-
-      saving = false;
-
-      if (response.success) {
-
-        statusDiv.style.color = '#10b981';
-        statusDiv.innerText = '✅ Mentve';
-
-        document.getElementById(
-          'progress-text'
-        ).innerText =
-          response.newProgress + '%';
-
-        document.getElementById(
-          'progress-bar'
-        ).style.width =
-          response.newProgress + '%';
-
-      } else {
-
-        statusDiv.style.color = '#ef4444';
-        statusDiv.innerText =
-          response.message;
-      }
-
-      setTimeout(() => {
-        statusDiv.innerText = '';
-      }, 2000);
+  // POST kérés küldése a mentéshez
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors", // Google Apps Script CORS kényszerítés
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "saveHabitData",
+      rowIndex: globalRowIndex,
+      states: states
     })
+  })
+  .then(() => {
+    saving = false;
+    statusDiv.style.color = '#10b981';
+    statusDiv.innerText = '✅ Mentve';
 
-    .withFailureHandler(function () {
-
-      saving = false;
-
-      statusDiv.style.color = '#ef4444';
-      statusDiv.innerText =
-        'Hiba történt mentéskor';
-    })
-
-    .saveHabitData(
-      globalRowIndex,
-      states
-    );
+    setTimeout(() => {
+      statusDiv.innerText = '';
+    }, 2000);
+  })
+  .catch(err => {
+    console.error("Hiba a mentéskor:", err);
+    saving = false;
+    statusDiv.style.color = '#ef4444';
+    statusDiv.innerText = 'Hiba történt mentéskor';
+  });
 }
-
 </script>
 </body>
 </html>
