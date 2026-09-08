@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Habit Tracker</title>
 
+  <!-- Külső CSS fájl behívása -->
+  <link rel="stylesheet" href="style.css">
+
   <!-- Közvetlenül beégetett neon zöld ikon -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='neonGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300FF00'/><stop offset='15%25' stop-color='%2300FF00'/><stop offset='35%25' stop-color='%23003300'/><stop offset='65%25' stop-color='%23003300'/><stop offset='85%25' stop-color='%2300FF00'/><stop offset='100%25' stop-color='%2300FF00'/></linearGradient></defs><rect width='512' height='512' rx='100' fill='%23000000'/><circle cx='256' cy='256' r='180' stroke='%23333333' stroke-width='40' fill='none'/><circle cx='256' cy='256' r='180' stroke='url(%23neonGradient)' stroke-width='40' stroke-linecap='round' fill='none' stroke-dasharray='1131' stroke-dashoffset='565' transform='rotate(-90 256 256)'/><path d='M 180 256 L 236 312 L 348 200' stroke='%23FFFFFF' stroke-width='40' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='neonGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300FF00'/><stop offset='15%25' stop-color='%2300FF00'/><stop offset='35%25' stop-color='%23003300'/><stop offset='65%25' stop-color='%23003300'/><stop offset='85%25' stop-color='%2300FF00'/><stop offset='100%25' stop-color='%2300FF00'/></linearGradient></defs><rect width='512' height='512' rx='100' fill='%23000000'/><circle cx='256' cy='256' r='180' stroke='%23333333' stroke-width='40' fill='none'/><circle cx='256' cy='256' r='180' stroke='url(%23neonGradient)' stroke-width='40' stroke-linecap='round' fill='none' stroke-dasharray='1131' stroke-dashoffset='565' transform='rotate(-90 256 256)'/><path d='M 180 256 L 236 312 L 348 200' stroke='%23FFFFFF' stroke-width='40' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
@@ -14,250 +17,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Habits">
   <meta name="theme-color" content="#0f172a">  
-  
-  <style>
-    :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --accent-color: #10b981;
-      --accent-glow: rgba(16, 185, 129, 0.25);
-      --text-main: #f8fafc;
-      --text-sub: #94a3b8;
-      --border-color: #334155;
-    }
-
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    /* Kényszerített teljes képernyős sötét háttér iOS Safarinak */
-    html, body {
-      background-color: #0f172a !important;
-      color: var(--text-main);
-      margin: 0 !important;
-      padding: 0 !important;
-      width: 100vw !important;
-      height: 100% !important;
-      min-height: 100vh !important;
-      overflow-x: hidden;
-      overflow-y: auto;
-      overscroll-behavior: none;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding: calc(16px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom)) 12px !important;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      padding: 24px 20px;
-      width: 100%;
-      max-width: 420px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-      margin: auto;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .header h1 {
-      margin: 0;
-      font-size: 24px;
-      font-weight: 700;
-      background: linear-gradient(135deg, #34d399, #10b981);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .header .date {
-      color: var(--text-sub);
-      font-size: 13px;
-      margin-top: 4px;
-      letter-spacing: 0.5px;
-    }
-
-    /* Progress Bar Box */
-    .progress-box {
-      background: #0f172a;
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-
-    .progress-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-
-    .progress-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    .progress-percentage {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--accent-color);
-    }
-
-    .progress-bar-bg {
-      background: #334155;
-      height: 12px;
-      border-radius: 6px;
-      overflow: hidden;
-      width: 100%;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #10b981, #34d399);
-      border-radius: 6px;
-      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 0 10px var(--accent-glow);
-    }
-
-    /* Habits List */
-    .habit-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .habit-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 14px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      transition: background 0.2s ease;
-    }
-
-    .habit-item:active {
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .habit-name {
-      font-size: 15px;
-      font-weight: 500;
-    }
-
-    /* Modern Toggle Switch */
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 52px;
-      height: 30px;
-    }
-
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #334155;
-      transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 30px;
-    }
-
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 22px;
-      width: 22px;
-      left: 4px;
-      bottom: 4px;
-      background-color: #ffffff;
-      transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 50%;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-
-    input:checked + .slider {
-      background-color: var(--accent-color);
-    }
-
-    input:checked + .slider:before {
-      transform: translateX(22px);
-    }
-
-    /* Save Button */
-    button.save-btn {
-      width: 100%;
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-      border: none;
-      padding: 16px;
-      border-radius: 16px;
-      font-size: 16px;
-      font-weight: 700;
-      margin-top: 24px;
-      cursor: pointer;
-      box-shadow: 0 4px 15px var(--accent-glow);
-      transition: transform 0.1s ease, filter 0.2s ease;
-    }
-
-    button.save-btn:active {
-      transform: scale(0.98);
-      filter: brightness(0.9);
-    }
-
-    #status {
-      text-align: center;
-      margin-top: 12px;
-      font-size: 13px;
-      color: var(--text-sub);
-      min-height: 18px;
-    }
-
-    .loader {
-      text-align: center;
-      padding: 40px 0;
-      color: var(--text-sub);
-    }
-    
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: #0f172a;
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-    }
-
-    .stat-emoji { font-size: 20px; margin-bottom: 4px; }
-    .stat-value { font-size: 18px; font-weight: 700; color: var(--text-main); }
-    .stat-label { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
-  </style>
 </head>
 <body>
 
@@ -267,51 +26,60 @@
     <div class="date" id="date-display">Dátum betöltése...</div>
   </div>
 
-  <!-- Progress Sáv -->
-  <div class="progress-box" id="progress-box" style="display: none;">
-    <div class="progress-info">
-      <span class="progress-title">Napi haladás</span>
-      <span class="progress-percentage" id="progress-text">0%</span>
-    </div>
-    <div class="progress-bar-bg">
-      <div class="progress-bar-fill" id="progress-bar"></div>
-    </div>
+  <!-- Bejelentkező Képernyő -->
+  <div id="login-box" style="display: none; text-align: center; padding: 20px 0;">
+    <p style="color: var(--text-sub); margin-bottom: 16px; font-size: 14px;">Kérlek add meg a jelszavad a belépéshez!</p>
+    <input type="password" id="password-input" placeholder="Jelszó" style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--border-color); background: #0f172a; color: #fff; font-size: 16px; margin-bottom: 12px; outline: none;">
+    <button class="save-btn" style="margin-top: 0;" onclick="handleLogin()">Belépés</button>
+    <div id="login-error" style="color: #ef4444; font-size: 13px; margin-top: 10px; min-height: 18px;"></div>
   </div>
 
-  <!-- Statisztikai kártyák -->
-  <div class="stats-grid" id="stats-grid" style="display: none;">
-    <div class="stat-card">
-      <span class="stat-emoji">🔥</span>
-      <span class="stat-value" id="current-streak">0</span>
-      <span class="stat-label">Current Streak</span>
+  <!-- App Tartalom (Sikeres belépés után) -->
+  <div id="app-box" style="display: none;">
+    <!-- Progress Sáv -->
+    <div class="progress-box" id="progress-box">
+      <div class="progress-info">
+        <span class="progress-title">Napi haladás</span>
+        <span class="progress-percentage" id="progress-text">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-bar"></div>
+      </div>
     </div>
-    <div class="stat-card">
-      <span class="stat-emoji">🏆</span>
-      <span class="stat-value" id="best-streak">0</span>
-      <span class="stat-label">Best Streak</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-emoji">📊</span>
-      <span class="stat-value" id="weekly-avg">0%</span>
-      <span class="stat-label">Heti átlag</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-emoji">📅</span>
-      <span class="stat-value" id="monthly-avg">0%</span>
-      <span class="stat-label">Havi átlag</span>
-    </div>
-  </div>
 
-  <div id="content">
-    <div class="loader">Mai adatok betöltése...</div>
-  </div>
+    <!-- Statisztikai kártyák -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card">
+        <span class="stat-emoji">🔥</span>
+        <span class="stat-value" id="current-streak">0</span>
+        <span class="stat-label">Current Streak</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-emoji">🏆</span>
+        <span class="stat-value" id="best-streak">0</span>
+        <span class="stat-label">Best Streak</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-emoji">📊</span>
+        <span class="stat-value" id="weekly-avg">0%</span>
+        <span class="stat-label">Heti átlag</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-emoji">📅</span>
+        <span class="stat-value" id="monthly-avg">0%</span>
+        <span class="stat-label">Havi átlag</span>
+      </div>
+    </div>
 
-  <button id="save-btn" class="save-btn" style="display:none;" onclick="saveData()">Mentés</button>
-  <div id="status"></div>
+    <div id="content">
+      <div class="loader">Mai adatok betöltése...</div>
+    </div>
+
+    <div id="status"></div>
+  </div>
 </div>
 
 <script>
-// A Google Apps Script Web App URL-ed
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyn0oPJOeF7-V430Nf4zTy7PGi1sfIbOA9pW58wLZZSqaEP97s9yXns05mFpd7sgbCfTQ/exec";
 
 let globalRowIndex = -1;
@@ -319,23 +87,76 @@ let totalHabitsCount = 0;
 let saveTimeout;
 let saving = false;
 
+// SHA-256 generáló segédfüggvény
+async function hashPassword(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder("utf-8").encode(str));
+  return Array.prototype.map.call(new Uint8Array(buf), x => (('0' + x.toString(16)).slice(-2))).join('');
+}
+
 window.onload = function () {
+  const authHash = localStorage.getItem("habit_auth_hash");
+  if (!authHash) {
+    showLogin();
+  } else {
+    loadTodayData(authHash);
+  }
+};
+
+function showLogin() {
+  document.getElementById('login-box').style.display = 'block';
+  document.getElementById('app-box').style.display = 'none';
+  document.getElementById('date-display').innerText = '';
+}
+
+async function handleLogin() {
+  const pwd = document.getElementById('password-input').value;
+  const errorDiv = document.getElementById('login-error');
+  if (!pwd) {
+    errorDiv.innerText = 'Kérlek írd be a jelszót!';
+    return;
+  }
+  
+  errorDiv.innerText = 'Ellenőrzés...';
+  const hashed = await hashPassword(pwd);
+  loadTodayData(hashed, true);
+}
+
+function loadTodayData(authHash, isInitialLogin = false) {
   const now = new Date();
   const formattedDate =
     String(now.getDate()).padStart(2, '0') + "." +
     String(now.getMonth() + 1).padStart(2, '0') + "." +
     now.getFullYear();
 
-  // GET kérés küldése az adatokért
-  fetch(`${SCRIPT_URL}?action=getTodayData&clientDate=${encodeURIComponent(formattedDate)}`)
+  fetch(`${SCRIPT_URL}?action=getTodayData&clientDate=${encodeURIComponent(formattedDate)}&auth=${encodeURIComponent(authHash)}`)
     .then(response => response.json())
-    .then(data => renderHabits(data))
+    .then(data => {
+      if (data.error === "Unauthorized") {
+        localStorage.removeItem("habit_auth_hash");
+        if (isInitialLogin) {
+          document.getElementById('login-error').innerText = 'Hibás jelszó!';
+        } else {
+          showLogin();
+        }
+        return;
+      }
+
+      // Sikeres belépés
+      localStorage.setItem("habit_auth_hash", authHash);
+      document.getElementById('login-box').style.display = 'none';
+      document.getElementById('app-box').style.display = 'block';
+      renderHabits(data);
+    })
     .catch(err => {
       console.error("Hiba az adatok betöltésekor:", err);
-      document.getElementById('content').innerHTML =
-        '<p style="text-align:center;color:#ef4444;">Hiba történt az adatok betöltésekor!</p>';
+      if (isInitialLogin) {
+        document.getElementById('login-error').innerText = 'Hiba történt a csatlakozáskor!';
+      } else {
+        document.getElementById('content').innerHTML =
+          '<p style="text-align:center;color:#ef4444;">Hiba történt az adatok betöltésekor!</p>';
+      }
     });
-};
+}
 
 function updateLocalProgress() {
   const inputs = document.querySelectorAll('#content input[type="checkbox"]');
@@ -350,23 +171,15 @@ function updateLocalProgress() {
 }
 
 function queueSave() {
-  console.log("QUEUE SAVE");
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
-    console.log("SAVE DATA");
     saveData();
   }, 1000);
 }
 
 function renderHabits(data) {
-  console.log("SZERVER VÁLASZ (DATA):", data);
-  console.log("BETOLTOTT DATUM:", data.dateStr);
-  console.log("BETOLTOTT ROW:", data.rowIndex);
-
   globalRowIndex = data.rowIndex;
-
-  document.getElementById('date-display').innerText =
-    'Mai nap: ' + data.dateStr;
+  document.getElementById('date-display').innerText = 'Mai nap: ' + data.dateStr;
 
   if (data.rowIndex === -1) {
     document.getElementById('content').innerHTML =
@@ -376,29 +189,16 @@ function renderHabits(data) {
 
   totalHabitsCount = data.headers.length;
 
-  // Statisztikai kártyák kitöltése és megjelenítése
   if (data.stats) {
-    document.getElementById('current-streak').innerText =
-      data.stats.currentStreak + ' nap';
-
-    document.getElementById('best-streak').innerText =
-      data.stats.bestStreak + ' nap';
-
-    document.getElementById('weekly-avg').innerText =
-      data.stats.weeklyAvg + '%';
-
-    document.getElementById('monthly-avg').innerText =
-      data.stats.monthlyAvg + '%';
-
-    document.getElementById('stats-grid').style.display = 'grid';
+    document.getElementById('current-streak').innerText = data.stats.currentStreak + ' nap';
+    document.getElementById('best-streak').innerText = data.stats.bestStreak + ' nap';
+    document.getElementById('weekly-avg').innerText = data.stats.weeklyAvg + '%';
+    document.getElementById('monthly-avg').innerText = data.stats.monthlyAvg + '%';
   }
 
-  // Progress sáv megjelenítése
-  document.getElementById('progress-box').style.display = 'block';
   document.getElementById('progress-text').innerText = data.progress + '%';
   document.getElementById('progress-bar').style.width = data.progress + '%';
 
-  // Habit lista összeállítása
   let html = '<div class="habit-list">';
 
   data.headers.forEach((header, index) => {
@@ -422,16 +222,13 @@ function renderHabits(data) {
 
   html += '</div>';
   document.getElementById('content').innerHTML = html;
-
-  const saveBtn = document.getElementById('save-btn');
-  if (saveBtn) {
-    saveBtn.style.display = 'none';
-  }
 }
 
 function saveData() {
-  console.log("MENTENDO ROW:", globalRowIndex);
   if (saving) return;
+
+  const authHash = localStorage.getItem("habit_auth_hash");
+  if (!authHash) return;
 
   saving = true;
 
@@ -442,27 +239,29 @@ function saveData() {
   const inputs = document.querySelectorAll('#content input[type="checkbox"]');
   const states = Array.from(inputs).map(input => input.checked);
 
-  // POST kérés küldése a mentéshez
   fetch(SCRIPT_URL, {
     method: "POST",
-    mode: "no-cors", // Google Apps Script CORS kényszerítés
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "text/plain;charset=utf-8"
     },
     body: JSON.stringify({
       action: "saveHabitData",
+      auth: authHash,
       rowIndex: globalRowIndex,
       states: states
     })
   })
-  .then(() => {
+  .then(res => res.json())
+  .then(res => {
     saving = false;
-    statusDiv.style.color = '#10b981';
-    statusDiv.innerText = '✅ Mentve';
-
-    setTimeout(() => {
-      statusDiv.innerText = '';
-    }, 2000);
+    if (res.status === "success") {
+      statusDiv.style.color = '#10b981';
+      statusDiv.innerText = '✅ Mentve';
+      setTimeout(() => { statusDiv.innerText = ''; }, 2000);
+    } else {
+      statusDiv.style.color = '#ef4444';
+      statusDiv.innerText = 'Hiba a mentéskor';
+    }
   })
   .catch(err => {
     console.error("Hiba a mentéskor:", err);
