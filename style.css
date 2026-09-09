@@ -1,8 +1,8 @@
 :root {
   --bg-color: #0f172a;
   --card-bg: #1e293b;
-  --accent-color: #10b981;
-  --accent-glow: rgba(16, 185, 129, 0.25);
+  --accent-color: #00FF00;
+  --accent-glow: rgba(0, 255, 0, 0.35);
   --text-main: #f8fafc;
   --text-sub: #94a3b8;
   --border-color: #334155;
@@ -55,9 +55,8 @@ body {
   margin: 0;
   font-size: 24px;
   font-weight: 700;
-  background: linear-gradient(135deg, #34d399, #10b981);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #00FF00;
+  text-shadow: 0 0 12px var(--accent-glow);
 }
 
 .header .date {
@@ -92,7 +91,8 @@ body {
 .progress-percentage {
   font-size: 18px;
   font-weight: 700;
-  color: var(--accent-color);
+  color: #00FF00;
+  text-shadow: 0 0 8px var(--accent-glow);
 }
 
 .progress-bar-bg {
@@ -106,11 +106,34 @@ body {
 .progress-bar-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #10b981, #34d399);
+  background: #00FF00;
   border-radius: 6px;
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 10px var(--accent-glow);
+  box-shadow: 0 0 12px var(--accent-glow);
 }
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: #0f172a;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-emoji { font-size: 20px; margin-bottom: 4px; }
+.stat-value { font-size: 18px; font-weight: 700; color: var(--text-main); }
+.stat-label { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
 
 /* Habits List */
 .habit-list {
@@ -134,9 +157,20 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
+.habit-info {
+  display: flex;
+  flex-direction: column;
+}
+
 .habit-name {
   font-size: 15px;
   font-weight: 500;
+}
+
+.habit-time {
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-top: 2px;
 }
 
 /* Modern Toggle Switch */
@@ -176,7 +210,8 @@ body {
 }
 
 input:checked + .slider {
-  background-color: var(--accent-color);
+  background-color: #00FF00;
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 input:checked + .slider:before {
@@ -186,8 +221,8 @@ input:checked + .slider:before {
 /* Save Button */
 button.save-btn {
   width: 100%;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
+  background: #00FF00;
+  color: #000000;
   border: none;
   padding: 16px;
   border-radius: 16px;
@@ -204,6 +239,49 @@ button.save-btn:active {
   filter: brightness(0.9);
 }
 
+/* Details / Analytics Section */
+.details-btn {
+  width: 100%;
+  background: #0f172a;
+  color: #00FF00;
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: background 0.2s;
+}
+
+.details-btn:active {
+  background: #1e293b;
+}
+
+.analytics-panel {
+  display: none;
+  background: #0f172a;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 10px;
+}
+
+.analytics-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.weak-habit-item {
+  font-size: 13px;
+  color: var(--text-sub);
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
 #status {
   text-align: center;
   margin-top: 12px;
@@ -217,25 +295,3 @@ button.save-btn:active {
   padding: 40px 0;
   color: var(--text-sub);
 }
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  background: #0f172a;
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.stat-emoji { font-size: 20px; margin-bottom: 4px; }
-.stat-value { font-size: 18px; font-weight: 700; color: var(--text-main); }
-.stat-label { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
