@@ -140,21 +140,21 @@ function renderHabits() {
     const timeStr = formatTimeLimit(h.target_minutes);
 
     html += `
-      <div class="habit-item-wrapper">
-        <div class="delete-action" onclick="archiveHabit(${h.id})">
-          <button title="Törlés">🗑️</button>
-        </div>
-        <div class="habit-item" id="habit-item-${h.id}">
-          <div class="habit-info">
-            <span class="habit-name">${h.title}</span>
-            ${timeStr ? `<span class="habit-time">${timeStr}</span>` : ''}
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="habit-${h.id}" ${isChecked ? 'checked' : ''} onchange="toggleHabit(${h.id}, this.checked)">
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
+<div class="habit-item-wrapper">
+  <div class="delete-action" onclick="archiveHabit(${h.id})">
+    <button title="Törlés">🗑️</button>
+  </div>
+  <div class="habit-item" id="habit-item-${h.id}">
+    <div class="habit-info">
+      <span class="habit-name">${h.title}</span>
+      ${timeStr ? `<span class="habit-time">${timeStr}</span>` : ''}
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="habit-${h.id}" ${isChecked ? 'checked' : ''} onchange="toggleHabit(${h.id}, this.checked)">
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
     `;
   });
 
