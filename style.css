@@ -228,7 +228,7 @@ input:checked + .slider:before {
   transform: translateX(22px);
 }
 
-/* Új Szokás Nyitó Gomb */
+/* Új Szokás Nyitó Gombb */
 .open-modal-btn {
   width: 100%;
   background: rgba(15, 23, 42, 0.8);
