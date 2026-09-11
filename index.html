@@ -7,6 +7,9 @@
 
   <link rel="stylesheet" href="style.css">
 
+  <!-- Supabase JS Client library CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- Neon zöld ikon -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='neonGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300FF00'/><stop offset='15%25' stop-color='%2300FF00'/><stop offset='35%25' stop-color='%23003300'/><stop offset='65%25' stop-color='%23003300'/><stop offset='85%25' stop-color='%2300FF00'/><stop offset='100%25' stop-color='%2300FF00'/></linearGradient></defs><rect width='512' height='512' rx='100' fill='%23000000'/><circle cx='256' cy='256' r='180' stroke='%23333333' stroke-width='40' fill='none'/><circle cx='256' cy='256' r='180' stroke='url(%23neonGradient)' stroke-width='40' stroke-linecap='round' fill='none' stroke-dasharray='1131' stroke-dashoffset='565' transform='rotate(-90 256 256)'/><path d='M 180 256 L 236 312 L 348 200' stroke='%23FFFFFF' stroke-width='40' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 </head>
@@ -18,14 +21,7 @@
     <div class="date" id="date-display">Dátum betöltése...</div>
   </div>
 
-  <div id="login-box" style="display: none; text-align: center; padding: 20px 0;">
-    <p style="color: #94a3b8; margin-bottom: 16px; font-size: 14px;">Kérlek add meg a jelszavad a belépéshez!</p>
-    <input type="password" id="password-input" placeholder="Jelszó" style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 16px; margin-bottom: 12px; outline: none;">
-    <button class="save-btn" style="margin-top: 0; background: #00FF00; color: #000; font-weight: bold;" onclick="handleLogin()">Belépés</button>
-    <div id="login-error" style="color: #ef4444; font-size: 13px; margin-top: 10px; min-height: 18px;"></div>
-  </div>
-
-  <div id="app-box" style="display: none;">
+  <div id="app-box">
     <div class="progress-box" id="progress-box">
       <div class="progress-info">
         <span class="progress-title">Napi haladás</span>
@@ -36,31 +32,18 @@
       </div>
     </div>
 
-    <div class="stats-grid" id="stats-grid">
-      <div class="stat-card">
-        <span class="stat-emoji">🔥</span>
-        <span class="stat-value" id="current-streak">0</span>
-        <span class="stat-label">Current Streak</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-emoji">🏆</span>
-        <span class="stat-value" id="best-streak">0</span>
-        <span class="stat-label">Best Streak</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-emoji">📊</span>
-        <span class="stat-value" id="weekly-avg">0%</span>
-        <span class="stat-label">Heti átlag</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-emoji">📅</span>
-        <span class="stat-value" id="monthly-avg">0%</span>
-        <span class="stat-label">Havi átlag</span>
-      </div>
-    </div>
-
     <div id="content">
       <div class="loader">Mai adatok betöltése...</div>
+    </div>
+
+    <!-- Új habit hozzáadása Form -->
+    <div style="margin-top: 20px; background: #0f172a; padding: 14px; border-radius: 16px; border: 1px solid var(--border-color);">
+      <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-main);">➕ Új szokás hozzáadása</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <input type="text" id="new-habit-title" placeholder="Szokás neve (pl. Olvasás)" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #1e293b; color: #fff; font-size: 13px; outline: none;">
+        <input type="number" id="new-habit-time" placeholder="Perc (pl. 15)" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #1e293b; color: #fff; font-size: 13px; outline: none;">
+      </div>
+      <button onclick="addNewHabit()" style="width: 100%; background: #00FF00; color: #000; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer;">Hozzáadás</button>
     </div>
 
     <!-- Részletes Statisztika Gomb és Panel -->
@@ -77,162 +60,188 @@
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyn0oPJOeF7-V430Nf4zTy7PGi1sfIbOA9pW58wLZZSqaEP97s9yXns05mFpd7sgbCfTQ/exec";
+// Supabase Konfiguráció
+const SUPABASE_URL = "https://hcnfoywtoegokphjmzpn.supabase.co";
+// MÁSOLD BE IDE A TELJES PUBLISHABLE KEY-T A SUPABASE-RŐL:
+const SUPABASE_KEY = "sb_publishable_Uzsb3AnDYM5bAwKWI5gwwQ_Hb3fw...";
 
-let globalRowIndex = -1;
-let totalHabitsCount = 0;
-let saveTimeout;
-let saving = false;
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-async function hashPassword(str) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder("utf-8").encode(str));
-  return Array.prototype.map.call(new Uint8Array(buf), x => (('0' + x.toString(16)).slice(-2))).join('');
-}
+let habitsList = [];
+let todayLogs = {};
+const todayStr = new Date().toISOString().split('T')[0];
 
-window.onload = function () {
-  const authHash = localStorage.getItem("habit_auth_hash");
-  if (!authHash) {
-    showLogin();
-  } else {
-    loadTodayData(authHash);
-  }
-};
-
-function showLogin() {
-  document.getElementById('login-box').style.display = 'block';
-  document.getElementById('app-box').style.display = 'none';
-  document.getElementById('date-display').innerText = '';
-}
-
-async function handleLogin() {
-  const pwd = document.getElementById('password-input').value;
-  const errorDiv = document.getElementById('login-error');
-  if (!pwd) {
-    errorDiv.innerText = 'Kérlek írd be a jelszót!';
-    return;
-  }
-  
-  errorDiv.innerText = 'Ellenőrzés...';
-  const hashed = await hashPassword(pwd);
-  loadTodayData(hashed, true);
-}
-
-function loadTodayData(authHash, isInitialLogin = false) {
+window.onload = function() {
   const now = new Date();
-  const formattedDate =
-    String(now.getDate()).padStart(2, '0') + "." +
-    String(now.getMonth() + 1).padStart(2, '0') + "." +
+  document.getElementById('date-display').innerText = 'Mai nap: ' +
+    String(now.getDate()).padStart(2, '0') + '.' +
+    String(now.getMonth() + 1).padStart(2, '0') + '.' +
     now.getFullYear();
 
-  fetch(`${SCRIPT_URL}?action=getTodayData&clientDate=${encodeURIComponent(formattedDate)}&auth=${encodeURIComponent(authHash)}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.error === "Unauthorized") {
-        localStorage.removeItem("habit_auth_hash");
-        if (isInitialLogin) {
-          document.getElementById('login-error').innerText = 'Hibás jelszó!';
-        } else {
-          showLogin();
-        }
-        return;
-      }
+  loadData();
+};
 
-      localStorage.setItem("habit_auth_hash", authHash);
-      document.getElementById('login-box').style.display = 'none';
-      document.getElementById('app-box').style.display = 'block';
-      renderHabits(data);
-    })
-    .catch(err => {
-      console.error("Hiba az adatok betöltésekor:", err);
-      if (isInitialLogin) {
-        document.getElementById('login-error').innerText = 'Hiba történt a csatlakozáskor!';
-      } else {
-        document.getElementById('content').innerHTML =
-          '<p style="text-align:center;color:#ef4444;">Hiba történt az adatok betöltésekor!</p>';
-      }
+async function loadData() {
+  try {
+    // 1. Aktív szokások lekérése
+    const { data: habits, error: habitsErr } = await supabase
+      .from('habits')
+      .select('*')
+      .eq('is_active', true)
+      .order('id', { ascending: true });
+
+    if (habitsErr) throw habitsErr;
+    habitsList = habits;
+
+    // 2. Mai naplózások lekérése
+    const { data: logs, error: logsErr } = await supabase
+      .from('daily_logs')
+      .select('*')
+      .eq('log_date', todayStr);
+
+    if (logsErr) throw logsErr;
+
+    todayLogs = {};
+    logs.forEach(l => {
+      todayLogs[l.habit_id] = l.completed;
     });
+
+    renderHabits();
+  } catch (err) {
+    console.error("Hiba az adatok betöltésekor:", err);
+    document.getElementById('content').innerHTML = '<p style="text-align:center;color:#ef4444;">Hiba az adatok betöltésekor!</p>';
+  }
 }
 
-function updateLocalProgress() {
-  const inputs = document.querySelectorAll('#content input[type="checkbox"]');
-  const checkedCount = Array.from(inputs).filter(input => input.checked).length;
-
-  const percent = totalHabitsCount > 0
-    ? Math.round((checkedCount / totalHabitsCount) * 100)
-    : 0;
-
-  document.getElementById('progress-text').innerText = percent + '%';
-  document.getElementById('progress-bar').style.width = percent + '%';
-}
-
-function queueSave() {
-  clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    saveData();
-  }, 1000);
-}
-
-// Segédfüggvény a percek átváltásához és kijelzéséhez
 function formatTimeLimit(minutes) {
   const num = Number(minutes);
   if (!num || num <= 0) return '';
   if (num >= 60) {
-    const hours = num / 60;
-    return `⏱️ ${hours} óra`;
+    return `⏱️ ${num / 60} óra`;
   }
   return `⏱️ ${num} perc`;
 }
 
-function renderHabits(data) {
-  globalRowIndex = data.rowIndex;
-  document.getElementById('date-display').innerText = 'Mai nap: ' + data.dateStr;
-
-  if (data.rowIndex === -1) {
-    document.getElementById('content').innerHTML =
-      '<p style="text-align:center;color:#ef4444;">A mai dátum nem található a táblázatban!</p>';
+function renderHabits() {
+  if (habitsList.length === 0) {
+    document.getElementById('content').innerHTML = '<p style="text-align:center;color:#94a3b8;">Még nincsenek aktív szokásaid.</p>';
+    updateProgress();
     return;
   }
 
-  totalHabitsCount = data.headers.length;
-
-  if (data.stats) {
-    document.getElementById('current-streak').innerText = data.stats.currentStreak + ' nap';
-    document.getElementById('best-streak').innerText = data.stats.bestStreak + ' nap';
-    document.getElementById('weekly-avg').innerText = data.stats.weeklyAvg + '%';
-    document.getElementById('monthly-avg').innerText = data.stats.monthlyAvg + '%';
-  }
-
-  document.getElementById('progress-text').innerText = data.progress + '%';
-  document.getElementById('progress-bar').style.width = data.progress + '%';
-
   let html = '<div class="habit-list">';
 
-  data.headers.forEach((header, index) => {
-    const checked = data.states[index] ? 'checked' : '';
-    const rawTime = data.timeLimits && data.timeLimits[index] ? data.timeLimits[index] : 0;
-    const timeLimitStr = formatTimeLimit(rawTime);
+  habitsList.forEach(h => {
+    const isChecked = todayLogs[h.id] === true;
+    const timeStr = formatTimeLimit(h.target_minutes);
 
     html += `
       <div class="habit-item">
         <div class="habit-info">
-          <span class="habit-name">${header}</span>
-          ${timeLimitStr ? `<span class="habit-time">${timeLimitStr}</span>` : ''}
+          <span class="habit-name">${h.title}</span>
+          ${timeStr ? `<span class="habit-time">${timeStr}</span>` : ''}
         </div>
-        <label class="switch">
-          <input
-            type="checkbox"
-            id="habit-${index}"
-            ${checked}
-            onchange="updateLocalProgress(); queueSave();"
-          >
-          <span class="slider"></span>
-        </label>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <label class="switch">
+            <input type="checkbox" id="habit-${h.id}" ${isChecked ? 'checked' : ''} onchange="toggleHabit(${h.id}, this.checked)">
+            <span class="slider"></span>
+          </label>
+          <button onclick="archiveHabit(${h.id})" title="Törlés/Archiválás" style="background: none; border: none; color: #ef4444; font-size: 16px; cursor: pointer; padding: 4px;">🗑️</button>
+        </div>
       </div>
     `;
   });
 
   html += '</div>';
   document.getElementById('content').innerHTML = html;
+  updateProgress();
+}
+
+function updateProgress() {
+  if (habitsList.length === 0) {
+    document.getElementById('progress-text').innerText = '0%';
+    document.getElementById('progress-bar').style.width = '0%';
+    return;
+  }
+
+  let checkedCount = 0;
+  habitsList.forEach(h => {
+    if (todayLogs[h.id] === true) checkedCount++;
+  });
+
+  const percent = Math.round((checkedCount / habitsList.length) * 100);
+  document.getElementById('progress-text').innerText = percent + '%';
+  document.getElementById('progress-bar').style.width = percent + '%';
+}
+
+async function toggleHabit(habitId, isCompleted) {
+  todayLogs[habitId] = isCompleted;
+  updateProgress();
+
+  const statusDiv = document.getElementById('status');
+  statusDiv.style.color = '#94a3b8';
+  statusDiv.innerText = 'Mentés...';
+
+  const { error } = await supabase
+    .from('daily_logs')
+    .upsert({
+      habit_id: habitId,
+      log_date: todayStr,
+      completed: isCompleted
+    }, { onConflict: 'habit_id,log_date' });
+
+  if (error) {
+    console.error("Mentési hiba:", error);
+    statusDiv.style.color = '#ef4444';
+    statusDiv.innerText = 'Hiba mentéskor!';
+  } else {
+    statusDiv.style.color = '#00FF00';
+    statusDiv.innerText = '✅ Mentve';
+    setTimeout(() => { statusDiv.innerText = ''; }, 1500);
+  }
+}
+
+async function addNewHabit() {
+  const titleInput = document.getElementById('new-habit-title');
+  const timeInput = document.getElementById('new-habit-time');
+
+  const title = titleInput.value.trim();
+  const time = parseInt(timeInput.value) || 0;
+
+  if (!title) {
+    alert("Kérlek add meg a szokás nevét!");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('habits')
+    .insert([{ title: title, target_minutes: time, is_active: true }])
+    .select();
+
+  if (error) {
+    console.error("Hiba hozzáadáskor:", error);
+    alert("Nem sikerült hozzáadni a szokást!");
+  } else {
+    titleInput.value = '';
+    timeInput.value = '';
+    loadData();
+  }
+}
+
+async function archiveHabit(habitId) {
+  if (!confirm("Biztosan törölni akarod ezt a szokást? (A korábbi napok statisztikájában megmarad!)")) return;
+
+  const { error } = await supabase
+    .from('habits')
+    .update({ is_active: false })
+    .eq('id', habitId);
+
+  if (error) {
+    console.error("Hiba törléskor:", error);
+    alert("Nem sikerült törölni a szokást!");
+  } else {
+    loadData();
+  }
 }
 
 function toggleAnalytics() {
@@ -247,72 +256,17 @@ function toggleAnalytics() {
 
 function loadAnalytics() {
   const container = document.getElementById('analytics-content');
-  const uncheckedHabits = [];
+  const missing = habitsList.filter(h => todayLogs[h.id] !== true);
 
-  const inputs = document.querySelectorAll('#content input[type="checkbox"]');
-  inputs.forEach((input, idx) => {
-    if (!input.checked) {
-      const name = input.closest('.habit-item').querySelector('.habit-name').innerText;
-      uncheckedHabits.push(name);
-    }
-  });
-
-  if (uncheckedHabits.length === 0) {
+  if (missing.length === 0) {
     container.innerHTML = '<p style="color: #00FF00; font-size: 13px;">🎉 Fantasztikus! Ma minden szokást teljesítettél!</p>';
   } else {
     let listHtml = '<p style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">A mai napon még ezekre kell odafigyelned:</p>';
-    uncheckedHabits.forEach(name => {
-      listHtml += `<div class="weak-habit-item"><span>• ${name}</span><span style="color: #ef4444;">Hiányzik</span></div>`;
+    missing.forEach(h => {
+      listHtml += `<div class="weak-habit-item"><span>• ${h.title}</span><span style="color: #ef4444;">Hiányzik</span></div>`;
     });
     container.innerHTML = listHtml;
   }
-}
-
-function saveData() {
-  if (saving) return;
-
-  const authHash = localStorage.getItem("habit_auth_hash");
-  if (!authHash) return;
-
-  saving = true;
-
-  const statusDiv = document.getElementById('status');
-  statusDiv.style.color = '#94a3b8';
-  statusDiv.innerText = 'Automatikus mentés...';
-
-  const inputs = document.querySelectorAll('#content input[type="checkbox"]');
-  const states = Array.from(inputs).map(input => input.checked);
-
-  fetch(SCRIPT_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
-    body: JSON.stringify({
-      action: "saveHabitData",
-      auth: authHash,
-      rowIndex: globalRowIndex,
-      states: states
-    })
-  })
-  .then(res => res.json())
-  .then(res => {
-    saving = false;
-    if (res.status === "success") {
-      statusDiv.style.color = '#00FF00';
-      statusDiv.innerText = '✅ Mentve';
-      setTimeout(() => { statusDiv.innerText = ''; }, 2000);
-    } else {
-      statusDiv.style.color = '#ef4444';
-      statusDiv.innerText = 'Hiba a mentéskor';
-    }
-  })
-  .catch(err => {
-    console.error("Hiba a mentéskor:", err);
-    saving = false;
-    statusDiv.style.color = '#ef4444';
-    statusDiv.innerText = 'Hiba történt mentéskor';
-  });
 }
 </script>
 </body>
