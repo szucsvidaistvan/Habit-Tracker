@@ -46,6 +46,7 @@ body {
 }
 
 .header {
+  position: relative;
   text-align: center;
   margin-bottom: 20px;
 }
@@ -63,6 +64,27 @@ body {
   font-size: 13px;
   margin-top: 4px;
   letter-spacing: 0.5px;
+}
+
+/* Szerkesztés / Törlés Mód Gomb a jobb felső sarokban */
+.edit-toggle-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-toggle-btn:active {
+  transform: scale(0.95);
+  background: #ef4444;
+  color: #fff;
 }
 
 /* Progress Bar Box */
@@ -111,64 +133,21 @@ body {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-/* Habits List & iOS Swipe törlés */
+/* Habits List */
 .habit-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.habit-item-wrapper {
-  position: relative;
-  overflow: hidden;
-  border-radius: 14px;
-  background: #ef4444; /* Piros háttér a kuka mögött */
-}
-
-.delete-action {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 70px;
-  background: #ef4444 !important;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 0 14px 14px 0;
-  cursor: pointer;
-  z-index: 1;
-}
-
-.delete-action button {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  color: white !important;
-  font-size: 20px;
-  cursor: pointer;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  margin: 0;
-}
-
 .habit-item {
-  position: relative;
-  z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 14px;
-  background: #1e293b !important; /* Elrejti a mögötte lévő kukát alapesetben */
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-color);
   border-radius: 14px;
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
-  touch-action: pan-y;
-}
-
-.habit-item.swiped {
-  transform: translateX(-70px);
 }
 
 .habit-info {
@@ -185,6 +164,19 @@ body {
   font-size: 11px;
   color: var(--text-sub);
   margin-top: 2px;
+}
+
+/* Törlés gomb elem mellett (Delete mód esetén) */
+.delete-single-btn {
+  background: #ef4444 !important;
+  color: #fff !important;
+  border: none !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
 /* Modern Toggle Switch */
@@ -232,7 +224,7 @@ input:checked + .slider:before {
   transform: translateX(22px);
 }
 
-/* Új Szokás Nyitó Gombb */
+/* Gombok alul */
 .open-modal-btn {
   width: 100%;
   background: rgba(15, 23, 42, 0.8);
@@ -254,6 +246,19 @@ input:checked + .slider:before {
 .open-modal-btn:active {
   transform: scale(0.98);
   background: #1e293b;
+}
+
+.done-edit-btn {
+  width: 100%;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 15px;
 }
 
 /* Modal Stílusok */
