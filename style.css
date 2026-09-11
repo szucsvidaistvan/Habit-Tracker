@@ -295,3 +295,62 @@ button.save-btn:active {
   padding: 40px 0;
   color: var(--text-sub);
 }
+    .add-habit-card {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 20px;
+    }
+    .add-habit-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 10px;
+    }
+    .add-habit-inputs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .add-habit-inputs input {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      outline: none;
+      width: 100%;
+    }
+    .add-habit-inputs input:focus {
+      border-color: #00FF00;
+    }
+    .add-habit-btn {
+      width: 100%;
+      background: #00FF00;
+      color: #000000;
+      border: none;
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+    .add-habit-btn:active {
+      transform: scale(0.98);
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ef4444;
+      font-size: 15px;
+      cursor: pointer;
+      padding: 4px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .delete-btn:hover {
+      opacity: 1;
+    }
