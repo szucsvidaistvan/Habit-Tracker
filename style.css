@@ -13,7 +13,6 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Kényszerített teljes képernyős sötét háttér iOS Safarinak */
 html, body {
   background-color: #0f172a !important;
   color: var(--text-main);
@@ -112,30 +111,7 @@ body {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-/* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  background: #0f172a;
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.stat-emoji { font-size: 20px; margin-bottom: 4px; }
-.stat-value { font-size: 18px; font-weight: 700; color: var(--text-main); }
-.stat-label { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
-
-/* Habits List */
+/* Habits List & Elhúzható elemek */
 .habit-list {
   display: flex;
   flex-direction: column;
@@ -143,6 +119,7 @@ body {
 }
 
 .habit-item {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -150,11 +127,30 @@ body {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-color);
   border-radius: 14px;
-  transition: background 0.2s ease;
+  transition: transform 0.2s ease, background 0.2s ease;
+  overflow: hidden;
 }
 
-.habit-item:active {
-  background: rgba(255, 255, 255, 0.05);
+/* Swipe / Hover hatásra megjelenő kuka */
+.habit-item .delete-btn {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: #ef4444;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 6px;
+  opacity: 0;
+  transform: translateX(15px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Mobilon elhúzáskor (swiped osztály) vagy egér fölévitelnél feltűnik */
+.habit-item.swiped .delete-btn,
+.habit-item:hover .delete-btn {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .habit-info {
@@ -218,25 +214,112 @@ input:checked + .slider:before {
   transform: translateX(22px);
 }
 
-/* Save Button */
-button.save-btn {
+/* Új Szokás Nyitó Gomb */
+.open-modal-btn {
   width: 100%;
-  background: #00FF00;
-  color: #000000;
-  border: none;
-  padding: 16px;
-  border-radius: 16px;
-  font-size: 16px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #00FF00;
+  border: 1px stroke var(--border-color);
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  border-radius: 14px;
+  font-size: 13px;
   font-weight: 700;
-  margin-top: 24px;
   cursor: pointer;
-  box-shadow: 0 4px 15px var(--accent-glow);
-  transition: transform 0.1s ease, filter 0.2s ease;
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.2s, transform 0.1s;
 }
 
-button.save-btn:active {
+.open-modal-btn:active {
   transform: scale(0.98);
-  filter: brightness(0.9);
+  background: #1e293b;
+}
+
+/* Modal (Felugró ablak) Stílusok */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-content {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.modal-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.modal-inputs input {
+  background: #0f172a;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+
+.modal-inputs input:focus {
+  border-color: #00FF00;
+}
+
+.modal-submit-btn {
+  width: 100%;
+  background: #00FF00;
+  color: #000;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px var(--accent-glow);
 }
 
 /* Details / Analytics Section */
@@ -250,7 +333,7 @@ button.save-btn:active {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 15px;
+  margin-top: 10px;
   transition: background 0.2s;
 }
 
@@ -295,62 +378,3 @@ button.save-btn:active {
   padding: 40px 0;
   color: var(--text-sub);
 }
-    .add-habit-card {
-      background: #0f172a;
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 16px;
-      margin-top: 20px;
-    }
-    .add-habit-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text-main);
-      margin-bottom: 10px;
-    }
-    .add-habit-inputs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-    .add-habit-inputs input {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-size: 13px;
-      outline: none;
-      width: 100%;
-    }
-    .add-habit-inputs input:focus {
-      border-color: #00FF00;
-    }
-    .add-habit-btn {
-      width: 100%;
-      background: #00FF00;
-      color: #000000;
-      border: none;
-      padding: 10px;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px var(--accent-glow);
-    }
-    .add-habit-btn:active {
-      transform: scale(0.98);
-    }
-    .delete-btn {
-      background: none;
-      border: none;
-      color: #ef4444;
-      font-size: 15px;
-      cursor: pointer;
-      padding: 4px;
-      opacity: 0.7;
-      transition: opacity 0.2s;
-    }
-    .delete-btn:hover {
-      opacity: 1;
-    }
