@@ -36,10 +36,8 @@
       <div class="loader">Mai adatok betöltése...</div>
     </div>
 
-    <!-- Új habit gomb, ami megnyitja a modalt -->
     <button class="open-modal-btn" onclick="openModal()">➕ Új szokás hozzáadása</button>
 
-    <!-- Részletes Statisztika Gomb és Panel -->
     <button class="details-btn" onclick="toggleAnalytics()">📈 Részletes elemzés / Fejlődési pontok</button>
     <div class="analytics-panel" id="analytics-panel">
       <div class="analytics-title">🎯 Miben kell fejlődnöd?</div>
@@ -52,7 +50,7 @@
   </div>
 </div>
 
-<!-- Modal (Felugró ablak az új szokásnak) -->
+<!-- Modal az új szokáshoz -->
 <div class="modal-overlay" id="habit-modal">
   <div class="modal-content">
     <div class="modal-header">
@@ -68,7 +66,6 @@
 </div>
 
 <script>
-// Supabase Konfiguráció
 const SUPABASE_URL = "https://hcnfoywtoegokphjmzpn.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Uzsb3AnDYM5bAwKWI5gwwQ_Hb3fwtNH";
 
@@ -143,17 +140,19 @@ function renderHabits() {
     const timeStr = formatTimeLimit(h.target_minutes);
 
     html += `
-      <div class="habit-item" id="habit-item-${h.id}">
-        <div class="habit-info">
-          <span class="habit-name">${h.title}</span>
-          ${timeStr ? `<span class="habit-time">${timeStr}</span>` : ''}
+      <div class="habit-item-wrapper">
+        <div class="delete-action" onclick="archiveHabit(${h.id})">
+          <button title="Törlés">🗑️</button>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
+        <div class="habit-item" id="habit-item-${h.id}">
+          <div class="habit-info">
+            <span class="habit-name">${h.title}</span>
+            ${timeStr ? `<span class="habit-time">${timeStr}</span>` : ''}
+          </div>
           <label class="switch">
             <input type="checkbox" id="habit-${h.id}" ${isChecked ? 'checked' : ''} onchange="toggleHabit(${h.id}, this.checked)">
             <span class="slider"></span>
           </label>
-          <button class="delete-btn" onclick="archiveHabit(${h.id})" title="Törlés">🗑️</button>
         </div>
       </div>
     `;
@@ -165,25 +164,64 @@ function renderHabits() {
   updateProgress();
 }
 
-/* Touch / Swipe események az elhúzáshoz */
 function attachSwipeEvents() {
   const items = document.querySelectorAll('.habit-item');
+
   items.forEach(item => {
     let startX = 0;
+    let currentX = 0;
+    let isSwiping = false;
+
+    /* Érintés mobilon */
     item.addEventListener('touchstart', e => {
       startX = e.touches[0].clientX;
-    }, {passive: true});
+      isSwiping = true;
+    }, { passive: true });
 
-    item.addEventListener('touchend', e => {
-      let endX = e.changedTouches[0].clientX;
-      let diffX = startX - endX;
-      // Ha balra húzzuk legalább 30px-t
-      if (diffX > 30) {
+    item.addEventListener('touchmove', e => {
+      if (!isSwiping) return;
+      currentX = e.touches[0].clientX;
+    }, { passive: true });
+
+    item.addEventListener('touchend', () => {
+      if (!isSwiping) return;
+      const diffX = startX - currentX;
+
+      if (diffX > 40 && currentX !== 0) {
+        document.querySelectorAll('.habit-item.swiped').forEach(el => {
+          if (el !== item) el.classList.remove('swiped');
+        });
         item.classList.add('swiped');
-      } else if (diffX < -30) {
+      } else if (diffX < -40) {
         item.classList.remove('swiped');
       }
-    }, {passive: true});
+
+      isSwiping = false;
+      startX = 0;
+      currentX = 0;
+    });
+
+    /* Egér asztali gépen */
+    item.addEventListener('mousedown', e => {
+      startX = e.clientX;
+      isSwiping = true;
+    });
+
+    item.addEventListener('mouseup', e => {
+      if (!isSwiping) return;
+      const diffX = startX - e.clientX;
+
+      if (diffX > 40) {
+        document.querySelectorAll('.habit-item.swiped').forEach(el => {
+          if (el !== item) el.classList.remove('swiped');
+        });
+        item.classList.add('swiped');
+      } else if (diffX < -40) {
+        item.classList.remove('swiped');
+      }
+
+      isSwiping = false;
+    });
   });
 }
 
@@ -231,7 +269,6 @@ async function toggleHabit(habitId, isCompleted) {
   }
 }
 
-/* Modal Kezelés */
 function openModal() {
   document.getElementById('habit-modal').classList.add('active');
 }
