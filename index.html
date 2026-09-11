@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="style.css">
 
-  <!-- Supabase JS Client library CDN -->
+  <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Neon zöld ikon -->
@@ -36,14 +36,14 @@
       <div class="loader">Mai adatok betöltése...</div>
     </div>
 
-    <!-- Új habit hozzáadása Form -->
-    <div style="margin-top: 20px; background: #0f172a; padding: 14px; border-radius: 16px; border: 1px solid var(--border-color);">
-      <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-main);">➕ Új szokás hozzáadása</div>
-      <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-        <input type="text" id="new-habit-title" placeholder="Szokás neve (pl. Olvasás)" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #1e293b; color: #fff; font-size: 13px; outline: none;">
-        <input type="number" id="new-habit-time" placeholder="Perc (pl. 15)" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #1e293b; color: #fff; font-size: 13px; outline: none;">
+    <!-- Új habit hozzáadása modul -->
+    <div class="add-habit-card">
+      <div class="add-habit-title">➕ Új szokás hozzáadása</div>
+      <div class="add-habit-inputs">
+        <input type="text" id="new-habit-title" placeholder="Szokás neve" style="flex: 2;">
+        <input type="number" id="new-habit-time" placeholder="Perc" style="flex: 1;">
       </div>
-      <button onclick="addNewHabit()" style="width: 100%; background: #00FF00; color: #000; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer;">Hozzáadás</button>
+      <button class="add-habit-btn" onclick="addNewHabit()">Hozzáadás</button>
     </div>
 
     <!-- Részletes Statisztika Gomb és Panel -->
@@ -51,21 +51,20 @@
     <div class="analytics-panel" id="analytics-panel">
       <div class="analytics-title">🎯 Miben kell fejlődnöd?</div>
       <div id="analytics-content">
-        <p style="font-size: 12px; color: #64748b;">Kattints a frissítéshez vagy töltsd be az adatokat.</p>
+        <p style="font-size: 12px; color: var(--text-sub);">Kattints a frissítéshez vagy töltsd be az adatokat.</p>
       </div>
     </div>
 
-    <div id="status" style="margin-top: 10px; text-align: center; font-size: 12px;"></div>
+    <div id="status"></div>
   </div>
 </div>
 
 <script>
 // Supabase Konfiguráció
 const SUPABASE_URL = "https://hcnfoywtoegokphjmzpn.supabase.co";
-// MÁSOLD BE IDE A TELJES PUBLISHABLE KEY-T A SUPABASE-RŐL:
 const SUPABASE_KEY = "sb_publishable_Uzsb3AnDYM5bAwKWI5gwwQ_Hb3fwtNH";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let habitsList = [];
 let todayLogs = {};
@@ -84,7 +83,7 @@ window.onload = function() {
 async function loadData() {
   try {
     // 1. Aktív szokások lekérése
-    const { data: habits, error: habitsErr } = await supabase
+    const { data: habits, error: habitsErr } = await sbClient
       .from('habits')
       .select('*')
       .eq('is_active', true)
@@ -94,7 +93,7 @@ async function loadData() {
     habitsList = habits;
 
     // 2. Mai naplózások lekérése
-    const { data: logs, error: logsErr } = await supabase
+    const { data: logs, error: logsErr } = await sbClient
       .from('daily_logs')
       .select('*')
       .eq('log_date', todayStr);
@@ -102,9 +101,11 @@ async function loadData() {
     if (logsErr) throw logsErr;
 
     todayLogs = {};
-    logs.forEach(l => {
-      todayLogs[l.habit_id] = l.completed;
-    });
+    if (logs) {
+      logs.forEach(l => {
+        todayLogs[l.habit_id] = l.completed;
+      });
+    }
 
     renderHabits();
   } catch (err) {
@@ -124,7 +125,7 @@ function formatTimeLimit(minutes) {
 
 function renderHabits() {
   if (habitsList.length === 0) {
-    document.getElementById('content').innerHTML = '<p style="text-align:center;color:#94a3b8;">Még nincsenek aktív szokásaid.</p>';
+    document.getElementById('content').innerHTML = '<p style="text-align:center;color:var(--text-sub);">Még nincsenek aktív szokásaid.</p>';
     updateProgress();
     return;
   }
@@ -146,7 +147,7 @@ function renderHabits() {
             <input type="checkbox" id="habit-${h.id}" ${isChecked ? 'checked' : ''} onchange="toggleHabit(${h.id}, this.checked)">
             <span class="slider"></span>
           </label>
-          <button onclick="archiveHabit(${h.id})" title="Törlés/Archiválás" style="background: none; border: none; color: #ef4444; font-size: 16px; cursor: pointer; padding: 4px;">🗑️</button>
+          <button class="delete-btn" onclick="archiveHabit(${h.id})" title="Archiválás">🗑️</button>
         </div>
       </div>
     `;
@@ -179,10 +180,10 @@ async function toggleHabit(habitId, isCompleted) {
   updateProgress();
 
   const statusDiv = document.getElementById('status');
-  statusDiv.style.color = '#94a3b8';
+  statusDiv.style.color = 'var(--text-sub)';
   statusDiv.innerText = 'Mentés...';
 
-  const { error } = await supabase
+  const { error } = await sbClient
     .from('daily_logs')
     .upsert({
       habit_id: habitId,
@@ -213,10 +214,9 @@ async function addNewHabit() {
     return;
   }
 
-  const { data, error } = await supabase
+  const { error } = await sbClient
     .from('habits')
-    .insert([{ title: title, target_minutes: time, is_active: true }])
-    .select();
+    .insert([{ title: title, target_minutes: time, is_active: true }]);
 
   if (error) {
     console.error("Hiba hozzáadáskor:", error);
@@ -231,7 +231,7 @@ async function addNewHabit() {
 async function archiveHabit(habitId) {
   if (!confirm("Biztosan törölni akarod ezt a szokást? (A korábbi napok statisztikájában megmarad!)")) return;
 
-  const { error } = await supabase
+  const { error } = await sbClient
     .from('habits')
     .update({ is_active: false })
     .eq('id', habitId);
@@ -261,7 +261,7 @@ function loadAnalytics() {
   if (missing.length === 0) {
     container.innerHTML = '<p style="color: #00FF00; font-size: 13px;">🎉 Fantasztikus! Ma minden szokást teljesítettél!</p>';
   } else {
-    let listHtml = '<p style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">A mai napon még ezekre kell odafigyelned:</p>';
+    let listHtml = '<p style="font-size: 12px; color: var(--text-sub); margin-bottom: 8px;">A mai napon még ezekre kell odafigyelned:</p>';
     missing.forEach(h => {
       listHtml += `<div class="weak-habit-item"><span>• ${h.title}</span><span style="color: #ef4444;">Hiányzik</span></div>`;
     });
