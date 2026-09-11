@@ -36,15 +36,8 @@
       <div class="loader">Mai adatok betöltése...</div>
     </div>
 
-    <!-- Új habit hozzáadása modul -->
-    <div class="add-habit-card">
-      <div class="add-habit-title">➕ Új szokás hozzáadása</div>
-      <div class="add-habit-inputs">
-        <input type="text" id="new-habit-title" placeholder="Szokás neve" style="flex: 2;">
-        <input type="number" id="new-habit-time" placeholder="Perc" style="flex: 1;">
-      </div>
-      <button class="add-habit-btn" onclick="addNewHabit()">Hozzáadás</button>
-    </div>
+    <!-- Új habit gomb, ami megnyitja a modalt -->
+    <button class="open-modal-btn" onclick="openModal()">➕ Új szokás hozzáadása</button>
 
     <!-- Részletes Statisztika Gomb és Panel -->
     <button class="details-btn" onclick="toggleAnalytics()">📈 Részletes elemzés / Fejlődési pontok</button>
@@ -56,6 +49,21 @@
     </div>
 
     <div id="status"></div>
+  </div>
+</div>
+
+<!-- Modal (Felugró ablak az új szokásnak) -->
+<div class="modal-overlay" id="habit-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">➕ Új szokás felvétele</span>
+      <button class="close-modal-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-inputs">
+      <input type="text" id="new-habit-title" placeholder="Szokás neve (pl. Olvasás)">
+      <input type="number" id="new-habit-time" placeholder="Cél idő percben (pl. 15)">
+    </div>
+    <button class="modal-submit-btn" onclick="addNewHabit()">Hozzáadás</button>
   </div>
 </div>
 
@@ -82,7 +90,6 @@ window.onload = function() {
 
 async function loadData() {
   try {
-    // 1. Aktív szokások lekérése
     const { data: habits, error: habitsErr } = await sbClient
       .from('habits')
       .select('*')
@@ -92,7 +99,6 @@ async function loadData() {
     if (habitsErr) throw habitsErr;
     habitsList = habits;
 
-    // 2. Mai naplózások lekérése
     const { data: logs, error: logsErr } = await sbClient
       .from('daily_logs')
       .select('*')
@@ -137,17 +143,17 @@ function renderHabits() {
     const timeStr = formatTimeLimit(h.target_minutes);
 
     html += `
-      <div class="habit-item">
+      <div class="habit-item" id="habit-item-${h.id}">
         <div class="habit-info">
           <span class="habit-name">${h.title}</span>
           ${timeStr ? `<span class="habit-time">${timeStr}</span>` : ''}
         </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
           <label class="switch">
             <input type="checkbox" id="habit-${h.id}" ${isChecked ? 'checked' : ''} onchange="toggleHabit(${h.id}, this.checked)">
             <span class="slider"></span>
           </label>
-          <button class="delete-btn" onclick="archiveHabit(${h.id})" title="Archiválás">🗑️</button>
+          <button class="delete-btn" onclick="archiveHabit(${h.id})" title="Törlés">🗑️</button>
         </div>
       </div>
     `;
@@ -155,7 +161,30 @@ function renderHabits() {
 
   html += '</div>';
   document.getElementById('content').innerHTML = html;
+  attachSwipeEvents();
   updateProgress();
+}
+
+/* Touch / Swipe események az elhúzáshoz */
+function attachSwipeEvents() {
+  const items = document.querySelectorAll('.habit-item');
+  items.forEach(item => {
+    let startX = 0;
+    item.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+    }, {passive: true});
+
+    item.addEventListener('touchend', e => {
+      let endX = e.changedTouches[0].clientX;
+      let diffX = startX - endX;
+      // Ha balra húzzuk legalább 30px-t
+      if (diffX > 30) {
+        item.classList.add('swiped');
+      } else if (diffX < -30) {
+        item.classList.remove('swiped');
+      }
+    }, {passive: true});
+  });
 }
 
 function updateProgress() {
@@ -202,6 +231,15 @@ async function toggleHabit(habitId, isCompleted) {
   }
 }
 
+/* Modal Kezelés */
+function openModal() {
+  document.getElementById('habit-modal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('habit-modal').classList.remove('active');
+}
+
 async function addNewHabit() {
   const titleInput = document.getElementById('new-habit-title');
   const timeInput = document.getElementById('new-habit-time');
@@ -224,12 +262,13 @@ async function addNewHabit() {
   } else {
     titleInput.value = '';
     timeInput.value = '';
+    closeModal();
     loadData();
   }
 }
 
 async function archiveHabit(habitId) {
-  if (!confirm("Biztosan törölni akarod ezt a szokást? (A korábbi napok statisztikájában megmarad!)")) return;
+  if (!confirm("Biztosan törölni akarod ezt a szokást?")) return;
 
   const { error } = await sbClient
     .from('habits')
