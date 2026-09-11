@@ -400,3 +400,88 @@ input:checked + .slider:before {
   padding: 40px 0;
   color: var(--text-sub);
 }
+/* Statisztika gombok & Nézet váltó */
+.stats-switcher {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.stats-tab-btn {
+  flex: 1;
+  background: #0f172a;
+  border: 1px solid var(--border-color);
+  color: var(--text-sub);
+  padding: 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stats-tab-btn.active {
+  background: rgba(0, 255, 0, 0.15);
+  border-color: #00FF00;
+  color: #00FF00;
+}
+
+/* Statisztikai Mutatók Kártyái */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #00FF00;
+  text-shadow: 0 0 8px var(--accent-glow);
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--text-sub);
+  margin-top: 2px;
+}
+
+/* Szokásonkénti Lebontás Lista */
+.stat-habit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+}
+
+.stat-habit-row:last-child {
+  border-bottom: none;
+}
+
+.stat-bar-bg {
+  width: 60px;
+  height: 6px;
+  background: #334155;
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  background: #00FF00;
+  border-radius: 3px;
+}
