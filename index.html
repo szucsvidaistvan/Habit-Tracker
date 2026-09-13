@@ -346,33 +346,44 @@ function initSwipeEvents() {
     const switchElem = document.getElementById(`switch-wrapper-${h.id}`);
     if (!card) return;
 
-    // Megakadályozzuk, hogy a kapcsoló megnyomása kiváltsa a swipe eseményt
+    // Leválasztjuk a touch eseményeket a kapcsolóról, hogy a tap-re ne induljon el a swipe
     if (switchElem) {
-      switchElem.addEventListener('touchstart', (e) => {
-        e.stopPropagation();
-      }, { passive: true });
+      ['touchstart', 'touchmove', 'touchend'].forEach(evtType => {
+        switchElem.addEventListener(evtType, (e) => {
+          e.stopPropagation();
+        }, { passive: true });
+      });
     }
 
     let startX = 0;
     let currentX = 0;
+    let isSwiping = false;
 
     card.addEventListener('touchstart', (e) => {
       startX = e.touches[0].clientX;
       currentX = startX;
+      isSwiping = false;
     }, { passive: true });
 
     card.addEventListener('touchmove', (e) => {
       currentX = e.touches[0].clientX;
       const diffX = currentX - startX;
-      if (diffX < 0 && diffX > -130) {
-        card.style.transform = `translateX(${diffX}px)`;
+      
+      // Csak akkor kezdjük el húzni a kártyát, ha már láthatóan balra húztad legalább 15px-et
+      if (diffX < -15) {
+        isSwiping = true;
+        if (diffX > -130) {
+          card.style.transform = `translateX(${diffX}px)`;
+        }
       }
     }, { passive: true });
 
     card.addEventListener('touchend', () => {
+      if (!isSwiping) return;
+      
       const diffX = currentX - startX;
-      // Minimum 30px elmozdulás szükséges a nyitáshoz
-      if (diffX < -30) {
+      // Küszöbérték növelése: legalább 60px elmozdulás kell a kártya kinyitásához
+      if (diffX < -60) {
         card.style.transform = 'translateX(-120px)';
       } else {
         card.style.transform = 'translateX(0px)';
