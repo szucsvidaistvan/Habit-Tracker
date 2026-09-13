@@ -34,6 +34,7 @@ body {
   padding: calc(16px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom)) 12px !important;
 }
 
+/* Fő kártya konténer */
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -42,9 +43,10 @@ body {
   width: 100%;
   max-width: 420px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-  margin: auto;
+  margin: 0 auto 80px auto; /* Margó az alsó menü miatt */
 }
 
+/* Fejléc */
 .header {
   position: relative;
   text-align: center;
@@ -66,25 +68,22 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Szerkesztés / Törlés Mód Gomb a jobb felső sarokban */
-.edit-toggle-btn {
+/* Kijelentkezés gomb */
+.logout-btn {
   position: absolute;
-  top: 0;
-  right: 0;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid #ef4444;
-  color: #ef4444;
-  border-radius: 10px;
+  left: 0;
+  top: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   padding: 6px 10px;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.edit-toggle-btn:active {
-  transform: scale(0.95);
-  background: #ef4444;
-  color: #fff;
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Progress Bar Box */
@@ -133,21 +132,33 @@ body {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-/* Habits List */
+/* Habits List Szerkezet */
 .habit-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+/* Ez a külső keret tartja bent a gombokat és a kártyát */
+.habit-card-wrapper {
+  position: relative;
+  overflow: hidden; /* Megakadályozza a kilógást! */
+  border-radius: 14px;
+  background-color: #0f172a; /* Sötét háttér a gombok mögött */
+}
+
+/* A felső kártya, amit elhúzol */
 .habit-item {
+  position: relative;
+  z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.02);
+  background: #1e293b;
   border: 1px solid var(--border-color);
   border-radius: 14px;
+  transition: transform 0.2s ease-out;
 }
 
 .habit-info {
@@ -166,17 +177,48 @@ body {
   margin-top: 2px;
 }
 
-/* Törlés gomb elem mellett (Delete mód esetén) */
-.delete-single-btn {
-  background: #ef4444 !important;
-  color: #fff !important;
-  border: none !important;
-  padding: 6px 12px !important;
-  border-radius: 8px !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
+/* Swipe háttérgombok konténere */
+.swipe-actions {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  z-index: 1; /* A habit-item MÖGÖTT van */
+}
+
+/* Swipe gombok stílusa */
+.swipe-btn {
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.swipe-btn:active {
+  transform: scale(0.92);
+}
+
+.swipe-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: #ffffff;
+}
+
+.swipe-btn.edit {
+  background-color: #f59e0b; /* iOS sárga */
+}
+
+.swipe-btn.delete {
+  background-color: #ef4444; /* iOS piros */
 }
 
 /* Modern Toggle Switch */
@@ -224,7 +266,7 @@ input:checked + .slider:before {
   transform: translateX(22px);
 }
 
-/* Gombok alul */
+/* Új szokás gomb */
 .open-modal-btn {
   width: 100%;
   background: rgba(15, 23, 42, 0.8);
@@ -246,19 +288,6 @@ input:checked + .slider:before {
 .open-modal-btn:active {
   transform: scale(0.98);
   background: #1e293b;
-}
-
-.done-edit-btn {
-  width: 100%;
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  padding: 12px;
-  border-radius: 14px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  margin-top: 15px;
 }
 
 /* Modal Stílusok */
@@ -344,63 +373,7 @@ input:checked + .slider:before {
   box-shadow: 0 2px 10px var(--accent-glow);
 }
 
-/* Analytics Section */
-.details-btn {
-  width: 100%;
-  background: #0f172a;
-  color: #00FF00;
-  border: 1px solid var(--border-color);
-  padding: 12px;
-  border-radius: 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 10px;
-  transition: background 0.2s;
-}
-
-.details-btn:active {
-  background: #1e293b;
-}
-
-.analytics-panel {
-  display: none;
-  background: #0f172a;
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
-  padding: 14px;
-  margin-top: 10px;
-}
-
-.analytics-title {
-  font-size: 13px;
-  font-weight: bold;
-  color: var(--text-main);
-  margin-bottom: 8px;
-}
-
-.weak-habit-item {
-  font-size: 13px;
-  color: var(--text-sub);
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-}
-
-#status {
-  text-align: center;
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--text-sub);
-  min-height: 18px;
-}
-
-.loader {
-  text-align: center;
-  padding: 40px 0;
-  color: var(--text-sub);
-}
-/* Statisztika gombok & Nézet váltó */
+/* Statisztika & Nézet váltó */
 .stats-switcher {
   display: flex;
   gap: 8px;
@@ -426,7 +399,6 @@ input:checked + .slider:before {
   color: #00FF00;
 }
 
-/* Statisztikai Mutatók Kártyái */
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -455,89 +427,31 @@ input:checked + .slider:before {
   margin-top: 2px;
 }
 
-/* Szokásonkénti Lebontás Lista */
-.stat-habit-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 12px;
+.stat-bar-row {
+  margin-bottom: 12px;
 }
 
-.stat-habit-row:last-child {
-  border-bottom: none;
+.stat-bar-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
 }
 
 .stat-bar-bg {
-  width: 60px;
-  height: 6px;
-  background: #334155;
-  border-radius: 3px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
   overflow: hidden;
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 8px;
 }
 
 .stat-bar-fill {
   height: 100%;
   background: #00FF00;
-  border-radius: 3px;
-}
-/* Kijelentkezés gomb finomítása */
-.logout-btn {
-  position: absolute;
-  left: 0;
-  top: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
+  border-radius: 4px;
+  transition: width 0.4s ease;
 }
 
-.logout-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Szerkesztő gombok finomítása (Kuka és Ceruza) */
-.edit-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.btn-icon-edit {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-icon-edit:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.btn-icon-delete {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-icon-delete:hover {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.4);
-}
 /* iOS Bottom Tab Bar Navigation */
 .ios-tab-bar {
   position: fixed;
@@ -583,101 +497,25 @@ input:checked + .slider:before {
   font-weight: 500;
 }
 
-/* Swipe konténer és háttér gombok */
-.swipe-actions {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  gap: 8px; /* Távolság a gombok között */
-  align-items: center;
-  z-index: 1;
+/* Segédosztályok */
+#status {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-sub);
+  min-height: 18px;
 }
 
-/* Alap gomb stílus lekerekítéssel */
-.swipe-btn {
-  border: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px; /* Lekerekített sarkok */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-.swipe-btn {
-  border: none;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  width: 60px;
-}
-.swipe-btn:active {
-  transform: scale(0.92);
-}
-.swipe-btn svg {
-  width: 20px;
-  height: 20px;
-  stroke: white;
-}
-
-.swipe-btn.edit {
-  background-color: #f59e0b; /* iOS sárga */
-}
-
-.swipe-btn.delete {
-  background-color: #ef4444; /* iOS piros */
-}
-
-.swipe-content {
-  position: relative;
-  z-index: 2;
-  background-color: #1e293b !important; /* Takarja a háttérgombokat */
-  transition: transform 0.2s ease-out;
-  margin-bottom: 0 !important;
-}
-
-/* Statisztikai vízszintes sávok stílusa */
-.stat-bar-row {
-  margin-bottom: 12px;
-}
-
-.stat-bar-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-
-.stat-bar-bg {
-  height: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.stat-bar-fill {
-  height: 100%;
-  background: #00FF00;
-  border-radius: 4px;
-  transition: width 0.4s ease;
-}
-
-/* Margó az alsó menü miatt */
-.card {
-  margin-bottom: 80px;
+.loader {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-sub);
 }
 
 .profile-container {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start; /* Felülre igazítás */
-  padding-top: 20px; /* Esztétikus távolság a tetejétől */
+  justify-content: flex-start;
+  padding-top: 20px;
   min-height: 100vh;
 }
-
