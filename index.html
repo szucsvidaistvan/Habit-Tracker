@@ -372,7 +372,7 @@ function initSwipeEvents() {
       // Csak akkor kezdjük el húzni a kártyát, ha már láthatóan balra húztad legalább 15px-et
       if (diffX < -15) {
         isSwiping = true;
-        if (diffX > -130) {
+        if (diffX > -120) {
           card.style.transform = `translateX(${diffX}px)`;
         }
       }
@@ -384,7 +384,7 @@ function initSwipeEvents() {
       const diffX = currentX - startX;
       // Küszöbérték növelése: legalább 60px elmozdulás kell a kártya kinyitásához
       if (diffX < -60) {
-        card.style.transform = 'translateX(-120px)';
+        card.style.transform = 'translateX(-110px)';
       } else {
         card.style.transform = 'translateX(0px)';
       }
