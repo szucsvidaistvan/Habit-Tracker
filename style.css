@@ -545,13 +545,14 @@ input:checked + .slider:before {
   left: 0;
   right: 0;
   height: 65px;
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(15, 23, 42, 0.92);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
   z-index: 1000;
 }
 
@@ -570,13 +571,15 @@ input:checked + .slider:before {
   color: #00FF00;
 }
 
-.tab-icon {
-  font-size: 20px;
+.tab-item svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
 }
 
 .tab-label {
   font-size: 10px;
-  margin-top: 2px;
+  margin-top: 3px;
   font-weight: 500;
 }
 
@@ -584,8 +587,9 @@ input:checked + .slider:before {
 .swipe-container {
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 14px;
   margin-bottom: 10px;
+  background-color: #1e293b; /* Háttérszín a kártya mögött */
 }
 
 .swipe-actions {
@@ -594,7 +598,8 @@ input:checked + .slider:before {
   top: 0;
   bottom: 0;
   display: flex;
-  width: 110px;
+  width: 120px;
+  z-index: 1;
 }
 
 .swipe-btn {
@@ -603,24 +608,56 @@ input:checked + .slider:before {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
   cursor: pointer;
-  width: 55px;
+  width: 60px;
+}
+
+.swipe-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: white;
 }
 
 .swipe-btn.edit {
   background-color: #0284c7; /* iOS kék */
 }
 
-  .swipe-btn.delete {
+.swipe-btn.delete {
   background-color: #ef4444; /* iOS piros */
 }
 
 .swipe-content {
   position: relative;
   z-index: 2;
+  background-color: #1e293b !important; /* Takarja a háttérgombokat */
   transition: transform 0.2s ease-out;
   margin-bottom: 0 !important;
+}
+
+/* Statisztikai vízszintes sávok stílusa */
+.stat-bar-row {
+  margin-bottom: 12px;
+}
+
+.stat-bar-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.stat-bar-bg {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  background: #00FF00;
+  border-radius: 4px;
+  transition: width 0.4s ease;
 }
 
 /* Margó az alsó menü miatt */
