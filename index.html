@@ -346,7 +346,6 @@ function initSwipeEvents() {
     const switchElem = document.getElementById(`switch-wrapper-${h.id}`);
     if (!card) return;
 
-    // Leválasztjuk a touch eseményeket a kapcsolóról, hogy a tap-re ne induljon el a swipe
     if (switchElem) {
       ['touchstart', 'touchmove', 'touchend'].forEach(evtType => {
         switchElem.addEventListener(evtType, (e) => {
@@ -357,36 +356,52 @@ function initSwipeEvents() {
 
     let startX = 0;
     let currentX = 0;
-    let isSwiping = false;
+    let isOpen = false; // Nyomon követjük, hogy nyitva van-e a kártya
 
     card.addEventListener('touchstart', (e) => {
       startX = e.touches[0].clientX;
       currentX = startX;
-      isSwiping = false;
+      card.style.transition = 'none'; // Húzás közben azonnali követés
     }, { passive: true });
 
     card.addEventListener('touchmove', (e) => {
       currentX = e.touches[0].clientX;
-      const diffX = currentX - startX;
-      
-      // Csak akkor kezdjük el húzni a kártyát, ha már láthatóan balra húztad legalább 15px-et
-      if (diffX < -15) {
-        isSwiping = true;
-        if (diffX > -120) {
+      let diffX = currentX - startX;
+
+      if (isOpen) {
+        // Ha már nyitva van és jobbra húzod
+        let newX = -110 + diffX;
+        if (newX > 0) newX = 0;
+        if (newX < -110) newX = -110;
+        card.style.transform = `translateX(${newX}px)`;
+      } else {
+        // Ha zárt állapotból húzod balra
+        if (diffX < 0 && diffX > -130) {
           card.style.transform = `translateX(${diffX}px)`;
         }
       }
     }, { passive: true });
 
     card.addEventListener('touchend', () => {
-      if (!isSwiping) return;
-      
+      card.style.transition = 'transform 0.2s ease-out'; // Sima animáció elengedéskor
       const diffX = currentX - startX;
-      // Küszöbérték növelése: legalább 60px elmozdulás kell a kártya kinyitásához
-      if (diffX < -60) {
-        card.style.transform = 'translateX(-110px)';
+
+      if (!isOpen) {
+        // Nyitási feltétel
+        if (diffX < -50) {
+          card.style.transform = 'translateX(-110px)';
+          isOpen = true;
+        } else {
+          card.style.transform = 'translateX(0px)';
+        }
       } else {
-        card.style.transform = 'translateX(0px)';
+        // Zárási feltétel (ha jobbra húztad legalább 30px-et)
+        if (diffX > 30) {
+          card.style.transform = 'translateX(0px)';
+          isOpen = false;
+        } else {
+          card.style.transform = 'translateX(-110px)';
+        }
       }
     });
   });
