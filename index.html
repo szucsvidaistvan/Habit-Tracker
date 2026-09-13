@@ -33,7 +33,7 @@
 <!-- FŐ ALKALMAZÁS PANELS (Alapértelmezetten rejtve) -->
 <div class="card" id="app-card" style="display: none;">
   <div class="header">
-    <button onclick="logout()" style="position: absolute; left: 0; top: 0; background: none; border: none; color: var(--text-sub); font-size: 12px; cursor: pointer;">🚪 Kijelentkezés</button>
+    <button onclick="logout()" style="position: absolute; left: 0; top: 0; background: none; border: none; color: var(--text-sub); font-size: 12px; cursor: pointer;">🚪</button>
     <h1>Habit Tracker</h1>
     <div class="date" id="date-display">Dátum betöltése...</div>
     <button class="edit-toggle-btn" onclick="toggleEditMode()" title="Szerkesztés / Törlés">⚙️</button>
@@ -250,16 +250,16 @@ function renderHabits() {
           <span class="habit-time">Heti ${weeklyTarget}x ${timeStr ? '• ' + timeStr : ''}</span>
         </div>
         ${isEditMode ? `
-          <div style="display: flex; gap: 6px;">
-            <button class="delete-single-btn" style="background: #334155 !important;" onclick="openModal(${h.id})">✏️</button>
-            <button class="delete-single-btn" onclick="archiveHabit(${h.id})">🗑️</button>
-          </div>
-        ` : `
-          <label class="switch">
-            <input type="checkbox" id="habit-${h.id}" ${isChecked ? 'checked' : ''} onchange="toggleHabit(${h.id}, this.checked)">
-            <span class="slider"></span>
-          </label>
-        `}
+  <div class="edit-actions">
+    <button class="btn-icon-edit" onclick="openModal(${h.id})" title="Szerkesztés">✏️</button>
+    <button class="btn-icon-delete" onclick="archiveHabit(${h.id})" title="Törlés">🗑️</button>
+  </div>
+` : `
+  <label class="switch">
+    <input type="checkbox" id="habit-${h.id}" ${isChecked ? 'checked' : ''} onchange="toggleHabit(${h.id}, this.checked)">
+    <span class="slider"></span>
+  </label>
+  `}
       </div>
     `;
   });
