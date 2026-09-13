@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="style.css">
 
-  <!-- Supabase JS && Lucide Icons -->
+  <!-- Supabase JS & Chart.js & Lucide Icons -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -82,7 +82,7 @@
       </div>
     </div>
 
-    <!-- Vízszintes progress sávos nézet (A megszokott szép elrendezés) -->
+    <!-- Vízszintes progress sávos nézet -->
     <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 14px; border-radius: 12px; margin-bottom: 15px;">
       <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text-main);">📊 Szokások aránya a célhoz képest:</div>
       <div id="horizontal-stats-list"></div>
@@ -96,7 +96,7 @@
   </div>
 
   <!-- TAB 3: PROFIL -->
-  <div id="tab-profile" class="tab-content" style="display: none;">
+  <div id="tab-profile" class="tab-content profile-container" style="display: none;">
     <div class="header">
       <h1>Profil</h1>
       <div class="date">Fiókbeállítások</div>
@@ -324,7 +324,7 @@ function renderHabits() {
             <span class="habit-name">${h.title}</span>
             <span class="habit-time">Heti ${weeklyTarget}x ${timeStr ? '• ' + timeStr : ''}</span>
           </div>
-          <label class="switch">
+          <label class="switch" id="switch-wrapper-${h.id}">
             <input type="checkbox" id="habit-${h.id}" ${isChecked ? 'checked' : ''} onchange="toggleHabit(${h.id}, this.checked)">
             <span class="slider"></span>
           </label>
@@ -343,14 +343,23 @@ function renderHabits() {
 function initSwipeEvents() {
   habitsList.forEach(h => {
     const card = document.getElementById(`swipe-content-${h.id}`);
+    const switchElem = document.getElementById(`switch-wrapper-${h.id}`);
     if (!card) return;
+
+    // Megakadályozzuk, hogy a kapcsoló megnyomása kiváltsa a swipe eseményt
+    if (switchElem) {
+      switchElem.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+    }
 
     let startX = 0;
     let currentX = 0;
 
     card.addEventListener('touchstart', (e) => {
       startX = e.touches[0].clientX;
-    });
+      currentX = startX;
+    }, { passive: true });
 
     card.addEventListener('touchmove', (e) => {
       currentX = e.touches[0].clientX;
@@ -358,11 +367,12 @@ function initSwipeEvents() {
       if (diffX < 0 && diffX > -130) {
         card.style.transform = `translateX(${diffX}px)`;
       }
-    });
+    }, { passive: true });
 
     card.addEventListener('touchend', () => {
       const diffX = currentX - startX;
-      if (diffX < -50) {
+      // Minimum 30px elmozdulás szükséges a nyitáshoz
+      if (diffX < -30) {
         card.style.transform = 'translateX(-120px)';
       } else {
         card.style.transform = 'translateX(0px)';
@@ -513,7 +523,7 @@ async function loadAnalytics(period) {
     document.getElementById('stat-total-percent').innerText = totalPercent + '%';
     document.getElementById('stat-weakest-title').innerText = weakest || '-';
 
-    // Napi bontású trend adatok előkészítése az Apple Fitness stílusú grafikongörbéhez
+    // Napi bontású trend adatok előkészítése
     const dateLabels = [];
     const dailyPercents = [];
 
@@ -521,23 +531,30 @@ async function loadAnalytics(period) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dStr = d.toISOString().split('T')[0];
-      const dayName = d.toLocaleDateString('hu-HU', { weekday: 'short' });
+
+      // Heti nézetben napnevek (H, K...), 30 napos nézetben dátum (pl. 09.01)
+      let label = '';
+      if (period === 'week') {
+        label = d.toLocaleDateString('hu-HU', { weekday: 'short' });
+      } else {
+        label = String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0');
+      }
 
       const dayLogs = (logs || []).filter(l => l.log_date === dStr && l.completed === true);
       const dayPercent = habitsList.length > 0 ? Math.round((dayLogs.length / habitsList.length) * 100) : 0;
 
-      dateLabels.push(dayName);
+      dateLabels.push(label);
       dailyPercents.push(dayPercent);
     }
 
-    renderTrendChart(dateLabels, dailyPercents);
+    renderTrendChart(dateLabels, dailyPercents, period);
 
   } catch (err) {
     console.error("Statisztikai hiba:", err);
   }
 }
 
-function renderTrendChart(labels, data) {
+function renderTrendChart(labels, data, period) {
   const ctx = document.getElementById('statsChart').getContext('2d');
 
   if (chartInstance) {
@@ -557,11 +574,11 @@ function renderTrendChart(labels, data) {
         data: data,
         borderColor: '#00FF00',
         borderWidth: 2,
-        tension: 0.4, // Lágy görbület
+        tension: 0.4,
         fill: true,
         backgroundColor: gradient,
         pointBackgroundColor: '#00FF00',
-        pointRadius: 3
+        pointRadius: period === 'month' ? 2 : 3
       }]
     },
     options: {
@@ -574,7 +591,11 @@ function renderTrendChart(labels, data) {
           grid: { color: 'rgba(255,255,255,0.05)' }
         },
         x: {
-          ticks: { color: '#64748b', font: { size: 10 } },
+          ticks: {
+            color: '#64748b',
+            font: { size: 10 },
+            maxTicksLimit: period === 'month' ? 6 : 7 // 30 napos nézetnél maximum 6 felirat jelenik meg, így tisztán olvasható
+          },
           grid: { display: false }
         }
       },
