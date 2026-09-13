@@ -7,13 +7,12 @@
 
   <link rel="stylesheet" href="style.css">
 
-  <!-- Supabase JS Client SDK -->
+  <!-- Supabase JS & Chart.js & Lucide Icons -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Chart.js a vizuális diagramokhoz -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Neon zöld ikon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='neonGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300FF00'/><stop offset='15%25' stop-color='%2300FF00'/><stop offset='35%25' stop-color='%23003300'/><stop offset='65%25' stop-color='%23003300'/><stop offset='85%25' stop-color='%2300FF00'/><stop offset='100%25' stop-color='%2300FF00'/></linearGradient></defs><rect width='512' height='512' rx='100' fill='%23000000'/><circle cx='256' cy='256' r='180' stroke='%23333333' stroke-width='40' fill='none'/><circle cx='256' cy='256' r='180' stroke='url(%23neonGradient)' stroke-width='40' stroke-linecap='round' fill='none' stroke-dasharray='1131' stroke-dashoffset='565' transform='rotate(-90 256 256)'/><path d='M 180 256 L 236 312 L 348 200' stroke='%23FFFFFF' stroke-width='40' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23000000'/><circle cx='256' cy='256' r='180' stroke='%23333333' stroke-width='40' fill='none'/><path d='M 180 256 L 236 312 L 348 200' stroke='%2300FF00' stroke-width='40' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 </head>
 <body>
 
@@ -33,16 +32,16 @@
 </div>
 
 <!-- FŐ ALKALMAZÁS PANELS -->
-<div class="card" id="app-card" style="display: none;">
+<div class="card" id="app-card" style="display: none; margin-bottom: 80px;">
   
-  <!-- TAB 1: FŐOLDAL (HABITS) -->
+  <!-- TAB 1: FŐOLDAL -->
   <div id="tab-home" class="tab-content">
     <div class="header">
       <h1>Habit Tracker</h1>
       <div class="date" id="date-display">Dátum betöltése...</div>
     </div>
 
-    <div class="progress-box" id="progress-box">
+    <div class="progress-box">
       <div class="progress-info">
         <span class="progress-title">Napi haladás</span>
         <span class="progress-percentage" id="progress-text">0%</span>
@@ -60,7 +59,7 @@
     <div id="status" style="text-align: center; font-size: 12px; margin-top: 8px;"></div>
   </div>
 
-  <!-- TAB 2: STATISZTIKA (ANALYTICS) -->
+  <!-- TAB 2: STATISZTIKA -->
   <div id="tab-stats" class="tab-content" style="display: none;">
     <div class="header">
       <h1>Statisztika</h1>
@@ -72,7 +71,7 @@
       <button class="stats-tab-btn" id="btn-period-month" onclick="switchStatsPeriod('month')">🗓️ Utolsó 30 nap</button>
     </div>
 
-    <div class="stats-grid" style="margin-top: 12px;">
+    <div class="stats-grid" style="margin-top: 12px; margin-bottom: 15px;">
       <div class="stat-card">
         <div class="stat-value" id="stat-total-percent">0%</div>
         <div class="stat-label">Célok teljesülése</div>
@@ -83,12 +82,20 @@
       </div>
     </div>
 
-    <div style="margin-top: 20px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px;">
-      <canvas id="statsChart" width="400" height="250"></canvas>
+    <!-- Vízszintes progress sávos nézet (A megszokott szép elrendezés) -->
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 14px; border-radius: 12px; margin-bottom: 15px;">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text-main);">📊 Szokások aránya a célhoz képest:</div>
+      <div id="horizontal-stats-list"></div>
+    </div>
+
+    <!-- Apple Fitness jellegű teljesítmény trendgörbe -->
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 14px; border-radius: 12px;">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-main);">📈 Teljesítmény trend:</div>
+      <canvas id="statsChart" height="180"></canvas>
     </div>
   </div>
 
-  <!-- TAB 3: PROFIL (PROFILE) -->
+  <!-- TAB 3: PROFIL -->
   <div id="tab-profile" class="tab-content" style="display: none;">
     <div class="header">
       <h1>Profil</h1>
@@ -99,24 +106,26 @@
       <p style="font-size: 12px; color: var(--text-sub); margin-bottom: 4px;">Bejelentkezve mint:</p>
       <p id="user-email-display" style="font-weight: 600; font-size: 15px; color: var(--text-main); margin-bottom: 20px;"></p>
       
-      <button class="delete-single-btn" onclick="logout()" style="width: 100%; padding: 12px; font-weight: 600;">🚪 Kijelentkezés</button>
+      <button class="delete-single-btn" onclick="logout()" style="width: 100%; padding: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <i data-lucide="log-out"></i> Kijelentkezés
+      </button>
     </div>
   </div>
 
 </div>
 
-<!-- iOS STYLE BOTTOM TAB BAR NAVIGÁCIÓ -->
+<!-- iOS BOTTOM TAB BAR NAVIGÁCIÓ -->
 <div class="ios-tab-bar" id="ios-nav" style="display: none;">
   <button class="tab-item active" onclick="switchTab('home')" id="nav-home">
-    <span class="tab-icon">🏠</span>
+    <i data-lucide="house"></i>
     <span class="tab-label">Főoldal</span>
   </button>
   <button class="tab-item" onclick="switchTab('stats')" id="nav-stats">
-    <span class="tab-icon">📊</span>
+    <i data-lucide="chart-no-axes-column"></i>
     <span class="tab-label">Statisztika</span>
   </button>
   <button class="tab-item" onclick="switchTab('profile')" id="nav-profile">
-    <span class="tab-icon">👤</span>
+    <i data-lucide="user"></i>
     <span class="tab-label">Profil</span>
   </button>
 </div>
@@ -189,6 +198,7 @@ function showApp() {
     now.getFullYear();
 
   loadData();
+  lucide.createIcons();
 }
 
 function switchTab(tabName) {
@@ -279,7 +289,6 @@ async function loadData() {
     renderHabits();
   } catch (err) {
     console.error("Hiba az adatok betöltésekor:", err);
-    document.getElementById('content').innerHTML = '<p style="text-align:center;color:#ef4444;">Hiba az adatok betöltésekor!</p>';
   }
 }
 
@@ -305,10 +314,10 @@ function renderHabits() {
     const weeklyTarget = h.weekly_target || 7;
 
     html += `
-      <div class="swipe-container" id="swipe-container-${h.id}">
+      <div class="swipe-container">
         <div class="swipe-actions">
-          <button class="swipe-btn edit" onclick="openModal(${h.id})">✏️</button>
-          <button class="swipe-btn delete" onclick="archiveHabit(${h.id})">🗑️</button>
+          <button class="swipe-btn edit" onclick="openModal(${h.id})"><i data-lucide="pencil"></i></button>
+          <button class="swipe-btn delete" onclick="archiveHabit(${h.id})"><i data-lucide="trash-2"></i></button>
         </div>
         <div class="habit-item swipe-content" id="swipe-content-${h.id}">
           <div class="habit-info">
@@ -328,9 +337,9 @@ function renderHabits() {
   document.getElementById('content').innerHTML = html;
   updateProgress();
   initSwipeEvents();
+  lucide.createIcons();
 }
 
-/* iOS SWIPE TO DELETE / EDIT LOGIKA */
 function initSwipeEvents() {
   habitsList.forEach(h => {
     const card = document.getElementById(`swipe-content-${h.id}`);
@@ -346,15 +355,15 @@ function initSwipeEvents() {
     card.addEventListener('touchmove', (e) => {
       currentX = e.touches[0].clientX;
       const diffX = currentX - startX;
-      if (diffX < 0 && diffX > -120) {
+      if (diffX < 0 && diffX > -130) {
         card.style.transform = `translateX(${diffX}px)`;
       }
     });
 
-    card.addEventListener('touchend', (e) => {
+    card.addEventListener('touchend', () => {
       const diffX = currentX - startX;
       if (diffX < -50) {
-        card.style.transform = 'translateX(-110px)';
+        card.style.transform = 'translateX(-120px)';
       } else {
         card.style.transform = 'translateX(0px)';
       }
@@ -383,10 +392,6 @@ async function toggleHabit(habitId, isCompleted) {
   todayLogs[habitId] = isCompleted;
   updateProgress();
 
-  const statusDiv = document.getElementById('status');
-  statusDiv.style.color = 'var(--text-sub)';
-  statusDiv.innerText = 'Mentés...';
-
   const { error } = await sbClient
     .from('daily_logs')
     .upsert({
@@ -394,15 +399,6 @@ async function toggleHabit(habitId, isCompleted) {
       log_date: todayStr,
       completed: isCompleted
     }, { onConflict: 'habit_id,log_date' });
-
-  if (error) {
-    statusDiv.style.color = '#ef4444';
-    statusDiv.innerText = 'Hiba mentéskor!';
-  } else {
-    statusDiv.style.color = '#00FF00';
-    statusDiv.innerText = '✅ Mentve';
-    setTimeout(() => { statusDiv.innerText = ''; }, 1500);
-  }
 }
 
 function openModal(habitId = null) {
@@ -414,7 +410,6 @@ function openModal(habitId = null) {
     document.getElementById('new-habit-weekly').value = habit.weekly_target || 7;
     document.getElementById('modal-title-text').innerText = '✏️ Szokás szerkesztése';
 
-    // Kártya visszaállítása eredeti helyére szerkesztéskor
     const card = document.getElementById(`swipe-content-${habitId}`);
     if (card) card.style.transform = 'translateX(0px)';
   } else {
@@ -437,20 +432,12 @@ async function saveHabit() {
   const time = parseInt(document.getElementById('new-habit-time').value) || 0;
   const weekly = parseInt(document.getElementById('new-habit-weekly').value) || 7;
 
-  if (!title) {
-    alert("Kérlek add meg a szokás nevét!");
-    return;
-  }
+  if (!title) return;
 
   if (habitId) {
-    await sbClient
-      .from('habits')
-      .update({ title: title, target_minutes: time, weekly_target: weekly })
-      .eq('id', habitId);
+    await sbClient.from('habits').update({ title, target_minutes: time, weekly_target: weekly }).eq('id', habitId);
   } else {
-    await sbClient
-      .from('habits')
-      .insert([{ title: title, target_minutes: time, weekly_target: weekly, user_id: currentUser.id, is_active: true }]);
+    await sbClient.from('habits').insert([{ title, target_minutes: time, weekly_target: weekly, user_id: currentUser.id, is_active: true }]);
   }
 
   closeModal();
@@ -460,11 +447,7 @@ async function saveHabit() {
 async function archiveHabit(habitId) {
   if (!confirm("Biztosan törölni akarod ezt a szokást?")) return;
 
-  await sbClient
-    .from('habits')
-    .update({ is_active: false })
-    .eq('id', habitId);
-
+  await sbClient.from('habits').update({ is_active: false }).eq('id', habitId);
   loadData();
 }
 
@@ -491,11 +474,10 @@ async function loadAnalytics(period) {
 
     let totalTargetDays = 0;
     let totalCompletedDays = 0;
-    const labels = [];
-    const dataPercents = [];
-
     let weakest = null;
     let minPercent = 101;
+
+    let horizontalHtml = '';
 
     habitsList.forEach(h => {
       const hLogs = (logs || []).filter(l => l.habit_id === h.id && l.completed === true);
@@ -507,43 +489,79 @@ async function loadAnalytics(period) {
       totalTargetDays += targetForPeriod;
       totalCompletedDays += Math.min(completedCount, targetForPeriod);
 
-      labels.push(h.title);
-      dataPercents.push(percent);
-
       if (percent < minPercent) {
         minPercent = percent;
         weakest = h.title;
       }
+
+      horizontalHtml += `
+        <div class="stat-bar-row">
+          <div class="stat-bar-header">
+            <span style="color:var(--text-main); font-weight:500;">${h.title} <span style="color:var(--text-sub); font-size:11px;">(${completedCount}/${targetForPeriod} alkalom)</span></span>
+            <span style="color:var(--text-main); font-weight:600;">${percent}%</span>
+          </div>
+          <div class="stat-bar-bg">
+            <div class="stat-bar-fill" style="width: ${percent}%;"></div>
+          </div>
+        </div>
+      `;
     });
 
+    document.getElementById('horizontal-stats-list').innerHTML = horizontalHtml;
+
     const totalPercent = totalTargetDays > 0 ? Math.round((totalCompletedDays / totalTargetDays) * 100) : 0;
-    
     document.getElementById('stat-total-percent').innerText = totalPercent + '%';
     document.getElementById('stat-weakest-title').innerText = weakest || '-';
 
-    renderChart(labels, dataPercents);
+    // Napi bontású trend adatok előkészítése az Apple Fitness stílusú grafikongörbéhez
+    const dateLabels = [];
+    const dailyPercents = [];
+
+    for (let i = daysCount - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dStr = d.toISOString().split('T')[0];
+      const dayName = d.toLocaleDateString('hu-HU', { weekday: 'short' });
+
+      const dayLogs = (logs || []).filter(l => l.log_date === dStr && l.completed === true);
+      const dayPercent = habitsList.length > 0 ? Math.round((dayLogs.length / habitsList.length) * 100) : 0;
+
+      dateLabels.push(dayName);
+      dailyPercents.push(dayPercent);
+    }
+
+    renderTrendChart(dateLabels, dailyPercents);
 
   } catch (err) {
     console.error("Statisztikai hiba:", err);
   }
 }
 
-function renderChart(labels, dataPercents) {
+function renderTrendChart(labels, data) {
   const ctx = document.getElementById('statsChart').getContext('2d');
 
   if (chartInstance) {
     chartInstance.destroy();
   }
 
+  const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+  gradient.addColorStop(0, 'rgba(0, 255, 0, 0.35)');
+  gradient.addColorStop(1, 'rgba(0, 255, 0, 0.0)');
+
   chartInstance = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: labels,
       datasets: [{
-        label: 'Cél teljesülése (%)',
-        data: dataPercents,
-        backgroundColor: '#00FF00',
-        borderRadius: 6
+        label: 'Napi teljesítmény (%)',
+        data: data,
+        borderColor: '#00FF00',
+        borderWidth: 2,
+        tension: 0.4, // Lágy görbület
+        fill: true,
+        backgroundColor: gradient,
+        pointBackgroundColor: '#00FF00',
+        pointRadius: 3
       }]
     },
     options: {
@@ -552,11 +570,11 @@ function renderChart(labels, dataPercents) {
         y: {
           beginAtZero: true,
           max: 100,
-          ticks: { color: '#94a3b8' },
+          ticks: { color: '#64748b', font: { size: 10 } },
           grid: { color: 'rgba(255,255,255,0.05)' }
         },
         x: {
-          ticks: { color: '#94a3b8', font: { size: 10 } },
+          ticks: { color: '#64748b', font: { size: 10 } },
           grid: { display: false }
         }
       },
