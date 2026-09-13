@@ -583,25 +583,31 @@ input:checked + .slider:before {
   font-weight: 500;
 }
 
-/* iOS Swipe to Delete & Edit */
-.swipe-container {
-  position: relative;
-  overflow: hidden;
-  border-radius: 14px;
-  margin-bottom: 10px;
-  background-color: #1e293b; /* Háttérszín a kártya mögött */
-}
-
+/* Swipe konténer és háttér gombok */
 .swipe-actions {
   position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
-  width: 120px;
+  gap: 8px; /* Távolság a gombok között */
+  align-items: center;
   z-index: 1;
 }
 
+/* Alap gomb stílus lekerekítéssel */
+.swipe-btn {
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px; /* Lekerekített sarkok */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
 .swipe-btn {
   border: none;
   color: white;
@@ -611,7 +617,9 @@ input:checked + .slider:before {
   cursor: pointer;
   width: 60px;
 }
-
+.swipe-btn:active {
+  transform: scale(0.92);
+}
 .swipe-btn svg {
   width: 20px;
   height: 20px;
@@ -619,7 +627,7 @@ input:checked + .slider:before {
 }
 
 .swipe-btn.edit {
-  background-color: #0284c7; /* iOS kék */
+  background-color: #f59e0b; /* iOS sárga */
 }
 
 .swipe-btn.delete {
