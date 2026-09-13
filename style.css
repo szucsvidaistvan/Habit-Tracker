@@ -665,3 +665,11 @@ input:checked + .slider:before {
   margin-bottom: 80px;
 }
 
+.profile-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Felülre igazítás */
+  padding-top: 20px; /* Esztétikus távolság a tetejétől */
+  min-height: 100vh;
+}
+
