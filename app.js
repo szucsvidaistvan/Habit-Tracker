@@ -1,40 +1,40 @@
+// Alkalmazás Vezérlő (*Controller*)
 const App = {
   currentUser: null,
   habitsList: [],
+  inactiveHabitsList: [],
   editingHabitId: null,
   activeStatsTab: 'weekly',
 
   async init() {
-    console.log('[App.init] Alkalmazás inicializálása indítva...');
+    console.log('[App.init] Alkalmazás indítása...');
     const today = new Date().toLocaleDateString('hu-HU');
     const dateElem = document.getElementById('current-date');
     if (dateElem) dateElem.innerText = `Mai nap: ${today}`;
 
     if (typeof API === 'undefined') {
-      console.error('[App.init] CRITICAL ERROR: Az API objektum nem létezik! Ellenőrizd az api.js betöltését az index.html-ben.');
+      console.error('[App.init] CRITICAL ERROR: API nem található!');
       return;
     }
 
     try {
-      console.log('[App.init] Munkamenet (Session) lekérése...');
       const { data: { session }, error } = await API.getSession();
       if (error) console.error('[App.init] Session hiba:', error);
 
       if (session) {
-        console.log('[App.init] Bejelentkezett felhasználó megtalálva:', session.user.email);
+        console.log('[App.init] Bejelentkezett felhasználó:', session.user.email);
         this.currentUser = session.user;
         this.showApp();
       } else {
-        console.log('[App.init] Nincs aktív munkamenet, Login nézet megjelenítése.');
+        console.log('[App.init] Auth nézet megjelenítése.');
         this.showAuth();
       }
     } catch (err) {
-      console.error('[App.init] Váratlan hiba az init során:', err);
+      console.error('[App.init] Váratlan hiba:', err);
     }
   },
 
   showAuth() {
-    console.log('[App.showAuth] Auth nézetre váltás.');
     const auth = document.getElementById('auth-container');
     const app = document.getElementById('app-container');
     const tabBar = document.getElementById('bottom-tab-bar');
@@ -45,7 +45,6 @@ const App = {
   },
 
   async showApp() {
-    console.log('[App.showApp] Fő alkalmazás nézetre váltás.');
     const auth = document.getElementById('auth-container');
     const app = document.getElementById('app-container');
     const tabBar = document.getElementById('bottom-tab-bar');
@@ -63,66 +62,50 @@ const App = {
   },
 
   async handleLogin() {
-    console.log('[App.handleLogin] Bejelentkezési kísérlet...');
     const emailElem = document.getElementById('auth-email');
     const passElem = document.getElementById('auth-password');
     const errElem = document.getElementById('auth-error');
 
-    if (!emailElem || !passElem) {
-      console.error('[App.handleLogin] Hiányzó login input mezők!');
-      return;
-    }
+    if (!emailElem || !passElem) return;
 
     const { data, error } = await API.login(emailElem.value.trim(), passElem.value.trim());
     if (error) {
-      console.error('[App.handleLogin] Bejelentkezési hiba:', error);
-      if (errElem) errElem.innerText = 'Hibás login adat!';
+      if (errElem) errElem.innerText = 'Hibás login adatok!';
     } else {
-      console.log('[App.handleLogin] Sikeres bejelentkezés!');
       this.currentUser = data.user;
       this.showApp();
     }
   },
 
   async handleSignUp() {
-    console.log('[App.handleSignUp] Regisztrációs kísérlet...');
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value.trim();
     const { error } = await API.signUp(email, password);
 
     const errElem = document.getElementById('auth-error');
     if (error) {
-      console.error('[App.handleSignUp] Regisztrációs hiba:', error);
       if (errElem) errElem.innerText = error.message;
     } else {
-      console.log('[App.handleSignUp] Sikeres regisztráció.');
       if (errElem) errElem.innerText = 'Sikeres regisztráció!';
     }
   },
 
   async logout() {
-    console.log('[App.logout] Kijelentkezés...');
     await API.logout();
     this.currentUser = null;
     this.showAuth();
   },
 
   async loadHabits() {
-    if (!this.currentUser) {
-      console.warn('[App.loadHabits] Nincs bejelentkezett felhasználó, lekérés megszakítva.');
-      return;
-    }
+    if (!this.currentUser) return;
     const todayStr = UI.getLocalDateString();
-    console.log(`[App.loadHabits] Szokások és mai logok (${todayStr}) lekérése Supabase-ből...`);
+    console.log(`[App.loadHabits] Szokások betöltése (${todayStr})...`);
 
     const { data: habitsData, error: habitsError } = await API.fetchActiveHabits(this.currentUser.id);
-    if (habitsError) console.error('[App.loadHabits] Hiba a szokások lekérésekor:', habitsError);
+    if (habitsError) console.error('[App.loadHabits] Hiba:', habitsError);
 
     const { data: logsData, error: logsError } = await API.fetchLogsByDate(todayStr);
-    if (logsError) console.error('[App.loadHabits] Hiba a napi logok lekérésekor:', logsError);
-
-    console.log('[App.loadHabits] Nyers habitsData:', habitsData);
-    console.log('[App.loadHabits] Nyers logsData:', logsData);
+    if (logsError) console.error('[App.loadHabits] Hiba:', logsError);
 
     const logsMap = {};
     if (logsData) logsData.forEach(l => logsMap[l.habit_id] = l);
@@ -132,124 +115,156 @@ const App = {
       completed: logsMap[h.id] ? logsMap[h.id].completed : false
     }));
 
-    console.log('[App.loadHabits] Feldolgozott habitsList:', this.habitsList);
     UI.renderHabits(this.habitsList);
   },
 
-async handleToggleHabit(habitId) {
-    console.log(`[App.handleToggleHabit] Váltás indítása -> Habit ID: ${habitId}`);
+  async handleToggleHabit(habitId) {
+    console.log(`[App.handleToggleHabit] Állapotváltás ID: ${habitId}`);
     const todayStr = UI.getLocalDateString();
     
-    // Javítva: String()-re konvertálás a típuseltérés (number vs string) kiszűrésére
+    // Típusbiztos keresés String()-re konvertálással (Type Coercion Fix)
     const habit = this.habitsList.find(h => String(h.id) === String(habitId));
 
     if (!habit) {
-      console.error(`[App.handleToggleHabit] A szokás nem található a memóriában ID: ${habitId}`);
+      console.error(`[App.handleToggleHabit] Szokás nem található ID: ${habitId}`);
       return;
     }
 
-    // Optimista UI frissítés
     habit.completed = !habit.completed;
-    console.log(`[App.handleToggleHabit] Új memóriabeli állapot (optimista): ${habit.completed}`);
     UI.updateProgress(this.habitsList);
 
     if (habit.completed) {
-      console.log(`[App.handleToggleHabit] API hívás: addLog(habitId: ${habitId}, date: ${todayStr})`);
       const { error } = await API.addLog(habitId, todayStr);
       if (error) {
-        console.error('[App.handleToggleHabit] Hiba a log hozzáadásakor, visszagörgetés:', error);
+        console.error('[App.handleToggleHabit] Hiba a mentéskor:', error);
         habit.completed = false;
       }
     } else {
-      console.log(`[App.handleToggleHabit] API hívás: removeLog(habitId: ${habitId}, date: ${todayStr})`);
       const { error } = await API.removeLog(habitId, todayStr);
       if (error) {
-        console.error('[App.handleToggleHabit] Hiba a log törlésekor, visszagörgetés:', error);
+        console.error('[App.handleToggleHabit] Hiba a törléskor:', error);
         habit.completed = true;
       }
     }
     UI.updateProgress(this.habitsList);
   },
 
-  openAddModal() {
-    console.log('[App.openAddModal] Új szokás hozzáadása modal megnyitása.');
+  async openAddModal() {
+    console.log('[App.openAddModal] Új szokás ablak nyitása.');
     this.editingHabitId = null;
 
     const nameInput = document.getElementById('habit-name-input');
     const freqInput = document.getElementById('habit-freq-input');
+    const timeInput = document.getElementById('habit-time-input');
     const modalTitle = document.getElementById('modal-title');
     const modal = document.getElementById('habit-modal');
+    const inactiveWrapper = document.getElementById('inactive-habits-wrapper');
+    const inactiveSelect = document.getElementById('inactive-habits-select');
 
-    if (!modal) console.error('[App.openAddModal] ERROR: #habit-modal elem hiányzik az index.html-ből!');
-    if (!nameInput) console.error('[App.openAddModal] ERROR: #habit-name-input elem hiányzik!');
-
+    if (modalTitle) modalTitle.innerText = 'Új szokás hozzáadása';
     if (nameInput) nameInput.value = '';
     if (freqInput) freqInput.value = '7';
-    if (modalTitle) modalTitle.innerText = 'Új szokás hozzáadása';
+    if (timeInput) timeInput.value = '0';
+
+    // Inaktív szokások lekérése újraaktiváláshoz (*Reactivation*)
+    if (this.currentUser) {
+      const { data: inactive, error } = await API.fetchInactiveHabits(this.currentUser.id);
+      if (!error && inactive && inactive.length > 0) {
+        this.inactiveHabitsList = inactive;
+        if (inactiveSelect) {
+          inactiveSelect.innerHTML = '<option value="">-- Válassz a korábbiakból --</option>' +
+            inactive.map(h => `<option value="${h.id}">${h.title}</option>`).join('');
+        }
+        if (inactiveWrapper) inactiveWrapper.style.display = 'block';
+      } else {
+        if (inactiveWrapper) inactiveWrapper.style.display = 'none';
+      }
+    }
+
     if (modal) modal.style.display = 'flex';
   },
 
+  handleSelectInactiveHabit(habitId) {
+    console.log('[App.handleSelectInactiveHabit] Kiválasztott inaktív szokás ID:', habitId);
+    if (!habitId) {
+      this.editingHabitId = null;
+      document.getElementById('habit-name-input').value = '';
+      return;
+    }
+
+    const selected = this.inactiveHabitsList.find(h => String(h.id) === String(habitId));
+    if (selected) {
+      this.editingHabitId = selected.id;
+      document.getElementById('habit-name-input').value = selected.title;
+      document.getElementById('habit-freq-input').value = selected.weekly_target || 7;
+      document.getElementById('habit-time-input').value = selected.target_minutes || 0;
+    }
+  },
+
   openEditModal(habitId) {
-    console.log(`[App.openEditModal] Szerkesztés modal megnyitása -> Habit ID: ${habitId}`);
+    console.log(`[App.openEditModal] Szerkesztés modal nyitása -> Habit ID: ${habitId}`);
     
-    // Javítva: String()-re konvertálás
+    // Típusbiztos keresés String()-re konvertálással
     const habit = this.habitsList.find(h => String(h.id) === String(habitId));
 
     if (!habit) {
-      console.error(`[App.openEditModal] A szokás nem található az id alapján: ${habitId}`);
+      console.error(`[App.openEditModal] Szokás nem található ID: ${habitId}`);
       return;
     }
 
     this.editingHabitId = habitId;
 
+    const inactiveWrapper = document.getElementById('inactive-habits-wrapper');
+    if (inactiveWrapper) inactiveWrapper.style.display = 'none';
+
     const nameInput = document.getElementById('habit-name-input');
     const freqInput = document.getElementById('habit-freq-input');
+    const timeInput = document.getElementById('habit-time-input');
     const modalTitle = document.getElementById('modal-title');
     const modal = document.getElementById('habit-modal');
 
-    if (!modal) console.error('[App.openEditModal] ERROR: #habit-modal elem hiányzik az index.html-ből!');
-
+    if (modalTitle) modalTitle.innerText = 'Szokás szerkesztése';
     if (nameInput) nameInput.value = habit.title;
     if (freqInput) freqInput.value = habit.weekly_target || 7;
-    if (modalTitle) modalTitle.innerText = 'Szokás szerkesztése';
+    if (timeInput) timeInput.value = habit.target_minutes || 0;
     if (modal) modal.style.display = 'flex';
   },
 
   closeModal() {
-    console.log('[App.closeModal] Modal bezárása.');
     this.editingHabitId = null;
-
     const modal = document.getElementById('habit-modal');
     if (modal) modal.style.display = 'none';
   },
 
   async saveHabitModal() {
-    console.log('[App.saveHabitModal] Mentés gomb megnyomva. Editing ID:', this.editingHabitId);
+    console.log('[App.saveHabitModal] Mentés indítása. Target ID:', this.editingHabitId);
     const titleElem = document.getElementById('habit-name-input');
     const freqElem = document.getElementById('habit-freq-input');
+    const timeElem = document.getElementById('habit-time-input');
 
     const title = titleElem ? titleElem.value.trim() : '';
     const targetNum = freqElem ? (parseInt(freqElem.value.trim()) || 7) : 7;
+    const targetMins = timeElem ? (parseInt(timeElem.value.trim()) || 0) : 0;
 
     if (!title) {
-      console.warn('[App.saveHabitModal] Üres megnevezés, mentés megszakítva.');
       alert('Kérlek adj meg egy nevet a szokásnak!');
       return;
     }
 
-    if (!this.currentUser) {
-      console.error('[App.saveHabitModal] Nincs bejelentkezett felhasználó!');
-      return;
-    }
+    if (!this.currentUser) return;
 
     if (this.editingHabitId) {
-      console.log(`[App.saveHabitModal] API hívás: updateHabit(${this.editingHabitId}, ${title}, ${targetNum})`);
-      const { error } = await API.updateHabit(this.editingHabitId, title, targetNum);
-      if (error) console.error('[App.saveHabitModal] Frissítési hiba:', error);
+      const isInactive = this.inactiveHabitsList.some(h => String(h.id) === String(this.editingHabitId));
+      if (isInactive) {
+        console.log('[App.saveHabitModal] Inaktív szokás újraaktiválása...');
+        await API.reactivateHabit(this.editingHabitId, title, targetNum, targetMins);
+      } else {
+        console.log('[App.saveHabitModal] Aktív szokás frissítése...');
+        await API.updateHabit(this.editingHabitId, title, targetNum, targetMins);
+      }
     } else {
-      console.log(`[App.saveHabitModal] API hívás: createHabit(${this.currentUser.id}, ${title}, ${targetNum})`);
-      const { error } = await API.createHabit(this.currentUser.id, title, targetNum);
-      if (error) console.error('[App.saveHabitModal] Létrehozási hiba:', error);
+      console.log('[App.saveHabitModal] Új szokás létrehozása...');
+      await API.createHabit(this.currentUser.id, title, targetNum, targetMins);
     }
 
     this.closeModal();
@@ -257,26 +272,20 @@ async handleToggleHabit(habitId) {
   },
 
   async handleDeleteHabit(habitId) {
-    console.log(`[App.handleDeleteHabit] Törlés kezdeményezve -> ID: ${habitId}`);
-    if (!confirm('Biztosan törölni szeretnéd ezt a szokást?')) {
-      console.log('[App.handleDeleteHabit] Törlés megszakítva a felhasználó által.');
-      return;
-    }
+    console.log(`[App.handleDeleteHabit] Soft delete (inaktiválás) indítása -> ID: ${habitId}`);
+    if (!confirm('Biztosan inaktiválni szeretnéd ezt a szokást?')) return;
 
-    console.log(`[App.handleDeleteHabit] API hívás: softDeleteHabit(${habitId})`);
     const { error } = await API.softDeleteHabit(habitId);
     if (error) {
-      console.error('[App.handleDeleteHabit] Törlési hiba:', error);
+      console.error('[App.handleDeleteHabit] Hiba az inaktiválás során:', error);
     } else {
-      console.log('[App.handleDeleteHabit] Sikeres törlés, lista újratöltése.');
+      console.log('[App.handleDeleteHabit] Sikeres inaktiválás.');
       await this.loadHabits();
     }
   },
 
   switchTab(tab) {
-    console.log(`[App.switchTab] Tab váltás -> ${tab}`);
     document.querySelectorAll('.tab-item').forEach(btn => btn.classList.remove('active'));
-    
     const tabBtn = document.getElementById(`tab-${tab}`);
     if (tabBtn) tabBtn.classList.add('active');
 
@@ -292,9 +301,7 @@ async handleToggleHabit(habitId) {
   },
 
   switchStatsTab(type) {
-    console.log(`[App.switchStatsTab] Statisztika típus váltás -> ${type}`);
     this.activeStatsTab = type;
-    
     const wBtn = document.getElementById('btn-stats-weekly');
     const mBtn = document.getElementById('btn-stats-monthly');
 
@@ -306,8 +313,6 @@ async handleToggleHabit(habitId) {
 
   async loadStatistics(type) {
     if (!this.currentUser) return;
-    console.log(`[App.loadStatistics] Statisztikák betöltése (${type})...`);
-
     const daysCount = type === 'weekly' ? 7 : 30;
     const datesList = [];
     const dateMap = {};
@@ -316,16 +321,15 @@ async handleToggleHabit(habitId) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dateStr = UI.getLocalDateString(d);
-      const dayLabel = type === 'weekly' 
-        ? d.toLocaleDateString('hu-HU', { weekday: 'short' }) 
+      const dayLabel = type === 'weekly'
+        ? d.toLocaleDateString('hu-HU', { weekday: 'short' })
         : `${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getDate().toString().padStart(2,'0')}.`;
-      
+
       datesList.push({ dateStr, dayLabel });
       dateMap[dateStr] = 0;
     }
 
     const startDateStr = datesList[0].dateStr;
-    const { data: allHabits } = await API.fetchAllHabitsForStats(this.currentUser.id);
     const { data: logs } = await API.fetchLogsRange(startDateStr);
 
     if (logs) {
