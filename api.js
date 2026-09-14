@@ -38,13 +38,17 @@ const API = {
     return await db.from('daily_logs').select('*').eq('log_date', todayStr);
   },
 
-  async addLog(habitId, logDate) {
-    return await db.from('daily_logs').insert([{ habit_id: habitId, log_date: logDate, completed: true }]);
-  },
+async addLog(habitId, logDate) {
+  const res = await db.from('daily_logs').insert([{ habit_id: habitId, log_date: logDate, completed: true }]);
+  console.log('[API Debug] addLog válasz:', res);
+  return res;
+},
 
-  async removeLog(habitId, logDate) {
-    return await db.from('daily_logs').delete().eq('habit_id', habitId).eq('log_date', logDate);
-  },
+async removeLog(habitId, logDate) {
+  const res = await db.from('daily_logs').delete().eq('habit_id', habitId).eq('log_date', logDate);
+  console.log('[API Debug] removeLog válasz:', res);
+  return res;
+}
 
   async createHabit(userId, title, weeklyTarget) {
     return await db.from('habits').insert([{
