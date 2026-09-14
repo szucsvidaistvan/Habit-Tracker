@@ -4,6 +4,7 @@ const App = {
   habitsList: [],
   inactiveHabitsList: [],
   editingHabitId: null,
+  pendingDeleteId: null,
   activeStatsTab: 'weekly',
 
   async init() {
@@ -271,17 +272,34 @@ const App = {
     await this.loadHabits();
   },
 
-  async handleDeleteHabit(habitId) {
-    console.log(`[App.handleDeleteHabit] Soft delete (inaktiválás) indítása -> ID: ${habitId}`);
-    if (!confirm('Biztosan inaktiválni szeretnéd ezt a szokást?')) return;
+  handleDeleteHabit(habitId) {
+    console.log(`[App.handleDeleteHabit] Törlés modal nyitása -> ID: ${habitId}`);
+    this.pendingDeleteId = habitId;
+    const modal = document.getElementById('delete-modal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  closeDeleteModal() {
+    this.pendingDeleteId = null;
+    const modal = document.getElementById('delete-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  async confirmDeleteHabit() {
+    const habitId = this.pendingDeleteId;
+    if (!habitId) return;
+    console.log(`[App.confirmDeleteHabit] Soft delete (inaktiválás) indítása -> ID: ${habitId}`);
 
     const { error } = await API.softDeleteHabit(habitId);
     if (error) {
-      console.error('[App.handleDeleteHabit] Hiba az inaktiválás során:', error);
+      console.error('[App.confirmDeleteHabit] Hiba az inaktiválás során:', error);
     } else {
-      console.log('[App.handleDeleteHabit] Sikeres inaktiválás.');
+      console.log('[App.confirmDeleteHabit] Sikeres inaktiválás.');
+      this.closeDeleteModal();
       await this.loadHabits();
+      return;
     }
+    this.closeDeleteModal();
   },
 
   switchTab(tab) {
