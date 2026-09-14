@@ -1,7 +1,7 @@
 // Supabase kliens és API réteg (API Layer)
-const SUPABASE_URL = 'https://YOUR_SUPABASE_PROJECT_URL.supabase.co'; // Cseréld ki a sajátodra
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Cseréld ki a sajátodra
-//test
+const SUPABASE_URL = 'https://hcnfoywtoegokphjmzpn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Uzsb3AnDYM5bAwKWI5gwwQ_Hb3fwtNH';
+
 const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const API = {
