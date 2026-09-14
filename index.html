@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Habit Tracker</title>
-  <link rel="stylesheet" href="style.css?v=1.5">
+  <link rel="stylesheet" href="style.css?v=1.7">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -39,7 +39,6 @@
     <div id="app-container" style="display: none;">
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-          <!-- Javított Checkbox / Habit SVG ikon dollárjel helyett -->
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="4"></rect>
             <path d="M9 12l2 2 4-4"></path>
@@ -96,10 +95,20 @@
           <div id="habits-breakdown-list"></div>
         </div>
 
+        <!-- Vertikális Oszlopdiagram -->
+        <div style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
+          <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            📊 Napi elvégzett szokások (db):
+          </div>
+          <div style="height: 180px; position: relative;">
+            <canvas id="barChart"></canvas>
+          </div>
+        </div>
+
         <!-- Teljesítmény trend vonaldiagram -->
         <div style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
           <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
-            📈 Teljesítmény trend:
+            📈 Teljesítmény trend (%):
           </div>
           <div style="height: 180px; position: relative;">
             <canvas id="statsChart"></canvas>
@@ -167,12 +176,16 @@
     let currentUser = null;
     let habitsList = [];
     let editingHabitId = null;
-    let chartInstance = null;
+    let lineChartInstance = null;
+    let barChartInstance = null;
     let activeStatsTab = 'weekly';
 
-    function getTodayString() {
-      const d = new Date();
-      return d.toISOString().split('T')[0];
+    // Helyi dátum lekérése YYYY-MM-DD formátumban (időzóna elcsúszás ellen)
+    function getLocalDateString(dateObj = new Date()) {
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -244,7 +257,7 @@
     async function fetchHabits() {
       if (!currentUser) return;
 
-      const todayStr = getTodayString();
+      const todayStr = getLocalDateString();
 
       const { data: habitsData, error: habitsErr } = await db
         .from('habits')
@@ -320,7 +333,7 @@
             </div>
             <div id="switch-wrapper-${h.id}">
               <label class="switch">
-                <input type="checkbox" ${h.completed ? 'checked' : ''} onchange="toggleHabit('${h.id}')">
+                <input type="checkbox" ${h.completed ? 'checked' : ''} onchange="toggleHabit('${h.id}', this.checked)">
                 <span class="slider"></span>
               </label>
             </div>
@@ -393,61 +406,58 @@
       });
     }
 
-    // Javított toggle: helyesen váltja a ki/be állapotot
-    async function toggleHabit(habitId) {
-  const todayStr = getTodayString();
-  const item = habitsList.find(h => h.id === habitId);
-  if (!item) return;
+    // Javított toggleHabit: biztosan beküldi a Supabase-nek a true/false értéket
+    async function toggleHabit(habitId, isChecked) {
+      const todayStr = getLocalDateString();
+      const item = habitsList.find(h => h.id === habitId);
+      if (!item) return;
 
-  // 1. Azonnali vizuális frissítés a kijelzőn
-  const newStatus = !item.completed;
-  item.completed = newStatus;
-  updateProgress();
-
-  // 2. Megnézzük, van-e már rekord mára ehhez a szokáshoz
-  const { data: existingLogs, error: fetchErr } = await db
-    .from('daily_logs')
-    .select('id')
-    .eq('habit_id', habitId)
-    .eq('log_date', todayStr);
-
-  if (fetchErr) {
-    console.error('Lekérdezési hiba:', fetchErr);
-    return;
-  }
-
-  if (existingLogs && existingLogs.length > 0) {
-    // 3A. Ha MÁR LÉTEZIK rekord mára -> UPDATE (átállítjuk true/false-ra)
-    const { error: updateErr } = await db
-      .from('daily_logs')
-      .update({ completed: newStatus })
-      .eq('id', existingLogs[0].id);
-
-    if (updateErr) {
-      console.error('Update hiba:', updateErr);
-      item.completed = !newStatus; // Hiba esetén visszacsináljuk
+      item.completed = isChecked;
       updateProgress();
-    }
-  } else {
-    // 3B. Ha MÉG NINCS rekord mára -> INSERT
-    const { data: insertedData, error: insertErr } = await db
-      .from('daily_logs')
-      .insert([{
-        habit_id: habitId,
-        log_date: todayStr,
-        completed: newStatus
-      }])
-      .select();
 
-    if (insertErr) {
-      console.error('Insert hiba:', insertErr);
-      item.completed = !newStatus; // Hiba esetén visszacsináljuk
-      updateProgress();
-    } else if (insertedData && insertedData.length > 0) {
-      item.log_id = insertedData[0].id;
+      const { data: existingLogs, error: fetchErr } = await db
+        .from('daily_logs')
+        .select('id')
+        .eq('habit_id', habitId)
+        .eq('log_date', todayStr);
+
+      if (fetchErr) {
+        console.error('Lekérdezési hiba:', fetchErr);
+        return;
+      }
+
+      if (existingLogs && existingLogs.length > 0) {
+        const { error: updateErr } = await db
+          .from('daily_logs')
+          .update({ completed: isChecked })
+          .eq('id', existingLogs[0].id);
+
+        if (updateErr) {
+          console.error('Update hiba:', updateErr);
+          item.completed = !isChecked;
+          updateProgress();
+          renderHabits();
+        }
+      } else {
+        const { data: insertedData, error: insertErr } = await db
+          .from('daily_logs')
+          .insert([{
+            habit_id: habitId,
+            log_date: todayStr,
+            completed: isChecked
+          }])
+          .select();
+
+        if (insertErr) {
+          console.error('Insert hiba:', insertErr);
+          item.completed = !isChecked;
+          updateProgress();
+          renderHabits();
+        } else if (insertedData && insertedData.length > 0) {
+          item.log_id = insertedData[0].id;
+        }
+      }
     }
-  }
-}
 
     async function saveHabitModal() {
       const title = document.getElementById('habit-name-input').value.trim();
@@ -534,8 +544,10 @@
       for (let i = daysCount - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        const dayLabel = d.toLocaleDateString('hu-HU', { weekday: 'short' });
+        const dateStr = getLocalDateString(d);
+        const dayLabel = type === 'weekly' 
+          ? d.toLocaleDateString('hu-HU', { weekday: 'short' }) 
+          : `${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getDate().toString().padStart(2,'0')}.`;
         
         datesList.push({ dateStr, dayLabel });
         dateMap[dateStr] = 0;
@@ -570,7 +582,6 @@
         });
       }
 
-      // 1. Összesített arány & Fejlesztendő terület
       let totalCompleted = 0;
       let totalTargetPossible = 0;
       let worstHabitName = '-';
@@ -607,23 +618,65 @@
       document.getElementById('stat-rate').innerText = `${overallRate}%`;
       document.getElementById('stat-worst-habit').innerText = worstHabitName;
 
-      // 2. Trend vonaldiagram kirajzolása (0-100% skála naponta)
       const labels = datesList.map(d => d.dayLabel);
+      const dailyCounts = datesList.map(d => dateMap[d.dateStr]);
       const totalHabitsCount = habitsList.length || 1;
       const trendData = datesList.map(d => Math.round((dateMap[d.dateStr] / totalHabitsCount) * 100));
 
+      renderBarChart(labels, dailyCounts);
       renderLineChart(labels, trendData);
+    }
+
+    function renderBarChart(labels, data) {
+      const ctx = document.getElementById('barChart');
+      if (!ctx) return;
+
+      if (barChartInstance) {
+        barChartInstance.destroy();
+      }
+
+      barChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: '#00e676',
+            borderRadius: 6,
+            barThickness: 'flex',
+            maxBarThickness: 30
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#8e8e93', font: { size: 10 } }
+            },
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#8e8e93', font: { size: 10 }, stepSize: 1 },
+              beginAtZero: true
+            }
+          }
+        }
+      });
     }
 
     function renderLineChart(labels, data) {
       const ctx = document.getElementById('statsChart');
       if (!ctx) return;
 
-      if (chartInstance) {
-        chartInstance.destroy();
+      if (lineChartInstance) {
+        lineChartInstance.destroy();
       }
 
-      chartInstance = new Chart(ctx, {
+      lineChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
           labels: labels,
