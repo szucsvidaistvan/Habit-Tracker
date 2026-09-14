@@ -4,33 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Habit Tracker</title>
-  <link rel="stylesheet" href="style.css?v=2.1">
+  <link rel="stylesheet" href="style.css?v=2.2">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
   <div class="card">
-    
     <!-- Auth Nézet -->
     <div id="auth-container">
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <path d="M9 12l2 2 4-4"></path>
-          </svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 12l2 2 4-4"></path></svg>
           <h1>Habit Tracker</h1>
         </div>
-        <div class="date" id="auth-title">Üdv újra! Jelentkezz be:</div>
+        <div class="date">Üdv újra! Jelentkezz be:</div>
       </div>
       <div class="modal-inputs" style="margin-top: 20px;">
         <input type="email" id="auth-email" placeholder="E-mail cím">
         <input type="password" id="auth-password" placeholder="Jelszó">
       </div>
       <div style="display: flex; gap: 10px; margin-top: 15px;">
-        <button class="modal-submit-btn" onclick="handleLogin()">Bejelentkezés</button>
-        <button class="modal-submit-btn" style="background: var(--text-sub, #666);" onclick="handleSignUp()">Regisztráció</button>
+        <button class="modal-submit-btn" onclick="App.handleLogin()">Bejelentkezés</button>
+        <button class="modal-submit-btn" style="background: var(--text-sub, #666);" onclick="App.handleSignUp()">Regisztráció</button>
       </div>
       <div id="auth-error" style="color: #ff4d4d; font-size: 13px; margin-top: 10px; text-align: center;"></div>
     </div>
@@ -39,10 +35,7 @@
     <div id="app-container" style="display: none;">
       <div class="header">
         <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="4"></rect>
-            <path d="M9 12l2 2 4-4"></path>
-          </svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="4"></rect><path d="M9 12l2 2 4-4"></path></svg>
           <h1>Habit Tracker</h1>
         </div>
         <div class="date" id="current-date">Mai nap: --.--.----</div>
@@ -59,60 +52,23 @@
             <div class="progress-bar-fill" id="progress-fill"></div>
           </div>
         </div>
-
         <div class="habit-list" id="habits-container">
           <div class="loader">Betöltés...</div>
         </div>
-
-        <button class="open-modal-btn" onclick="openAddModal()">
-          <span>+</span> Új szokás hozzáadása
-        </button>
+        <button class="open-modal-btn" onclick="App.openAddModal()"><span>+</span> Új szokás hozzáadása</button>
       </div>
 
       <!-- Statisztika Nézet -->
       <div id="view-stats" style="display: none;">
         <div class="stats-switcher">
-          <button class="stats-tab-btn active" id="btn-stats-weekly" onclick="switchStatsTab('weekly')">Utolsó 7 nap</button>
-          <button class="stats-tab-btn" id="btn-stats-monthly" onclick="switchStatsTab('monthly')">Utolsó 30 nap</button>
+          <button class="stats-tab-btn active" id="btn-stats-weekly" onclick="App.switchStatsTab('weekly')">Utolsó 7 nap</button>
+          <button class="stats-tab-btn" id="btn-stats-monthly" onclick="App.switchStatsTab('monthly')">Utolsó 30 nap</button>
         </div>
-
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-value" id="stat-rate">0%</div>
-            <div class="stat-label">Célok teljesülése</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="stat-worst-habit" style="font-size: 14px; color: #ff5252;">-</div>
-            <div class="stat-label">Fejlesztendő terület</div>
-          </div>
-        </div>
-
-        <!-- 1. Szokások aránya progress bar-os lista -->
         <div style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
-          <div style="font-size: 14px; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-            📊 Szokások aránya a célhoz képest:
-          </div>
-          <div id="habits-breakdown-list"></div>
+          <div style="height: 180px; position: relative;"><canvas id="barChart"></canvas></div>
         </div>
-
-        <!-- 2. Vertikális Oszlopdiagram -->
         <div style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
-          <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
-            📊 Napi elvégzett szokások (db):
-          </div>
-          <div style="height: 180px; position: relative;">
-            <canvas id="barChart"></canvas>
-          </div>
-        </div>
-
-        <!-- 3. Teljesítmény trend vonaldiagram -->
-        <div style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
-          <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
-            📈 Teljesítmény trend (%):
-          </div>
-          <div style="height: 180px; position: relative;">
-            <canvas id="statsChart"></canvas>
-          </div>
+          <div style="height: 180px; position: relative;"><canvas id="statsChart"></canvas></div>
         </div>
       </div>
 
@@ -120,11 +76,9 @@
       <div id="view-profile" style="display: none;" class="profile-container">
         <h3>Profil beállítások</h3>
         <p id="user-email-display" style="color: var(--text-sub); font-size: 13px; margin-bottom: 20px;"></p>
-        <button class="modal-submit-btn" style="background: #ff4d4d;" onclick="logout()">Kijelentkezés</button>
+        <button class="modal-submit-btn" style="background: #ff4d4d;" onclick="App.logout()">Kijelentkezés</button>
       </div>
     </div>
-
-    <div id="status"></div>
   </div>
 
   <!-- Modal -->
@@ -132,613 +86,35 @@
     <div class="modal-content">
       <div class="modal-header">
         <span class="modal-title" id="modal-title-text">Új szokás</span>
-        <button class="close-modal-btn" onclick="closeModal()">✕</button>
+        <button class="close-modal-btn" onclick="App.closeModal()">✕</button>
       </div>
       <div class="modal-inputs">
-        <input type="text" id="habit-name-input" placeholder="Szokás neve (pl. Edzés)">
-        <input type="number" id="habit-freq-input" placeholder="Heti cél (pl. 4)">
+        <input type="text" id="habit-name-input" placeholder="Szokás neve">
+        <input type="number" id="habit-freq-input" placeholder="Heti cél (pl. 7)">
       </div>
-      <button class="modal-submit-btn" onclick="saveHabitModal()">Mentés</button>
+      <button class="modal-submit-btn" onclick="App.saveHabitModal()">Mentés</button>
     </div>
   </div>
 
   <!-- Bottom Tab Bar -->
   <div class="ios-tab-bar" id="bottom-tab-bar" style="display: none;">
-    <button class="tab-item active" onclick="switchTab('home')" id="tab-home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-      </svg>
+    <button class="tab-item active" onclick="App.switchTab('home')" id="tab-home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
       <span class="tab-label">Főoldal</span>
     </button>
-    <button class="tab-item" onclick="switchTab('stats')" id="tab-stats">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="18" y1="20" x2="18" y2="10"></line>
-        <line x1="12" y1="20" x2="12" y2="4"></line>
-        <line x1="6" y1="20" x2="6" y2="14"></line>
-      </svg>
+    <button class="tab-item" onclick="App.switchTab('stats')" id="tab-stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
       <span class="tab-label">Statisztika</span>
     </button>
-    <button class="tab-item" onclick="switchTab('profile')" id="tab-profile">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
-      </svg>
+    <button class="tab-item" onclick="App.switchTab('profile')" id="tab-profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
       <span class="tab-label">Profil</span>
     </button>
   </div>
 
-  <script>
-    const SUPABASE_URL = 'https://hcnfoywtoegokphjmzpn.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_Uzsb3AnDYM5bAwKWI5gwwQ_Hb3fwtNH';
-    
-    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    let currentUser = null;
-    let habitsList = [];
-    let editingHabitId = null;
-    let lineChartInstance = null;
-    let barChartInstance = null;
-    let activeStatsTab = 'weekly';
-
-    function getLocalDateString(dateObj = new Date()) {
-      const year = dateObj.getFullYear();
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const day = String(dateObj.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      const today = new Date().toLocaleDateString('hu-HU');
-      document.getElementById('current-date').innerText = `Mai nap: ${today}`;
-
-      const { data: { session } } = await db.auth.getSession();
-      if (session) {
-        currentUser = session.user;
-        showApp();
-      } else {
-        showAuth();
-      }
-    });
-
-    function showAuth() {
-      document.getElementById('auth-container').style.display = 'block';
-      document.getElementById('app-container').style.display = 'none';
-      document.getElementById('bottom-tab-bar').style.display = 'none';
-    }
-
-    async function showApp() {
-      document.getElementById('auth-container').style.display = 'none';
-      document.getElementById('app-container').style.display = 'block';
-      document.getElementById('bottom-tab-bar').style.display = 'flex';
-      document.getElementById('user-email-display').innerText = `Bejelentkezve: ${currentUser.email}`;
-      await fetchHabits();
-    }
-
-    async function handleLogin() {
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value.trim();
-      const errorDiv = document.getElementById('auth-error');
-      errorDiv.innerText = '';
-
-      if (!email || !password) {
-        errorDiv.innerText = 'Kérlek töltsd ki mindkét mezőt!';
-        return;
-      }
-
-      const { data, error } = await db.auth.signInWithPassword({ email, password });
-      if (error) {
-        errorDiv.innerText = 'Hibás e-mail vagy jelszó!';
-      } else {
-        currentUser = data.user;
-        showApp();
-      }
-    }
-
-    async function handleSignUp() {
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value.trim();
-      const errorDiv = document.getElementById('auth-error');
-      errorDiv.innerText = '';
-
-      if (!email || !password) {
-        errorDiv.innerText = 'Kérlek töltsd ki mindkét mezőt!';
-        return;
-      }
-
-      const { data, error } = await db.auth.signUp({ email, password });
-      if (error) {
-        errorDiv.innerText = error.message;
-      } else {
-        errorDiv.innerText = 'Sikeres regisztráció! Jelentkezz be.';
-      }
-    }
-
-    async function fetchHabits() {
-      if (!currentUser) return;
-
-      const todayStr = getLocalDateString();
-
-      const { data: habitsData, error: habitsErr } = await db
-        .from('habits')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: true });
-
-      if (habitsErr) {
-        console.error('Hiba a szokások lekérésénél:', habitsErr);
-        document.getElementById('habits-container').innerHTML = '<div class="loader">Hiba történt a betöltéskor.</div>';
-        return;
-      }
-
-      const { data: logsData, error: logsErr } = await db
-        .from('daily_logs')
-        .select('*')
-        .eq('log_date', todayStr);
-
-      if (logsErr) {
-        console.error('Hiba a logok lekérésénél:', logsErr);
-      }
-
-      const logsMap = {};
-      if (logsData) {
-        logsData.forEach(l => {
-          logsMap[l.habit_id] = l;
-        });
-      }
-
-      habitsList = (habitsData || []).map(h => {
-        const log = logsMap[h.id];
-        return {
-          ...h,
-          completed: log ? log.completed : false
-        };
-      });
-
-      renderHabits();
-    }
-
-    function renderHabits() {
-      const container = document.getElementById('habits-container');
-      if (!container) return;
-
-      if (habitsList.length === 0) {
-        container.innerHTML = '<div class="loader">Még nincsenek felvett szokások.</div>';
-        updateProgress();
-        return;
-      }
-
-      container.innerHTML = habitsList.map(h => `
-        <div class="habit-card-wrapper">
-          <div class="swipe-actions">
-            <button class="swipe-btn edit" onclick="openEditModal('${h.id}')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-            </button>
-            <button class="swipe-btn delete" onclick="deleteHabit('${h.id}')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
-          </div>
-
-          <div class="habit-item" id="swipe-content-${h.id}">
-            <div class="habit-info">
-              <span class="habit-name">${h.title}</span>
-              <span class="habit-time">${h.weekly_target ? 'Cél: Heti ' + h.weekly_target + 'x' : ''}</span>
-            </div>
-            <div id="switch-wrapper-${h.id}">
-              <label class="switch">
-                <input type="checkbox" ${h.completed ? 'checked' : ''} onchange="toggleHabit('${h.id}')">
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-      `).join('');
-
-      updateProgress();
-      initSwipeEvents();
-    }
-
-    function initSwipeEvents() {
-      habitsList.forEach(h => {
-        const card = document.getElementById(`swipe-content-${h.id}`);
-        const switchElem = document.getElementById(`switch-wrapper-${h.id}`);
-        if (!card) return;
-
-        if (switchElem) {
-          ['touchstart', 'touchmove', 'touchend'].forEach(evtType => {
-            switchElem.addEventListener(evtType, (e) => e.stopPropagation(), { passive: true });
-          });
-        }
-
-        let startX = 0;
-        let currentX = 0;
-        let isOpen = false;
-
-        card.addEventListener('touchstart', (e) => {
-          startX = e.touches[0].clientX;
-          currentX = startX;
-          card.style.transition = 'none';
-        }, { passive: true });
-
-        card.addEventListener('touchmove', (e) => {
-          currentX = e.touches[0].clientX;
-          let diffX = currentX - startX;
-
-          if (isOpen) {
-            let newX = -110 + diffX;
-            if (newX > 0) newX = 0;
-            if (newX < -110) newX = -110;
-            card.style.transform = `translateX(${newX}px)`;
-          } else {
-            if (diffX < 0 && diffX > -130) {
-              card.style.transform = `translateX(${diffX}px)`;
-            }
-          }
-        }, { passive: true });
-
-        card.addEventListener('touchend', () => {
-          card.style.transition = 'transform 0.2s ease-out';
-          const diffX = currentX - startX;
-
-          if (!isOpen) {
-            if (diffX < -50) {
-              card.style.transform = 'translateX(-110px)';
-              isOpen = true;
-            } else {
-              card.style.transform = 'translateX(0px)';
-            }
-          } else {
-            if (diffX > 30) {
-              card.style.transform = 'translateX(0px)';
-              isOpen = false;
-            } else {
-              card.style.transform = 'translateX(-110px)';
-            }
-          }
-        });
-      });
-    }
-
-    // Biztos, stabil toggle gomb logika
-    async function toggleHabit(habitId) {
-      const todayStr = getLocalDateString();
-      const item = habitsList.find(h => h.id === habitId);
-      if (!item) return;
-
-      item.completed = !item.completed;
-      updateProgress();
-
-      if (item.completed) {
-        const { data: existing } = await db
-          .from('daily_logs')
-          .select('id')
-          .eq('habit_id', habitId)
-          .eq('log_date', todayStr)
-          .maybeSingle();
-
-        if (!existing) {
-          const { error } = await db
-            .from('daily_logs')
-            .insert([{
-              habit_id: habitId,
-              log_date: todayStr,
-              completed: true
-            }]);
-
-          if (error) {
-            console.error('Hiba az beszúrásnál:', error);
-            item.completed = false;
-            updateProgress();
-          }
-        }
-      } else {
-        const { error } = await db
-          .from('daily_logs')
-          .delete()
-          .eq('habit_id', habitId)
-          .eq('log_date', todayStr);
-
-        if (error) {
-          console.error('Hiba a törlésnél:', error);
-          item.completed = true;
-          updateProgress();
-        }
-      }
-    }
-
-    async function saveHabitModal() {
-      const title = document.getElementById('habit-name-input').value.trim();
-      const targetStr = document.getElementById('habit-freq-input').value.trim();
-      const targetNum = parseInt(targetStr) || 7;
-
-      if (!title || !currentUser) return;
-
-      if (editingHabitId) {
-        const { error } = await db
-          .from('habits')
-          .update({ title: title, weekly_target: targetNum })
-          .eq('id', editingHabitId);
-
-        if (error) console.error('Szerkesztési hiba:', error);
-      } else {
-        const { error } = await db
-          .from('habits')
-          .insert([{
-            user_id: currentUser.id,
-            title: title,
-            weekly_target: targetNum,
-            is_active: true
-          }]);
-
-        if (error) console.error('Hozzáadási hiba:', error);
-      }
-
-      closeModal();
-      await fetchHabits();
-    }
-
-    // Törlés megerősítő párbeszédablakkal
-    async function deleteHabit(id) {
-      const h = habitsList.find(item => item.id === id);
-      const habitName = h ? h.title : 'ezt a szokást';
-      
-      const confirmed = confirm(`Biztosan törölni szeretnéd a(z) "${habitName}" szokást?`);
-      if (!confirmed) return;
-
-      await db.from('daily_logs').delete().eq('habit_id', id);
-
-      const { error } = await db
-        .from('habits')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Törlési hiba:', error);
-      } else {
-        await fetchHabits();
-      }
-    }
-
-    function updateProgress() {
-      const completed = habitsList.filter(h => h.completed).length;
-      const total = habitsList.length;
-      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-      
-      document.getElementById('progress-text').innerText = `${percent}%`;
-      document.getElementById('progress-fill').style.width = `${percent}%`;
-    }
-
-    function switchTab(tab) {
-      document.querySelectorAll('.tab-item').forEach(btn => btn.classList.remove('active'));
-      document.getElementById(`tab-${tab}`).classList.add('active');
-
-      document.getElementById('view-home').style.display = tab === 'home' ? 'block' : 'none';
-      document.getElementById('view-stats').style.display = tab === 'stats' ? 'block' : 'none';
-      document.getElementById('view-profile').style.display = tab === 'profile' ? 'block' : 'none';
-
-      if (tab === 'stats') {
-        loadStatistics(activeStatsTab);
-      }
-    }
-
-    function switchStatsTab(type) {
-      activeStatsTab = type;
-      document.getElementById('btn-stats-weekly').classList.toggle('active', type === 'weekly');
-      document.getElementById('btn-stats-monthly').classList.toggle('active', type === 'monthly');
-      loadStatistics(type);
-    }
-
-    async function loadStatistics(type) {
-      if (!currentUser) return;
-
-      const daysCount = type === 'weekly' ? 7 : 30;
-      const datesList = [];
-      const dateMap = {};
-
-      for (let i = daysCount - 1; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = getLocalDateString(d);
-        const dayLabel = type === 'weekly' 
-          ? d.toLocaleDateString('hu-HU', { weekday: 'short' }) 
-          : `${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getDate().toString().padStart(2,'0')}.`;
-        
-        datesList.push({ dateStr, dayLabel });
-        dateMap[dateStr] = 0;
-      }
-
-      const startDateStr = datesList[0].dateStr;
-
-      const { data: logs, error } = await db
-        .from('daily_logs')
-        .select('*')
-        .gte('log_date', startDateStr)
-        .eq('completed', true);
-
-      if (error) {
-        console.error('Statisztika lekérdezési hiba:', error);
-        return;
-      }
-
-      const habitStats = {};
-      habitsList.forEach(h => {
-        habitStats[h.id] = { title: h.title, target: h.weekly_target || 7, completedCount: 0 };
-      });
-
-      if (logs) {
-        logs.forEach(log => {
-          if (dateMap[log.log_date] !== undefined) {
-            dateMap[log.log_date]++;
-          }
-          if (habitStats[log.habit_id]) {
-            habitStats[log.habit_id].completedCount++;
-          }
-        });
-      }
-
-      let totalCompleted = 0;
-      let totalTargetPossible = 0;
-      let worstHabitName = '-';
-      let lowestRate = 101;
-
-      const breakdownHtml = Object.values(habitStats).map(h => {
-        const maxForPeriod = type === 'weekly' ? h.target : Math.round((h.target / 7) * 30);
-        const rate = maxForPeriod > 0 ? Math.min(100, Math.round((h.completedCount / maxForPeriod) * 100)) : 0;
-        
-        totalCompleted += h.completedCount;
-        totalTargetPossible += maxForPeriod;
-
-        if (rate < lowestRate) {
-          lowestRate = rate;
-          worstHabitName = h.title;
-        }
-
-        return `
-          <div style="margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
-              <span><strong>${h.title}</strong> <span style="color: #8e8e93; font-size: 11px;">(${h.completedCount}/${maxForPeriod} alkalom)</span></span>
-              <span style="font-weight: bold;">${rate}%</span>
-            </div>
-            <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
-              <div style="background: #00e676; height: 100%; width: ${rate}%;"></div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      document.getElementById('habits-breakdown-list').innerHTML = breakdownHtml || '<div style="font-size:12px; color:#8e8e93;">Nincs megjeleníthető adat</div>';
-
-      const overallRate = totalTargetPossible > 0 ? Math.round((totalCompleted / totalTargetPossible) * 100) : 0;
-      document.getElementById('stat-rate').innerText = `${overallRate}%`;
-      document.getElementById('stat-worst-habit').innerText = worstHabitName;
-
-      const labels = datesList.map(d => d.dayLabel);
-      const dailyCounts = datesList.map(d => dateMap[d.dateStr]);
-      const totalHabitsCount = habitsList.length || 1;
-      const trendData = datesList.map(d => Math.round((dateMap[d.dateStr] / totalHabitsCount) * 100));
-
-      renderBarChart(labels, dailyCounts);
-      renderLineChart(labels, trendData);
-    }
-
-    function renderBarChart(labels, data) {
-      const ctx = document.getElementById('barChart');
-      if (!ctx) return;
-
-      if (barChartInstance) {
-        barChartInstance.destroy();
-      }
-
-      barChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: '#00e676',
-            borderRadius: 6,
-            barThickness: 'flex',
-            maxBarThickness: 30
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { color: '#8e8e93', font: { size: 10 } }
-            },
-            y: {
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#8e8e93', font: { size: 10 }, stepSize: 1 },
-              beginAtZero: true
-            }
-          }
-        }
-      });
-    }
-
-    function renderLineChart(labels, data) {
-      const ctx = document.getElementById('statsChart');
-      if (!ctx) return;
-
-      if (lineChartInstance) {
-        lineChartInstance.destroy();
-      }
-
-      lineChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            borderColor: '#00e676',
-            backgroundColor: 'rgba(0, 230, 118, 0.15)',
-            borderWidth: 2.5,
-            fill: true,
-            tension: 0.3,
-            pointBackgroundColor: '#00e676',
-            pointRadius: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { color: '#8e8e93', font: { size: 10 } }
-            },
-            y: {
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#8e8e93', font: { size: 10 } },
-              min: 0,
-              max: 100
-            }
-          }
-        }
-      });
-    }
-
-    function openAddModal() {
-      editingHabitId = null;
-      document.getElementById('modal-title-text').innerText = 'Új szokás';
-      document.getElementById('habit-name-input').value = '';
-      document.getElementById('habit-freq-input').value = '';
-      document.getElementById('habit-modal').classList.add('active');
-    }
-
-    function openEditModal(id) {
-      const h = habitsList.find(item => item.id === id);
-      if (!h) return;
-      editingHabitId = id;
-      document.getElementById('modal-title-text').innerText = 'Szokás szerkesztése';
-      document.getElementById('habit-name-input').value = h.title;
-      document.getElementById('habit-freq-input').value = h.weekly_target || '';
-      document.getElementById('habit-modal').classList.add('active');
-    }
-
-    function closeModal() {
-      document.getElementById('habit-modal').classList.remove('active');
-    }
-
-    async function logout() {
-      await db.auth.signOut();
-      currentUser = null;
-      showAuth();
-    }
-  </script>
+  <!-- Moduláris szkriptek beolvasása -->
+  <script src="api.js"></script>
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
