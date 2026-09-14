@@ -106,11 +106,11 @@ const UI = {
         let diffX = currentX - startX;
 
         if (isOpen) {
-          let newX = -110 + diffX;
+          let newX = -128 + diffX;
           if (newX > 0) newX = 0;
-          if (newX < -110) newX = -110;
+          if (newX < -128) newX = -128;
           card.style.transform = `translateX(${newX}px)`;
-        } else if (diffX < 0 && diffX > -130) {
+        } else if (diffX < 0 && diffX > -148) {
           card.style.transform = `translateX(${diffX}px)`;
         }
       });
@@ -127,13 +127,13 @@ const UI = {
         const diffX = currentX - startX;
 
         if (!isOpen && diffX < -40) {
-          card.style.transform = 'translateX(-110px)';
+          card.style.transform = 'translateX(-128px)';
           isOpen = true;
         } else if (isOpen && diffX > 30) {
           card.style.transform = 'translateX(0px)';
           isOpen = false;
         } else {
-          card.style.transform = isOpen ? 'translateX(-110px)' : 'translateX(0px)';
+          card.style.transform = isOpen ? 'translateX(-128px)' : 'translateX(0px)';
         }
       };
 
