@@ -205,11 +205,11 @@ body {
 /* Swipe háttérgombok */
 .swipe-actions {
   position: absolute;
-  right: 10px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
   z-index: 1;
 }
@@ -406,6 +406,23 @@ input:checked + .slider:before { transform: translateX(20px); }
   border-color: var(--accent-color);
 }
 
+.modal-message {
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-actions .btn-secondary,
+.modal-actions .btn-danger {
+  flex: 1;
+}
+
 /* --- Alsó navigáció --- */
 .bottom-nav {
   position: fixed;
@@ -428,20 +445,19 @@ input:checked + .slider:before { transform: translateX(20px); }
   background: none;
   border: none;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   color: var(--text-sub);
-  font-size: 11px;
-  font-weight: 600;
   cursor: pointer;
-  transition: color 0.2s;
-  padding: 8px 14px;
+  transition: color 0.2s, transform 0.15s;
+  padding: 12px 26px;
 }
 
+.tab-item:active { transform: scale(0.9); }
+
 .tab-item svg {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   stroke: currentColor;
 }
 
