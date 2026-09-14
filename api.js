@@ -1,4 +1,4 @@
-// Supabase kliens és API réteg
+// Supabase API réteg (*API layer*)
 const SUPABASE_URL = 'https://hcnfoywtoegokphjmzpn.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Uzsb3AnDYM5bAwKWI5gwwQ_Hb3fwtNH';
 
@@ -41,7 +41,7 @@ const API = {
 
   async fetchLogsByDate(dateStr) {
     return await supabase
-      .from('habit_logs')
+      .from('daily_logs')
       .select('*')
       .eq('log_date', dateStr);
   },
@@ -84,7 +84,7 @@ const API = {
   },
 
   async addLog(habitId, dateStr) {
-    return await supabase.from('habit_logs').insert([{
+    return await supabase.from('daily_logs').insert([{
       habit_id: habitId,
       log_date: dateStr,
       completed: true
@@ -92,7 +92,7 @@ const API = {
   },
 
   async removeLog(habitId, dateStr) {
-    return await supabase.from('habit_logs')
+    return await supabase.from('daily_logs')
       .delete()
       .eq('habit_id', habitId)
       .eq('log_date', dateStr);
@@ -103,6 +103,6 @@ const API = {
   },
 
   async fetchLogsRange(startDateStr) {
-    return await supabase.from('habit_logs').select('*').gte('log_date', startDateStr);
+    return await supabase.from('daily_logs').select('*').gte('log_date', startDateStr);
   }
 };
