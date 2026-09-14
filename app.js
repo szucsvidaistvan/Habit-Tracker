@@ -75,30 +75,31 @@ const App = {
   },
 
   async handleToggleHabit(habitId) {
-  const todayStr = UI.getLocalDateString();
-  const habit = this.habitsList.find(h => h.id === habitId);
-  if (!habit) return;
+    const todayStr = UI.getLocalDateString();
+    const habit = this.habitsList.find(h => h.id === habitId);
+    if (!habit) return;
 
-  console.log('[App Debug] Kapcsoló kattintva:', habit.title, '| Új állapot lesz:', !habit.completed);
+    console.log('[App Debug] Kapcsoló kattintva:', habit.title, '| Új állapot lesz:', !habit.completed);
 
-  habit.completed = !habit.completed;
-  UI.updateProgress(this.habitsList);
+    habit.completed = !habit.completed;
+    UI.updateProgress(this.habitsList);
 
-  if (habit.completed) {
-    const { error } = await API.addLog(habitId, todayStr);
-    if (error) {
-      console.error('[App Debug] Hiba az addLog során:', error);
-      habit.completed = false; // Visszaállítás hiba esetén
+    if (habit.completed) {
+      const { error } = await API.addLog(habitId, todayStr);
+      if (error) {
+        console.error('[App Debug] Hiba az addLog során:', error);
+        habit.completed = false;
+      }
+    } else {
+      const { error } = await API.removeLog(habitId, todayStr);
+      if (error) {
+        console.error('[App Debug] Hiba a removeLog során:', error);
+        habit.completed = true;
+      }
     }
-  } else {
-    const { error } = await API.removeLog(habitId, todayStr);
-    if (error) {
-      console.error('[App Debug] Hiba a removeLog során:', error);
-      habit.completed = true; // Visszaállítás hiba esetén
-    }
-  }
-  UI.updateProgress(this.habitsList);
-}
+    UI.updateProgress(this.habitsList);
+  },
+
   async saveHabitModal() {
     const title = document.getElementById('habit-name-input').value.trim();
     const targetNum = parseInt(document.getElementById('habit-freq-input').value.trim()) || 7;
