@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Habit Tracker</title>
-  <link rel="stylesheet" href="style.css?v=1.8">
+  <link rel="stylesheet" href="style.css?v=1.9">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -258,6 +258,7 @@
 
       const todayStr = getLocalDateString();
 
+      // 1. Saját szokások lekérése
       const { data: habitsData, error: habitsErr } = await db
         .from('habits')
         .select('*')
@@ -270,9 +271,11 @@
         return;
       }
 
+      // 2. Napi logok lekérése JOIN-nal a habits táblán keresztül (RLS kompatibilis)
       const { data: logsData, error: logsErr } = await db
         .from('daily_logs')
-        .select('*')
+        .select('*, habits!inner(user_id)')
+        .eq('habits.user_id', currentUser.id)
         .eq('log_date', todayStr);
 
       if (logsErr) {
@@ -405,7 +408,7 @@
       });
     }
 
-    // A 759e35a commit működő toggle habit logikája visszaállítva
+    // A 9e5dda6 commit eredeti működő toggle habit logikája
     async function toggleHabit(habitId) {
       const todayStr = getLocalDateString();
       const item = habitsList.find(h => h.id === habitId);
@@ -544,9 +547,11 @@
 
       const startDateStr = datesList[0].dateStr;
 
+      // Statisztika lekérdezése JOIN-nal az RLS átlépéséhez
       const { data: logs, error } = await db
         .from('daily_logs')
-        .select('*')
+        .select('*, habits!inner(user_id)')
+        .eq('habits.user_id', currentUser.id)
         .gte('log_date', startDateStr)
         .eq('completed', true);
 
