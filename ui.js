@@ -66,16 +66,19 @@ const UI = {
 
       let startX = 0, currentX = 0, isOpen = false, isDragging = false;
 
-      const startDrag = (clientX) => {
-        startX = clientX;
+      card.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.switch')) return;
+
+        startX = e.clientX;
         currentX = startX;
         isDragging = true;
+        try { card.setPointerCapture(e.pointerId); } catch (_) {}
         card.style.transition = 'none';
-      };
+      });
 
-      const moveDrag = (clientX) => {
+      card.addEventListener('pointermove', (e) => {
         if (!isDragging) return;
-        currentX = clientX;
+        currentX = e.clientX;
         let diffX = currentX - startX;
 
         if (isOpen) {
@@ -86,11 +89,13 @@ const UI = {
         } else if (diffX < 0 && diffX > -130) {
           card.style.transform = `translateX(${diffX}px)`;
         }
-      };
+      });
 
-      const endDrag = () => {
+      const handlePointerUp = (e) => {
         if (!isDragging) return;
         isDragging = false;
+        try { card.releasePointerCapture(e.pointerId); } catch (_) {}
+
         card.style.transition = 'transform 0.2s ease-out';
         const diffX = currentX - startX;
 
@@ -105,18 +110,8 @@ const UI = {
         }
       };
 
-      // Érintőképernyő (Touch)
-      card.addEventListener('touchstart', (e) => startDrag(e.touches[0].clientX), { passive: true });
-      card.addEventListener('touchmove', (e) => moveDrag(e.touches[0].clientX), { passive: true });
-      card.addEventListener('touchend', endDrag);
-
-      // Egér (Mouse / Desktop)
-      card.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.switch')) return; // Ha a kapcsolóra kattint, ne húzza a kártyát
-        startDrag(e.clientX);
-      });
-      window.addEventListener('mousemove', (e) => moveDrag(e.clientX));
-      window.addEventListener('mouseup', endDrag);
+      card.addEventListener('pointerup', handlePointerUp);
+      card.addEventListener('pointercancel', handlePointerUp);
     });
   },
 
