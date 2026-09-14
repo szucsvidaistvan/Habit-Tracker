@@ -28,7 +28,8 @@ const App = {
     document.getElementById('auth-container').style.display = 'none';
     document.getElementById('app-container').style.display = 'block';
     document.getElementById('bottom-tab-bar').style.display = 'flex';
-    document.getElementById('user-email-display').innerText = `Bejelentkezve: ${this.currentUser.email}`;
+    const userEmailElem = document.getElementById('user-email-display');
+    if (userEmailElem) userEmailElem.innerText = `Bejelentkezve: ${this.currentUser.email}`;
     await this.loadHabits();
   },
 
@@ -91,6 +92,18 @@ const App = {
       if (error) habit.completed = true;
     }
     UI.updateProgress(this.habitsList);
+  },
+
+  openAddModal() {
+    this.editingHabitId = null;
+    document.getElementById('habit-name-input').value = '';
+    document.getElementById('habit-freq-input').value = '7';
+    
+    const modalTitle = document.getElementById('modal-title');
+    if (modalTitle) modalTitle.innerText = 'Új szokás hozzáadása';
+
+    const modal = document.getElementById('habit-modal');
+    if (modal) modal.style.display = 'flex';
   },
 
   openEditModal(habitId) {
