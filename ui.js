@@ -1,7 +1,7 @@
-// User Interface (UI) Renderelő és Eseménykezelő réteg
+// User Interface (UI) rendering and event-handling layer
 let lineChartInstance = null;
 let barChartInstance = null;
-//shit
+
 const UI = {
   getLocalDateString(dateObj = new Date()) {
     const year = dateObj.getFullYear();
@@ -11,27 +11,28 @@ const UI = {
   },
 
   formatMinutes(mins) {
-    if (!mins || mins === 0) return 'Korlátlan idő';
+    if (!mins || mins === 0) return 'Unlimited';
     if (mins >= 60 && mins % 60 === 0) {
-      return `${mins / 60} óra`;
+      const hours = mins / 60;
+      return `${hours} hr`;
     }
-    return `${mins} perc`;
+    return `${mins} min`;
   },
 
   renderHabits(habitsList) {
-    console.log('[UI.renderHabits] Renderelés indítása habitsList:', habitsList);
+    console.log('[UI.renderHabits] Starting render with habitsList:', habitsList);
     const container = document.getElementById('habits-container');
     if (!container) return;
 
     if (!habitsList || habitsList.length === 0) {
-      console.warn('[UI.renderHabits] Nincsenek aktív szokások.');
-      container.innerHTML = '<div class="loader">Nincsenek aktív szokások.</div>';
+      console.warn('[UI.renderHabits] No active habits.');
+      container.innerHTML = '<div class="loader">No active habits.</div>';
       this.updateProgress([]);
       return;
     }
 
     container.innerHTML = habitsList.map(h => {
-      const targetText = h.weekly_target ? `Heti ${h.weekly_target}x` : '';
+      const targetText = h.weekly_target ? `${h.weekly_target}x/week` : '';
       const timeText = this.formatMinutes(h.target_minutes);
       const subInfo = [targetText, timeText].filter(Boolean).join(' • ');
 
@@ -61,7 +62,7 @@ const UI = {
       `;
     }).join('');
 
-    console.log('[UI.renderHabits] HTML sikeresen frissítve.');
+    console.log('[UI.renderHabits] HTML successfully updated.');
     this.updateProgress(habitsList);
     this.initSwipeEvents(habitsList);
   },
@@ -79,7 +80,7 @@ const UI = {
   },
 
   initSwipeEvents(habitsList) {
-    console.log('[UI.initSwipeEvents] Húzási eseménykezelők (*Event Listeners*) csatolása...');
+    console.log('[UI.initSwipeEvents] Attaching swipe event listeners...');
     habitsList.forEach(h => {
       const card = document.getElementById(`swipe-content-${h.id}`);
       if (!card) return;
@@ -170,5 +171,44 @@ const UI = {
       },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
+  },
+
+  renderHabitStats(list) {
+    console.log('[UI.renderHabitStats] Rendering per-habit completion list:', list);
+    const container = document.getElementById('habit-stats-container');
+    if (!container) return;
+
+    if (!list || list.length === 0) {
+      container.innerHTML = '<div class="loader">No habits yet.</div>';
+      return;
+    }
+
+    container.innerHTML = list.map(h => `
+      <div class="habit-stat-row">
+        <span class="habit-stat-name">${h.title}</span>
+        <span class="habit-stat-percent">${h.percent}%</span>
+        <div class="habit-stat-bar-bg">
+          <div class="habit-stat-bar-fill" style="width: ${h.percent}%;"></div>
+        </div>
+      </div>
+    `).join('');
+  },
+
+  renderInactiveHabits(list) {
+    console.log('[UI.renderInactiveHabits] Rendering inactive habits list:', list);
+    const container = document.getElementById('inactive-habits-list-container');
+    if (!container) return;
+
+    if (!list || list.length === 0) {
+      container.innerHTML = '<div class="loader">No inactive habits.</div>';
+      return;
+    }
+
+    container.innerHTML = list.map(h => `
+      <div class="inactive-habit-row">
+        <span class="inactive-habit-name">${h.title}</span>
+        <button class="btn-primary btn-sm" onclick="console.log('[UI.click] Reactivate ID:', '${h.id}'); App.reactivateFromProfile('${h.id}')">Reactivate</button>
+      </div>
+    `).join('');
   }
 };
