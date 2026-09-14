@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Habit Tracker</title>
-  <link rel="stylesheet" href="style.css?v=1.2">
+  <link rel="stylesheet" href="style.css?v=1.4">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -107,25 +108,56 @@
   </div>
 
   <script>
-    let habitsList = [
-      { id: '1', name: 'Morning Meditation', frequency: 'Heti 7x • 2 perc', completed: false },
-      { id: '2', name: 'Brush Teeth AM', frequency: 'Heti 7x', completed: false },
-      { id: '3', name: 'Brush Teeth PM', frequency: 'Heti 7x', completed: false },
-      { id: '4', name: 'Workout', frequency: 'Heti 4x • 1 óra', completed: false },
-      { id: '5', name: 'Drink Water 2L', frequency: 'Heti 7x', completed: false },
-      { id: '6', name: 'Read 10 Page', frequency: 'Heti 7x', completed: false },
-      { id: '7', name: 'Practice/learn', frequency: 'Heti 7x • 15 perc', completed: false }
-    ];
+    const SUPABASE_URL = 'https://wvhvuvkscqikwzwbwnqg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2aHZ1dmtzY3Fpa3d6d2J3bnFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyMzQ1NjcsImV4cCI6MjA1NjgxMDU2N30.placeholder_key';
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    let currentUser = null;
+    let habitsList = [];
     let editingHabitId = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
-      renderHabits();
+    document.addEventListener('DOMContentLoaded', async () => {
+      const today = new Date().toLocaleDateString('hu-HU');
+      document.getElementById('current-date').innerText = `Mai nap: ${today}`;
+
+      const { data: { session } } = await db.auth.getSession();
+      if (!session) {
+        window.location.href = 'login.html';
+      } else {
+        currentUser = session.user;
+        document.getElementById('user-email-display').innerText = `Bejelentkezve: ${currentUser.email}`;
+        await fetchHabits();
+      }
     });
+
+    async function fetchHabits() {
+      if (!currentUser) return;
+
+      const { data, error } = await db
+        .from('habits')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Hiba az adatok lekérésénél:', error);
+        document.getElementById('habits-container').innerHTML = '<div class="loader">Hiba történt a betöltéskor.</div>';
+        return;
+      }
+
+      habitsList = data || [];
+      renderHabits();
+    }
 
     function renderHabits() {
       const container = document.getElementById('habits-container');
       if (!container) return;
+
+      if (habitsList.length === 0) {
+        container.innerHTML = '<div class="loader">Még nincsenek felvett szokások.</div>';
+        updateProgress();
+        return;
+      }
 
       container.innerHTML = habitsList.map(h => `
         <div class="habit-card-wrapper">
@@ -147,11 +179,11 @@
           <div class="habit-item" id="swipe-content-${h.id}">
             <div class="habit-info">
               <span class="habit-name">${h.name}</span>
-              <span class="habit-time">${h.frequency}</span>
+              <span class="habit-time">${h.frequency || ''}</span>
             </div>
             <div id="switch-wrapper-${h.id}">
               <label class="switch">
-                <input type="checkbox" ${h.completed ? 'checked' : ''} onchange="toggleHabit('${h.id}')">
+                <input type="checkbox" ${h.completed ? 'checked' : ''} onchange="toggleHabit('${h.id}', ${h.completed})">
                 <span class="slider"></span>
               </label>
             </div>
@@ -171,9 +203,7 @@
 
         if (switchElem) {
           ['touchstart', 'touchmove', 'touchend'].forEach(evtType => {
-            switchElem.addEventListener(evtType, (e) => {
-              e.stopPropagation();
-            }, { passive: true });
+            switchElem.addEventListener(evtType, (e) => e.stopPropagation(), { passive: true });
           });
         }
 
@@ -226,11 +256,62 @@
       });
     }
 
-    function toggleHabit(id) {
-      const h = habitsList.find(item => item.id === id);
-      if (h) {
-        h.completed = !h.completed;
-        updateProgress();
+    async function toggleHabit(id, currentStatus) {
+      const newStatus = !currentStatus;
+      const item = habitsList.find(h => h.id === id);
+      if (item) item.completed = newStatus;
+      updateProgress();
+
+      const { error } = await db
+        .from('habits')
+        .update({ completed: newStatus })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Hiba a frissítéskor:', error);
+        await fetchHabits();
+      }
+    }
+
+    async function saveHabitModal() {
+      const name = document.getElementById('habit-name-input').value.trim();
+      const freq = document.getElementById('habit-freq-input').value.trim();
+      if (!name || !currentUser) return;
+
+      if (editingHabitId) {
+        const { error } = await db
+          .from('habits')
+          .update({ name: name, frequency: freq })
+          .eq('id', editingHabitId);
+
+        if (error) console.error('Szerkesztési hiba:', error);
+      } else {
+        const { error } = await db
+          .from('habits')
+          .insert([{
+            user_id: currentUser.id,
+            name: name,
+            frequency: freq || 'Heti 7x',
+            completed: false
+          }]);
+
+        if (error) console.error('Hozzáadási hiba:', error);
+      }
+
+      closeModal();
+      await fetchHabits();
+    }
+
+    async function deleteHabit(id) {
+      const { error } = await db
+        .from('habits')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Törlési hiba:', error);
+      } else {
+        await fetchHabits();
       }
     }
 
@@ -266,7 +347,7 @@
       editingHabitId = id;
       document.getElementById('modal-title-text').innerText = 'Szokás szerkesztése';
       document.getElementById('habit-name-input').value = h.name;
-      document.getElementById('habit-freq-input').value = h.frequency;
+      document.getElementById('habit-freq-input').value = h.frequency || '';
       document.getElementById('habit-modal').classList.add('active');
     }
 
@@ -274,37 +355,9 @@
       document.getElementById('habit-modal').classList.remove('active');
     }
 
-    function saveHabitModal() {
-      const name = document.getElementById('habit-name-input').value.trim();
-      const freq = document.getElementById('habit-freq-input').value.trim();
-      if (!name) return;
-
-      if (editingHabitId) {
-        const h = habitsList.find(item => item.id === editingHabitId);
-        if (h) {
-          h.name = name;
-          h.frequency = freq;
-        }
-      } else {
-        habitsList.push({
-          id: Date.now().toString(),
-          name: name,
-          frequency: freq || 'Heti 7x',
-          completed: false
-        });
-      }
-
-      closeModal();
-      renderHabits();
-    }
-
-    function deleteHabit(id) {
-      habitsList = habitsList.filter(h => h.id !== id);
-      renderHabits();
-    }
-
-    function logout() {
-      alert('Kijelentkezés...');
+    async function logout() {
+      await db.auth.signOut();
+      window.location.href = 'login.html';
     }
   </script>
 </body>
