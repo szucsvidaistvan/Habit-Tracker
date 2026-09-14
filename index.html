@@ -138,6 +138,11 @@
     let habitsList = [];
     let editingHabitId = null;
 
+    function getTodayString() {
+      const d = new Date();
+      return d.toISOString().split('T')[0]; // YYYY-MM-DD
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       const today = new Date().toLocaleDateString('hu-HU');
       document.getElementById('current-date').innerText = `Mai nap: ${today}`;
@@ -207,19 +212,48 @@
     async function fetchHabits() {
       if (!currentUser) return;
 
-      const { data, error } = await db
+      const todayStr = getTodayString();
+
+      // 1. Szokások lekérése
+      const { data: habitsData, error: habitsErr } = await db
         .from('habits')
         .select('*')
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('Hiba az adatok lekérésénél:', error);
+      if (habitsErr) {
+        console.error('Hiba a szokások lekérésénél:', habitsErr);
         document.getElementById('habits-container').innerHTML = '<div class="loader">Hiba történt a betöltéskor.</div>';
         return;
       }
 
-      habitsList = data || [];
+      // 2. Mai napi logok lekérése
+      const { data: logsData, error: logsErr } = await db
+        .from('daily_logs')
+        .select('*')
+        .eq('log_date', todayStr);
+
+      if (logsErr) {
+        console.error('Hiba a logok lekérésénél:', logsErr);
+      }
+
+      const logsMap = {};
+      if (logsData) {
+        logsData.forEach(l => {
+          logsMap[l.habit_id] = l;
+        });
+      }
+
+      // Összefűzés
+      habitsList = (habitsData || []).map(h => {
+        const log = logsMap[h.id];
+        return {
+          ...h,
+          log_id: log ? log.id : null,
+          completed: log ? log.completed : false
+        };
+      });
+
       renderHabits();
     }
 
@@ -252,8 +286,8 @@
 
           <div class="habit-item" id="swipe-content-${h.id}">
             <div class="habit-info">
-              <span class="habit-name">${h.name}</span>
-              <span class="habit-time">${h.frequency || ''}</span>
+              <span class="habit-name">${h.title}</span>
+              <span class="habit-time">${h.weekly_target ? 'Cél: Heti ' + h.weekly_target + 'x' : ''}</span>
             </div>
             <div id="switch-wrapper-${h.id}">
               <label class="switch">
@@ -330,32 +364,51 @@
       });
     }
 
-    async function toggleHabit(id, currentStatus) {
+    async function toggleHabit(habitId, currentStatus) {
       const newStatus = !currentStatus;
-      const item = habitsList.find(h => h.id === id);
+      const todayStr = getTodayString();
+      const item = habitsList.find(h => h.id === habitId);
       if (item) item.completed = newStatus;
       updateProgress();
 
-      const { error } = await db
-        .from('habits')
-        .update({ completed: newStatus })
-        .eq('id', id);
+      if (item && item.log_id) {
+        // Log frissítése
+        const { error } = await db
+          .from('daily_logs')
+          .update({ completed: newStatus })
+          .eq('id', item.log_id);
 
-      if (error) {
-        console.error('Hiba a frissítéskor:', error);
-        await fetchHabits();
+        if (error) console.error('Hiba a daily_log frissítésénél:', error);
+      } else {
+        // Új log beszúrása a mai napra
+        const { data, error } = await db
+          .from('daily_logs')
+          .insert([{
+            habit_id: habitId,
+            log_date: todayStr,
+            completed: newStatus
+          }])
+          .select();
+
+        if (error) {
+          console.error('Hiba a daily_log mentésénél:', error);
+        } else if (data && data.length > 0) {
+          if (item) item.log_id = data[0].id;
+        }
       }
     }
 
     async function saveHabitModal() {
-      const name = document.getElementById('habit-name-input').value.trim();
-      const freq = document.getElementById('habit-freq-input').value.trim();
-      if (!name || !currentUser) return;
+      const title = document.getElementById('habit-name-input').value.trim();
+      const targetStr = document.getElementById('habit-freq-input').value.trim();
+      const targetNum = parseInt(targetStr) || 7;
+
+      if (!title || !currentUser) return;
 
       if (editingHabitId) {
         const { error } = await db
           .from('habits')
-          .update({ name: name, frequency: freq })
+          .update({ title: title, weekly_target: targetNum })
           .eq('id', editingHabitId);
 
         if (error) console.error('Szerkesztési hiba:', error);
@@ -364,9 +417,9 @@
           .from('habits')
           .insert([{
             user_id: currentUser.id,
-            name: name,
-            frequency: freq || 'Heti 7x',
-            completed: false
+            title: title,
+            weekly_target: targetNum,
+            is_active: true
           }]);
 
         if (error) console.error('Hozzáadási hiba:', error);
@@ -377,6 +430,9 @@
     }
 
     async function deleteHabit(id) {
+      // Kapcsolódó logok törlése először
+      await db.from('daily_logs').delete().eq('habit_id', id);
+
       const { error } = await db
         .from('habits')
         .delete()
@@ -420,8 +476,8 @@
       if (!h) return;
       editingHabitId = id;
       document.getElementById('modal-title-text').innerText = 'Szokás szerkesztése';
-      document.getElementById('habit-name-input').value = h.name;
-      document.getElementById('habit-freq-input').value = h.frequency || '';
+      document.getElementById('habit-name-input').value = h.title;
+      document.getElementById('habit-freq-input').value = h.weekly_target || '';
       document.getElementById('habit-modal').classList.add('active');
     }
 
