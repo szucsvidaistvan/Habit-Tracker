@@ -74,9 +74,15 @@
 
   <!-- Alsó Navigáció (Bottom Tab Bar) -->
   <nav id="bottom-tab-bar" class="bottom-nav" style="display: none;">
-    <button id="tab-home" class="tab-item active" onclick="App.switchTab('home')">Szokások</button>
-    <button id="tab-stats" class="tab-item" onclick="App.switchTab('stats')">Statisztika</button>
-    <button id="tab-profile" class="tab-item" onclick="App.switchTab('profile')">Profil</button>
+    <button id="tab-home" class="tab-item active" onclick="App.switchTab('home')" aria-label="Szokások">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+    </button>
+    <button id="tab-stats" class="tab-item" onclick="App.switchTab('stats')" aria-label="Statisztika">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+    </button>
+    <button id="tab-profile" class="tab-item" onclick="App.switchTab('profile')" aria-label="Profil">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+    </button>
   </nav>
 
   <!-- Szokás Kezelő Modális Ablak (Habit Modal) -->
@@ -90,7 +96,7 @@
         <!-- Inaktív szokások kiválasztója (Inactivation Dropdown) -->
         <div id="inactive-habits-wrapper" style="display: none; margin-bottom: 15px;">
           <label for="inactive-habits-select">Korábbi inaktív szokás újraaktiválása:</label>
-          <select id="inactive-habits-select" onchange="App.handleSelectInactiveHabit(this.value)" style="width: 100%; padding: 10px; border-radius: 6px; background: #1e293b; color: #fff; border: 1px solid #334155; margin-top: 5px;">
+          <select id="inactive-habits-select" onchange="App.handleSelectInactiveHabit(this.value)" style="width: 100%; padding: 10px; margin-top: 5px;">
             <option value="">-- Válassz a korábbiakból --</option>
           </select>
           <div style="text-align: center; margin: 10px 0; font-size: 12px; color: #94a3b8;">— VAGY hozz létre újat —</div>
@@ -107,6 +113,23 @@
       </div>
       <div class="modal-footer">
         <button class="btn-primary" onclick="App.saveHabitModal()" style="width: 100%;">Mentés</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Törlés megerősítő Modális Ablak (Delete Confirm Modal) -->
+  <div id="delete-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Szokás törlése</h3>
+        <button class="close-btn" onclick="App.closeDeleteModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-message">Biztosan inaktiválni szeretnéd ezt a szokást? Később bármikor újra aktiválhatod.</p>
+      </div>
+      <div class="modal-footer modal-actions">
+        <button class="btn-secondary" onclick="App.closeDeleteModal()">Mégse</button>
+        <button class="btn-danger" onclick="App.confirmDeleteHabit()">Törlés</button>
       </div>
     </div>
   </div>
