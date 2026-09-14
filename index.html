@@ -10,58 +10,79 @@
 <body>
 
   <div class="card">
-    <div class="header">
-      <button class="logout-btn" onclick="logout()">🚪</button>
-      <h1>Habit Tracker</h1>
-      <div class="date" id="current-date">Mai nap: --.--.----</div>
+    
+    <!-- Auth Nézet: Bejelentkezés / Regisztráció -->
+    <div id="auth-container">
+      <div class="header">
+        <h1>Habit Tracker</h1>
+        <div class="date" id="auth-title">Üdv újra! Jelentkezz be:</div>
+      </div>
+      <div class="modal-inputs" style="margin-top: 20px;">
+        <input type="email" id="auth-email" placeholder="E-mail cím">
+        <input type="password" id="auth-password" placeholder="Jelszó">
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <button class="modal-submit-btn" onclick="handleLogin()">Bejelentkezés</button>
+        <button class="modal-submit-btn" style="background: var(--text-sub, #666);" onclick="handleSignUp()">Regisztráció</button>
+      </div>
+      <div id="auth-error" style="color: #ff4d4d; font-size: 13px; margin-top: 10px; text-align: center;"></div>
     </div>
 
-    <!-- Nézet 1:Főoldal -->
-    <div id="view-home">
-      <div class="progress-box">
-        <div class="progress-info">
-          <span class="progress-title">Napi haladás</span>
-          <span class="progress-percentage" id="progress-text">0%</span>
-        </div>
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" id="progress-fill"></div>
-        </div>
+    <!-- Fő Nézet: Bejelentkezés után jelenik meg -->
+    <div id="app-container" style="display: none;">
+      <div class="header">
+        <button class="logout-btn" onclick="logout()">🚪</button>
+        <h1>Habit Tracker</h1>
+        <div class="date" id="current-date">Mai nap: --.--.----</div>
       </div>
 
-      <div class="habit-list" id="habits-container">
-        <div class="loader">Betöltés...</div>
-      </div>
-
-      <button class="open-modal-btn" onclick="openAddModal()">
-        <span>+</span> Új szokás hozzáadása
-      </button>
-    </div>
-
-    <!-- Nézet 2: Statisztika -->
-    <div id="view-stats" style="display: none;">
-      <div class="stats-switcher">
-        <button class="stats-tab-btn active" onclick="switchStatsTab('weekly')">Heti</button>
-        <button class="stats-tab-btn" onclick="switchStatsTab('monthly')">Havi</button>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value" id="stat-completed-count">0</div>
-          <div class="stat-label">Teljesítve</div>
+      <!-- Nézet 1: Főoldal -->
+      <div id="view-home">
+        <div class="progress-box">
+          <div class="progress-info">
+            <span class="progress-title">Napi haladás</span>
+            <span class="progress-percentage" id="progress-text">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-fill"></div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value" id="stat-rate">0%</div>
-          <div class="stat-label">Sikeresség</div>
+
+        <div class="habit-list" id="habits-container">
+          <div class="loader">Betöltés...</div>
         </div>
+
+        <button class="open-modal-btn" onclick="openAddModal()">
+          <span>+</span> Új szokás hozzáadása
+        </button>
       </div>
 
-      <div id="stats-bars-container"></div>
-    </div>
+      <!-- Nézet 2: Statisztika -->
+      <div id="view-stats" style="display: none;">
+        <div class="stats-switcher">
+          <button class="stats-tab-btn active" onclick="switchStatsTab('weekly')">Heti</button>
+          <button class="stats-tab-btn" onclick="switchStatsTab('monthly')">Havi</button>
+        </div>
 
-    <!-- Nézet 3: Profil -->
-    <div id="view-profile" style="display: none;" class="profile-container">
-      <h3>Profil beállítások</h3>
-      <p id="user-email-display" style="color: var(--text-sub); font-size: 13px;"></p>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-completed-count">0</div>
+            <div class="stat-label">Teljesítve</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-rate">0%</div>
+            <div class="stat-label">Sikeresség</div>
+          </div>
+        </div>
+
+        <div id="stats-bars-container"></div>
+      </div>
+
+      <!-- Nézet 3: Profil -->
+      <div id="view-profile" style="display: none;" class="profile-container">
+        <h3>Profil beállítások</h3>
+        <p id="user-email-display" style="color: var(--text-sub); font-size: 13px;"></p>
+      </div>
     </div>
 
     <div id="status"></div>
@@ -83,7 +104,7 @@
   </div>
 
   <!-- iOS Bottom Tab Bar -->
-  <div class="ios-tab-bar">
+  <div class="ios-tab-bar" id="bottom-tab-bar" style="display: none;">
     <button class="tab-item active" onclick="switchTab('home')" id="tab-home">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -121,14 +142,66 @@
       document.getElementById('current-date').innerText = `Mai nap: ${today}`;
 
       const { data: { session } } = await db.auth.getSession();
-      if (!session) {
-        window.location.href = 'login.html';
-      } else {
+      if (session) {
         currentUser = session.user;
-        document.getElementById('user-email-display').innerText = `Bejelentkezve: ${currentUser.email}`;
-        await fetchHabits();
+        showApp();
+      } else {
+        showAuth();
       }
     });
+
+    function showAuth() {
+      document.getElementById('auth-container').style.display = 'block';
+      document.getElementById('app-container').style.display = 'none';
+      document.getElementById('bottom-tab-bar').style.display = 'none';
+    }
+
+    async function showApp() {
+      document.getElementById('auth-container').style.display = 'none';
+      document.getElementById('app-container').style.display = 'block';
+      document.getElementById('bottom-tab-bar').style.display = 'flex';
+      document.getElementById('user-email-display').innerText = `Bejelentkezve: ${currentUser.email}`;
+      await fetchHabits();
+    }
+
+    async function handleLogin() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value.trim();
+      const errorDiv = document.getElementById('auth-error');
+      errorDiv.innerText = '';
+
+      if (!email || !password) {
+        errorDiv.innerText = 'Kérlek töltsd ki mindkét mezőt!';
+        return;
+      }
+
+      const { data, error } = await db.auth.signInWithPassword({ email, password });
+      if (error) {
+        errorDiv.innerText = 'Hibás e-mail vagy jelszó!';
+      } else {
+        currentUser = data.user;
+        showApp();
+      }
+    }
+
+    async function handleSignUp() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value.trim();
+      const errorDiv = document.getElementById('auth-error');
+      errorDiv.innerText = '';
+
+      if (!email || !password) {
+        errorDiv.innerText = 'Kérlek töltsd ki mindkét mezőt!';
+        return;
+      }
+
+      const { data, error } = await db.auth.signUp({ email, password });
+      if (error) {
+        errorDiv.innerText = error.message;
+      } else {
+        errorDiv.innerText = 'Sikeres regisztráció! Ha visszaigazoló e-mailt kapsz, igazold vissza, vagy jelentkezz be.';
+      }
+    }
 
     async function fetchHabits() {
       if (!currentUser) return;
@@ -357,7 +430,8 @@
 
     async function logout() {
       await db.auth.signOut();
-      window.location.href = 'login.html';
+      currentUser = null;
+      showAuth();
     }
   </script>
 </body>
