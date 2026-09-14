@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Habit Tracker</title>
   <link rel="stylesheet" href="style.css?v=1.4">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.0"></script>
 </head>
 <body>
 
@@ -129,9 +129,10 @@
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://wvhvuvkscqikwzwbwnqg.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2aHZ1dmtzY3Fpa3d6d2J3bnFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyMzQ1NjcsImV4cCI6MjA1NjgxMDU2N30.placeholder_key';
-    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_URL = 'https://hcnfoywtoegokphjmzpn.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Uzsb3AnDYM5bAwKWI5gwwQ_Hb3fwtNH';
+    
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentUser = null;
     let habitsList = [];
@@ -199,7 +200,7 @@
       if (error) {
         errorDiv.innerText = error.message;
       } else {
-        errorDiv.innerText = 'Sikeres regisztráció! Ha visszaigazoló e-mailt kapsz, igazold vissza, vagy jelentkezz be.';
+        errorDiv.innerText = 'Sikeres regisztráció! Jelentkezz be.';
       }
     }
 
