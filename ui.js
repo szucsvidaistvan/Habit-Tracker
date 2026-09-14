@@ -1,6 +1,6 @@
 let lineChartInstance = null;
 let barChartInstance = null;
-
+//shit
 const UI = {
   getLocalDateString(dateObj = new Date()) {
     const year = dateObj.getFullYear();
