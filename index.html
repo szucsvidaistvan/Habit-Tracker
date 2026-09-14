@@ -395,38 +395,54 @@
 
     // Javított toggle: helyesen váltja a ki/be állapotot
     async function toggleHabit(habitId) {
-      const todayStr = getTodayString();
-      const item = habitsList.find(h => h.id === habitId);
-      if (!item) return;
+  const todayStr = getTodayString();
+  const item = habitsList.find(h => h.id === habitId);
+  if (!item) return;
 
-      const newStatus = !item.completed;
-      item.completed = newStatus;
-      updateProgress();
+  // Állapot megfordítása a memóriában
+  const newStatus = !item.completed;
+  item.completed = newStatus;
+  updateProgress();
 
-      if (item.log_id) {
-        const { error } = await db
-          .from('daily_logs')
-          .update({ completed: newStatus })
-          .eq('id', item.log_id);
+  // Megkeressük, hogy van-e már bejegyzés mára ehhez a szokáshoz
+  const { data: existingLog, error: fetchErr } = await db
+    .from('daily_logs')
+    .select('id')
+    .eq('habit_id', habitId)
+    .eq('log_date', todayStr)
+    .maybeSingle();
 
-        if (error) console.error('Hiba a daily_log frissítésénél:', error);
-      } else {
-        const { data, error } = await db
-          .from('daily_logs')
-          .insert([{
-            habit_id: habitId,
-            log_date: todayStr,
-            completed: newStatus
-          }])
-          .select();
+  if (fetchErr) {
+    console.error('Hiba a log keresésekor:', fetchErr);
+    return;
+  }
 
-        if (error) {
-          console.error('Hiba a daily_log mentésénél:', error);
-        } else if (data && data.length > 0) {
-          item.log_id = data[0].id;
-        }
-      }
+  if (existingLog) {
+    // Ha már létezik rekord mára, frissítjük az új állapotra (igaz/hamis)
+    const { error: updateErr } = await db
+      .from('daily_logs')
+      .update({ completed: newStatus })
+      .eq('id', existingLog.id);
+
+    if (updateErr) console.error('Hiba a daily_log frissítésénél:', updateErr);
+  } else {
+    // Ha még nincs rekord mára, létrehozzuk
+    const { data: newLog, error: insertErr } = await db
+      .from('daily_logs')
+      .insert([{
+        habit_id: habitId,
+        log_date: todayStr,
+        completed: newStatus
+      }])
+      .select();
+
+    if (insertErr) {
+      console.error('Hiba a daily_log mentésénél:', insertErr);
+    } else if (newLog && newLog.length > 0) {
+      item.log_id = newLog[0].id;
     }
+  }
+}
 
     async function saveHabitModal() {
       const title = document.getElementById('habit-name-input').value.trim();
