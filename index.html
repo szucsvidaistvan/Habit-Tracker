@@ -48,6 +48,19 @@
     <!-- Stats Tab -->
     <div id="view-stats" class="tab-content" style="display: none;">
       <h2>Statistics</h2>
+      <div class="card streak-card">
+        <div class="streak-item">
+          <div class="streak-icon">🔥</div>
+          <div class="streak-value" id="current-streak-value">0</div>
+          <div class="streak-label">Day Streak</div>
+        </div>
+        <div class="streak-divider"></div>
+        <div class="streak-item">
+          <div class="streak-icon">🏆</div>
+          <div class="streak-value" id="best-streak-value">0</div>
+          <div class="streak-label">Best Streak</div>
+        </div>
+      </div>
       <div class="stats-toggle">
         <button id="btn-stats-weekly" class="toggle-btn active" onclick="App.switchStatsTab('weekly')">Weekly</button>
         <button id="btn-stats-monthly" class="toggle-btn" onclick="App.switchStatsTab('monthly')">Monthly</button>
