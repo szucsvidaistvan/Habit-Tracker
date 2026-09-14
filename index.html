@@ -6,6 +6,7 @@
   <title>Habit Tracker</title>
   <link rel="stylesheet" href="style.css?v=1.4">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -14,7 +15,12 @@
     <!-- Auth Nézet: Bejelentkezés / Regisztráció -->
     <div id="auth-container">
       <div class="header">
-        <h1>Habit Tracker</h1>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary, #00e676)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          <h1>Habit Tracker</h1>
+        </div>
         <div class="date" id="auth-title">Üdv újra! Jelentkezz be:</div>
       </div>
       <div class="modal-inputs" style="margin-top: 20px;">
@@ -31,8 +37,12 @@
     <!-- Fő Nézet: Bejelentkezés után jelenik meg -->
     <div id="app-container" style="display: none;">
       <div class="header">
-        <button class="logout-btn" onclick="logout()">🚪</button>
-        <h1>Habit Tracker</h1>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary, #00e676)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          <h1>Habit Tracker</h1>
+        </div>
         <div class="date" id="current-date">Mai nap: --.--.----</div>
       </div>
 
@@ -75,13 +85,16 @@
           </div>
         </div>
 
-        <div id="stats-bars-container"></div>
+        <div style="margin-top: 25px; height: 220px; position: relative;">
+          <canvas id="statsChart"></canvas>
+        </div>
       </div>
 
       <!-- Nézet 3: Profil -->
       <div id="view-profile" style="display: none;" class="profile-container">
         <h3>Profil beállítások</h3>
-        <p id="user-email-display" style="color: var(--text-sub); font-size: 13px;"></p>
+        <p id="user-email-display" style="color: var(--text-sub); font-size: 13px; margin-bottom: 20px;"></p>
+        <button class="modal-submit-btn" style="background: #ff4d4d;" onclick="logout()">Kijelentkezés</button>
       </div>
     </div>
 
@@ -97,7 +110,7 @@
       </div>
       <div class="modal-inputs">
         <input type="text" id="habit-name-input" placeholder="Szokás neve (pl. Edzés)">
-        <input type="text" id="habit-freq-input" placeholder="Gyakoriság (pl. Heti 4x)">
+        <input type="number" id="habit-freq-input" placeholder="Heti cél (pl. 4)">
       </div>
       <button class="modal-submit-btn" onclick="saveHabitModal()">Mentés</button>
     </div>
@@ -137,6 +150,8 @@
     let currentUser = null;
     let habitsList = [];
     let editingHabitId = null;
+    let chartInstance = null;
+    let activeStatsTab = 'weekly';
 
     function getTodayString() {
       const d = new Date();
@@ -214,7 +229,6 @@
 
       const todayStr = getTodayString();
 
-      // 1. Szokások lekérése
       const { data: habitsData, error: habitsErr } = await db
         .from('habits')
         .select('*')
@@ -227,7 +241,6 @@
         return;
       }
 
-      // 2. Mai napi logok lekérése
       const { data: logsData, error: logsErr } = await db
         .from('daily_logs')
         .select('*')
@@ -244,7 +257,6 @@
         });
       }
 
-      // Összefűzés
       habitsList = (habitsData || []).map(h => {
         const log = logsMap[h.id];
         return {
@@ -372,7 +384,6 @@
       updateProgress();
 
       if (item && item.log_id) {
-        // Log frissítése
         const { error } = await db
           .from('daily_logs')
           .update({ completed: newStatus })
@@ -380,7 +391,6 @@
 
         if (error) console.error('Hiba a daily_log frissítésénél:', error);
       } else {
-        // Új log beszúrása a mai napra
         const { data, error } = await db
           .from('daily_logs')
           .insert([{
@@ -430,7 +440,6 @@
     }
 
     async function deleteHabit(id) {
-      // Kapcsolódó logok törlése először
       await db.from('daily_logs').delete().eq('habit_id', id);
 
       const { error } = await db
@@ -461,6 +470,107 @@
       document.getElementById('view-home').style.display = tab === 'home' ? 'block' : 'none';
       document.getElementById('view-stats').style.display = tab === 'stats' ? 'block' : 'none';
       document.getElementById('view-profile').style.display = tab === 'profile' ? 'block' : 'none';
+
+      if (tab === 'stats') {
+        loadStatistics(activeStatsTab);
+      }
+    }
+
+    function switchStatsTab(type) {
+      activeStatsTab = type;
+      document.querySelectorAll('.stats-tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      loadStatistics(type);
+    }
+
+    async function loadStatistics(type) {
+      if (!currentUser) return;
+
+      const daysCount = type === 'weekly' ? 7 : 30;
+      const labels = [];
+      const dateMap = {};
+
+      for (let i = daysCount - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        
+        const label = `${(d.getMonth() + 1).toString().padStart(2, '0')}.${d.getDate().toString().padStart(2, '0')}.`;
+        labels.push(label);
+        dateMap[dateStr] = 0;
+      }
+
+      const startDateStr = Object.keys(dateMap)[0];
+
+      const { data: logs, error } = await db
+        .from('daily_logs')
+        .select('*')
+        .gte('log_date', startDateStr)
+        .eq('completed', true);
+
+      if (error) {
+        console.error('Statisztika lekérdezési hiba:', error);
+        return;
+      }
+
+      if (logs) {
+        logs.forEach(log => {
+          if (dateMap[log.log_date] !== undefined) {
+            dateMap[log.log_date]++;
+          }
+        });
+      }
+
+      const chartData = Object.values(dateMap);
+      const completedCount = logs ? logs.length : 0;
+      const totalPossible = habitsList.length * daysCount;
+      const rate = totalPossible > 0 ? Math.round((completedCount / totalPossible) * 100) : 0;
+
+      document.getElementById('stat-completed-count').innerText = completedCount;
+      document.getElementById('stat-rate').innerText = `${rate}%`;
+
+      renderChart(labels, chartData);
+    }
+
+    function renderChart(labels, data) {
+      const ctx = document.getElementById('statsChart');
+      if (!ctx) return;
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Teljesített szokások',
+            data: data,
+            backgroundColor: '#00e676',
+            borderRadius: 6,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#8e8e93', font: { size: 10 } }
+            },
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#8e8e93', stepSize: 1, precision: 0 },
+              beginAtZero: true
+            }
+          }
+        }
+      });
     }
 
     function openAddModal() {
