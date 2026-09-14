@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="hu">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,17 +11,17 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <!-- Bejelentkezési felület (Auth View) -->
+  <!-- Auth View -->
   <div id="auth-container" class="card" style="display: none; max-width: 400px; margin: 40px auto; padding: 20px;">
-    <h2>Bejelentkezés</h2>
+    <h2>Log In</h2>
     <div id="auth-error" style="color: #ef4444; margin-bottom: 10px;"></div>
-    <input type="email" id="auth-email" placeholder="E-mail cím" style="width: 100%; margin-bottom: 10px; padding: 10px;" />
-    <input type="password" id="auth-password" placeholder="Jelszó" style="width: 100%; margin-bottom: 15px; padding: 10px;" />
-    <button class="btn-primary" onclick="App.handleLogin()" style="width: 100%; margin-bottom: 10px;">Bejelentkezés</button>
-    <button class="btn-secondary" onclick="App.handleSignUp()" style="width: 100%;">Regisztráció</button>
+    <input type="email" id="auth-email" placeholder="Email address" style="width: 100%; margin-bottom: 10px; padding: 10px;" />
+    <input type="password" id="auth-password" placeholder="Password" style="width: 100%; margin-bottom: 15px; padding: 10px;" />
+    <button class="btn-primary" onclick="App.handleLogin()" style="width: 100%; margin-bottom: 10px;">Log In</button>
+    <button class="btn-secondary" onclick="App.handleSignUp()" style="width: 100%;">Sign Up</button>
   </div>
 
-  <!-- Fő Alkalmazás (App View) -->
+  <!-- App View -->
   <div id="app-container" style="display: none;">
     <!-- Home Tab -->
     <div id="view-home" class="tab-content">
@@ -32,7 +32,7 @@
 
       <div class="progress-card card">
         <div class="progress-header">
-          <span>Napi haladás</span>
+          <span>Daily Progress</span>
           <span id="progress-text">0%</span>
         </div>
         <div class="progress-bar-bg">
@@ -42,94 +42,103 @@
 
       <div id="habits-container" class="habits-list"></div>
 
-      <button class="btn-primary add-habit-btn" onclick="App.openAddModal()">+ Új szokás hozzáadása</button>
+      <button class="btn-primary add-habit-btn" onclick="App.openAddModal()">+ Add New Habit</button>
     </div>
 
     <!-- Stats Tab -->
     <div id="view-stats" class="tab-content" style="display: none;">
-      <h2>Statisztikák</h2>
+      <h2>Statistics</h2>
       <div class="stats-toggle">
-        <button id="btn-stats-weekly" class="toggle-btn active" onclick="App.switchStatsTab('weekly')">Heti</button>
-        <button id="btn-stats-monthly" class="toggle-btn" onclick="App.switchStatsTab('monthly')">Havi</button>
+        <button id="btn-stats-weekly" class="toggle-btn active" onclick="App.switchStatsTab('weekly')">Weekly</button>
+        <button id="btn-stats-monthly" class="toggle-btn" onclick="App.switchStatsTab('monthly')">Monthly</button>
       </div>
       <div class="card chart-card">
-        <h3>Elvégzett szokások száma</h3>
+        <h3>Habits Completed</h3>
         <canvas id="barChart"></canvas>
       </div>
       <div class="card chart-card">
-        <h3>Teljesítési arány (%)</h3>
+        <h3>Completion Rate (%)</h3>
         <canvas id="statsChart"></canvas>
+      </div>
+      <div class="card chart-card">
+        <h3>Completion by Habit</h3>
+        <div id="habit-stats-container"></div>
       </div>
     </div>
 
     <!-- Profile Tab -->
     <div id="view-profile" class="tab-content" style="display: none;">
-      <h2>Profil</h2>
+      <h2>Profile</h2>
       <div class="card">
         <p id="user-email-display"></p>
-        <button class="btn-danger" onclick="App.logout()">Kijelentkezés</button>
+        <button class="btn-danger" onclick="App.logout()">Log Out</button>
+      </div>
+
+      <div class="card" style="margin-top: 16px;">
+        <h3 class="section-title">Inactive Habits</h3>
+        <div id="inactive-habits-list-container"></div>
       </div>
     </div>
   </div>
 
-  <!-- Alsó Navigáció (Bottom Tab Bar) -->
+  <!-- Bottom Tab Bar -->
   <nav id="bottom-tab-bar" class="bottom-nav" style="display: none;">
-    <button id="tab-home" class="tab-item active" onclick="App.switchTab('home')" aria-label="Szokások">
+    <button id="tab-home" class="tab-item active" onclick="App.switchTab('home')" aria-label="Habits">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
     </button>
-    <button id="tab-stats" class="tab-item" onclick="App.switchTab('stats')" aria-label="Statisztika">
+    <button id="tab-stats" class="tab-item" onclick="App.switchTab('stats')" aria-label="Stats">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
     </button>
-    <button id="tab-profile" class="tab-item" onclick="App.switchTab('profile')" aria-label="Profil">
+    <button id="tab-profile" class="tab-item" onclick="App.switchTab('profile')" aria-label="Profile">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
     </button>
   </nav>
 
-  <!-- Szokás Kezelő Modális Ablak (Habit Modal) -->
+  <!-- Habit Modal (Add/Edit) -->
   <div id="habit-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="modal-title">Új szokás</h3>
+        <h3 id="modal-title">New Habit</h3>
         <button class="close-btn" onclick="App.closeModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <!-- Inaktív szokások kiválasztója (Inactivation Dropdown) -->
+        <!-- Inactive habit reactivation dropdown -->
         <div id="inactive-habits-wrapper" style="display: none; margin-bottom: 15px;">
-          <label for="inactive-habits-select">Korábbi inaktív szokás újraaktiválása:</label>
+          <label for="inactive-habits-select">Reactivate a previous inactive habit:</label>
           <select id="inactive-habits-select" onchange="App.handleSelectInactiveHabit(this.value)" style="width: 100%; padding: 10px; margin-top: 5px;">
-            <option value="">-- Válassz a korábbiakból --</option>
+            <option value="">-- Choose from previous --</option>
           </select>
-          <div style="text-align: center; margin: 10px 0; font-size: 12px; color: #94a3b8;">— VAGY hozz létre újat —</div>
+          <div style="text-align: center; margin: 10px 0; font-size: 12px; color: #94a3b8;">— OR create a new one —</div>
         </div>
 
-        <label for="habit-name-input">Szokás neve</label>
-        <input type="text" id="habit-name-input" placeholder="pl. Reggeli meditáció" style="width: 100%; margin-bottom: 10px; padding: 10px;" />
+        <label for="habit-name-input">Habit name</label>
+        <input type="text" id="habit-name-input" placeholder="e.g. Morning meditation" style="width: 100%; margin-bottom: 10px; padding: 10px;" />
 
-        <label for="habit-freq-input">Heti cél (alkalom)</label>
+        <label for="habit-freq-input">Weekly goal (times)</label>
         <input type="number" id="habit-freq-input" placeholder="7" min="1" max="7" style="width: 100%; margin-bottom: 10px; padding: 10px;" />
 
-        <label for="habit-time-input">Időtartam percekben (0 = korlátlan)</label>
+        <label for="habit-time-input">Duration in minutes (0 = unlimited)</label>
         <input type="number" id="habit-time-input" placeholder="0" min="0" style="width: 100%; margin-bottom: 15px; padding: 10px;" />
       </div>
       <div class="modal-footer">
-        <button class="btn-primary" onclick="App.saveHabitModal()" style="width: 100%;">Mentés</button>
+        <button class="btn-primary" onclick="App.saveHabitModal()" style="width: 100%;">Save</button>
       </div>
     </div>
   </div>
 
-  <!-- Törlés megerősítő Modális Ablak (Delete Confirm Modal) -->
+  <!-- Delete Confirm Modal -->
   <div id="delete-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Szokás törlése</h3>
+        <h3>Delete Habit</h3>
         <button class="close-btn" onclick="App.closeDeleteModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="modal-message">Biztosan inaktiválni szeretnéd ezt a szokást? Később bármikor újra aktiválhatod.</p>
+        <p class="modal-message">Are you sure you want to deactivate this habit? You can reactivate it anytime later from your Profile.</p>
       </div>
       <div class="modal-footer modal-actions">
-        <button class="btn-secondary" onclick="App.closeDeleteModal()">Mégse</button>
-        <button class="btn-danger" onclick="App.confirmDeleteHabit()">Törlés</button>
+        <button class="btn-secondary" onclick="App.closeDeleteModal()">Cancel</button>
+        <button class="btn-danger" onclick="App.confirmDeleteHabit()">Delete</button>
       </div>
     </div>
   </div>
