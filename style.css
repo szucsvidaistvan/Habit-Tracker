@@ -153,6 +153,7 @@ body {
   background: #1e293b;
   border: 1px solid var(--border-color);
   border-radius: 14px;
+  touch-action: pan-y;
   transition: transform 0.2s ease-out;
 }
 
