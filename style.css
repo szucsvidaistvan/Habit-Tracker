@@ -9,6 +9,16 @@
   --border-color: #334155;
   --danger-color: #ef4444;
   --edit-color: #f59e0b;
+
+  /* Completion-level color bands */
+  --band-red: #ef4444;
+  --band-red-glow: rgba(239, 68, 68, 0.35);
+  --band-orange: #f97316;
+  --band-orange-glow: rgba(249, 115, 22, 0.35);
+  --band-yellow: #eab308;
+  --band-yellow-glow: rgba(234, 179, 8, 0.32);
+  --band-green: var(--accent-color);
+  --band-green-glow: var(--accent-glow);
 }
 
 * {
@@ -160,7 +170,7 @@ body {
   height: 100%;
   background: var(--accent-color);
   border-radius: 6px;
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
@@ -302,6 +312,49 @@ input:checked + .slider:before { transform: translateX(20px); }
   margin-bottom: 14px;
 }
 
+/* --- Streak card --- */
+.streak-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 20px 10px;
+  margin-bottom: 16px;
+}
+
+.streak-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.streak-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.streak-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent-color);
+  text-shadow: 0 0 14px var(--accent-glow);
+}
+
+.streak-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.streak-divider {
+  width: 1px;
+  height: 46px;
+  background: var(--border-color);
+}
+
 .toggle-btn {
   flex: 1;
   background: var(--card-bg);
@@ -382,7 +435,7 @@ input:checked + .slider:before { transform: translateX(20px); }
   height: 100%;
   background: var(--accent-color);
   border-radius: 4px;
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
 }
 
 /* --- Profile: section heading + inactive habits list --- */
