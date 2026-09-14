@@ -16,6 +16,14 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* iOS Safari auto-zooms on focus if an input's font-size is below 16px.
+   Forcing 16px here prevents the page from zooming in when the keyboard opens. */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
+
 html, body {
   background-color: var(--bg-color) !important;
   color: var(--text-main);
@@ -33,7 +41,7 @@ body {
   padding: 20px 12px 100px 12px !important;
 }
 
-/* Generikus kártya */
+/* Generic card */
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -48,13 +56,12 @@ body {
   max-width: 420px;
 }
 
-/* --- Bejelentkezés --- */
+/* --- Auth --- */
 #auth-container input {
   background: var(--bg-color);
   border: 1px solid var(--border-color);
   color: var(--text-main);
   border-radius: 10px;
-  font-size: 14px;
   outline: none;
 }
 
@@ -62,7 +69,7 @@ body {
   border-color: var(--accent-color);
 }
 
-/* --- Gombok --- */
+/* --- Buttons --- */
 .btn-primary,
 .btn-secondary,
 .btn-danger {
@@ -99,7 +106,7 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
-/* --- Fejléc --- */
+/* --- Header --- */
 .app-header {
   text-align: center;
   margin-bottom: 18px;
@@ -120,7 +127,7 @@ body {
   letter-spacing: 0.3px;
 }
 
-/* --- Napi haladás kártya --- */
+/* --- Daily progress card --- */
 .progress-card {
   margin-bottom: 16px;
 }
@@ -157,7 +164,7 @@ body {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-/* --- Szokáslista --- */
+/* --- Habit list --- */
 .habits-list {
   display: flex;
   flex-direction: column;
@@ -202,7 +209,7 @@ body {
   color: var(--text-sub);
 }
 
-/* Swipe háttérgombok */
+/* Swipe reveal buttons */
 .swipe-actions {
   position: absolute;
   right: 14px;
@@ -231,7 +238,7 @@ body {
 .swipe-btn.edit { background-color: var(--edit-color); }
 .swipe-btn.delete { background-color: var(--danger-color); }
 
-/* Toggle kapcsoló */
+/* Toggle switch */
 .switch {
   position: relative;
   display: inline-block;
@@ -282,7 +289,7 @@ input:checked + .slider:before { transform: translateX(20px); }
   color: var(--text-sub);
 }
 
-/* --- Statisztika --- */
+/* --- Stats --- */
 #view-stats h2,
 #view-profile h2 {
   margin: 0 0 14px 0;
@@ -329,7 +336,94 @@ input:checked + .slider:before { transform: translateX(20px); }
   max-height: 220px;
 }
 
-/* --- Profil --- */
+/* --- Per-habit completion list (Stats tab) --- */
+.habit-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.habit-stat-row:last-child {
+  border-bottom: none;
+}
+
+.habit-stat-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.habit-stat-percent {
+  width: 40px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-color);
+}
+
+.habit-stat-bar-bg {
+  width: 100px;
+  flex-shrink: 0;
+  height: 8px;
+  background: var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.habit-stat-bar-fill {
+  height: 100%;
+  background: var(--accent-color);
+  border-radius: 4px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Profile: section heading + inactive habits list --- */
+.section-title {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.inactive-habit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.inactive-habit-row:last-child {
+  border-bottom: none;
+}
+
+.inactive-habit-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-sm {
+  padding: 8px 14px;
+  font-size: 12px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* --- Profile --- */
 #view-profile .card {
   text-align: center;
 }
@@ -397,7 +491,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   border: 1px solid var(--border-color);
   color: var(--text-main);
   border-radius: 10px;
-  font-size: 14px;
   outline: none;
 }
 
@@ -423,7 +516,7 @@ input:checked + .slider:before { transform: translateX(20px); }
   flex: 1;
 }
 
-/* --- Alsó navigáció --- */
+/* --- Bottom navigation --- */
 .bottom-nav {
   position: fixed;
   bottom: 0;
