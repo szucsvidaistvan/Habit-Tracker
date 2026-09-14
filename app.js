@@ -136,10 +136,12 @@ const App = {
     UI.renderHabits(this.habitsList);
   },
 
-  async handleToggleHabit(habitId) {
+async handleToggleHabit(habitId) {
     console.log(`[App.handleToggleHabit] Váltás indítása -> Habit ID: ${habitId}`);
     const todayStr = UI.getLocalDateString();
-    const habit = this.habitsList.find(h => h.id === habitId);
+    
+    // Javítva: String()-re konvertálás a típuseltérés (number vs string) kiszűrésére
+    const habit = this.habitsList.find(h => String(h.id) === String(habitId));
 
     if (!habit) {
       console.error(`[App.handleToggleHabit] A szokás nem található a memóriában ID: ${habitId}`);
@@ -189,7 +191,9 @@ const App = {
 
   openEditModal(habitId) {
     console.log(`[App.openEditModal] Szerkesztés modal megnyitása -> Habit ID: ${habitId}`);
-    const habit = this.habitsList.find(h => h.id === habitId);
+    
+    // Javítva: String()-re konvertálás
+    const habit = this.habitsList.find(h => String(h.id) === String(habitId));
 
     if (!habit) {
       console.error(`[App.openEditModal] A szokás nem található az id alapján: ${habitId}`);
