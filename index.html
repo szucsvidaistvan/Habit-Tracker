@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Habit Tracker</title>
-  <link rel="stylesheet" href="style.css?v=2.0">
+  <link rel="stylesheet" href="style.css?v=2.1">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -272,8 +272,7 @@
 
       const { data: logsData, error: logsErr } = await db
         .from('daily_logs')
-        .select('*, habits!inner(user_id)')
-        .eq('habits.user_id', currentUser.id)
+        .select('*')
         .eq('log_date', todayStr);
 
       if (logsErr) {
@@ -405,7 +404,7 @@
       });
     }
 
-    // Stabil, közvetlen habit_id + log_date alapú frissítés (upsert)
+    // Biztos, stabil toggle gomb logika
     async function toggleHabit(habitId) {
       const todayStr = getLocalDateString();
       const item = habitsList.find(h => h.id === habitId);
@@ -415,18 +414,27 @@
       updateProgress();
 
       if (item.completed) {
-        const { error } = await db
+        const { data: existing } = await db
           .from('daily_logs')
-          .upsert({
-            habit_id: habitId,
-            log_date: todayStr,
-            completed: true
-          }, { onConflict: 'habit_id,log_date' });
+          .select('id')
+          .eq('habit_id', habitId)
+          .eq('log_date', todayStr)
+          .maybeSingle();
 
-        if (error) {
-          console.error('Hiba az mentésnél:', error);
-          item.completed = false;
-          updateProgress();
+        if (!existing) {
+          const { error } = await db
+            .from('daily_logs')
+            .insert([{
+              habit_id: habitId,
+              log_date: todayStr,
+              completed: true
+            }]);
+
+          if (error) {
+            console.error('Hiba az beszúrásnál:', error);
+            item.completed = false;
+            updateProgress();
+          }
         }
       } else {
         const { error } = await db
@@ -474,7 +482,14 @@
       await fetchHabits();
     }
 
+    // Törlés megerősítő párbeszédablakkal
     async function deleteHabit(id) {
+      const h = habitsList.find(item => item.id === id);
+      const habitName = h ? h.title : 'ezt a szokást';
+      
+      const confirmed = confirm(`Biztosan törölni szeretnéd a(z) "${habitName}" szokást?`);
+      if (!confirmed) return;
+
       await db.from('daily_logs').delete().eq('habit_id', id);
 
       const { error } = await db
@@ -541,8 +556,7 @@
 
       const { data: logs, error } = await db
         .from('daily_logs')
-        .select('*, habits!inner(user_id)')
-        .eq('habits.user_id', currentUser.id)
+        .select('*')
         .gte('log_date', startDateStr)
         .eq('completed', true);
 
