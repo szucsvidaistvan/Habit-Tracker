@@ -399,35 +399,38 @@
   const item = habitsList.find(h => h.id === habitId);
   if (!item) return;
 
-  // Állapot megfordítása a memóriában
+  // 1. Azonnali vizuális frissítés a kijelzőn
   const newStatus = !item.completed;
   item.completed = newStatus;
   updateProgress();
 
-  // Megkeressük, hogy van-e már bejegyzés mára ehhez a szokáshoz
-  const { data: existingLog, error: fetchErr } = await db
+  // 2. Megnézzük, van-e már rekord mára ehhez a szokáshoz
+  const { data: existingLogs, error: fetchErr } = await db
     .from('daily_logs')
     .select('id')
     .eq('habit_id', habitId)
-    .eq('log_date', todayStr)
-    .maybeSingle();
+    .eq('log_date', todayStr);
 
   if (fetchErr) {
-    console.error('Hiba a log keresésekor:', fetchErr);
+    console.error('Lekérdezési hiba:', fetchErr);
     return;
   }
 
-  if (existingLog) {
-    // Ha már létezik rekord mára, frissítjük az új állapotra (igaz/hamis)
+  if (existingLogs && existingLogs.length > 0) {
+    // 3A. Ha MÁR LÉTEZIK rekord mára -> UPDATE (átállítjuk true/false-ra)
     const { error: updateErr } = await db
       .from('daily_logs')
       .update({ completed: newStatus })
-      .eq('id', existingLog.id);
+      .eq('id', existingLogs[0].id);
 
-    if (updateErr) console.error('Hiba a daily_log frissítésénél:', updateErr);
+    if (updateErr) {
+      console.error('Update hiba:', updateErr);
+      item.completed = !newStatus; // Hiba esetén visszacsináljuk
+      updateProgress();
+    }
   } else {
-    // Ha még nincs rekord mára, létrehozzuk
-    const { data: newLog, error: insertErr } = await db
+    // 3B. Ha MÉG NINCS rekord mára -> INSERT
+    const { data: insertedData, error: insertErr } = await db
       .from('daily_logs')
       .insert([{
         habit_id: habitId,
@@ -437,9 +440,11 @@
       .select();
 
     if (insertErr) {
-      console.error('Hiba a daily_log mentésénél:', insertErr);
-    } else if (newLog && newLog.length > 0) {
-      item.log_id = newLog[0].id;
+      console.error('Insert hiba:', insertErr);
+      item.completed = !newStatus; // Hiba esetén visszacsináljuk
+      updateProgress();
+    } else if (insertedData && insertedData.length > 0) {
+      item.log_id = insertedData[0].id;
     }
   }
 }
