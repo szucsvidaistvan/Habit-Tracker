@@ -34,7 +34,6 @@ body {
   padding: calc(16px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom)) 12px !important;
 }
 
-/* Fő kártya konténer */
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -43,10 +42,9 @@ body {
   width: 100%;
   max-width: 420px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-  margin: 0 auto 80px auto; /* Margó az alsó menü miatt */
+  margin: 0 auto 80px auto;
 }
 
-/* Fejléc */
 .header {
   position: relative;
   text-align: center;
@@ -68,7 +66,6 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Kijelentkezés gomb */
 .logout-btn {
   position: absolute;
   left: 0;
@@ -86,7 +83,6 @@ body {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Progress Bar Box */
 .progress-box {
   background: #0f172a;
   border: 1px solid var(--border-color);
@@ -132,22 +128,21 @@ body {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-/* Habits List Szerkezet */
 .habit-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-/* Ez a külső keret tartja bent a gombokat és a kártyát */
+/* Külső burkoló a gomboknak és a kártyának */
 .habit-card-wrapper {
   position: relative;
-  overflow: hidden; /* Megakadályozza a kilógást! */
+  overflow: hidden;
   border-radius: 14px;
-  background-color: #0f172a; /* Sötét háttér a gombok mögött */
+  background-color: #0f172a;
 }
 
-/* A felső kártya, amit elhúzol */
+/* Felső elhúzható kártya */
 .habit-item {
   position: relative;
   z-index: 2;
@@ -177,7 +172,7 @@ body {
   margin-top: 2px;
 }
 
-/* Swipe háttérgombok konténere */
+/* Swipe háttérgombok */
 .swipe-actions {
   position: absolute;
   right: 10px;
@@ -186,10 +181,9 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
-  z-index: 1; /* A habit-item MÖGÖTT van */
+  z-index: 1;
 }
 
-/* Swipe gombok stílusa */
 .swipe-btn {
   border: none;
   width: 44px;
@@ -198,7 +192,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
   cursor: pointer;
   transition: transform 0.15s ease;
 }
@@ -214,11 +207,11 @@ body {
 }
 
 .swipe-btn.edit {
-  background-color: #f59e0b; /* iOS sárga */
+  background-color: #f59e0b;
 }
 
 .swipe-btn.delete {
-  background-color: #ef4444; /* iOS piros */
+  background-color: #ef4444;
 }
 
 /* Modern Toggle Switch */
@@ -266,7 +259,6 @@ input:checked + .slider:before {
   transform: translateX(22px);
 }
 
-/* Új szokás gomb */
 .open-modal-btn {
   width: 100%;
   background: rgba(15, 23, 42, 0.8);
@@ -290,7 +282,7 @@ input:checked + .slider:before {
   background: #1e293b;
 }
 
-/* Modal Stílusok */
+/* Modal */
 .modal-overlay {
   display: none;
   position: fixed;
@@ -373,7 +365,7 @@ input:checked + .slider:before {
   box-shadow: 0 2px 10px var(--accent-glow);
 }
 
-/* Statisztika & Nézet váltó */
+/* Statisztika & Nézetek */
 .stats-switcher {
   display: flex;
   gap: 8px;
@@ -497,7 +489,6 @@ input:checked + .slider:before {
   font-weight: 500;
 }
 
-/* Segédosztályok */
 #status {
   text-align: center;
   margin-top: 12px;
