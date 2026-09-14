@@ -1,7 +1,7 @@
 // User Interface (UI) Renderelő és Eseménykezelő réteg
 let lineChartInstance = null;
 let barChartInstance = null;
-
+//shit
 const UI = {
   getLocalDateString(dateObj = new Date()) {
     const year = dateObj.getFullYear();
