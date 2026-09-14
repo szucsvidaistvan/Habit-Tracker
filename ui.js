@@ -53,33 +53,31 @@ const UI = {
     const total = habitsList.length;
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
     
-    document.getElementById('progress-text').innerText = `${percent}%`;
-    document.getElementById('progress-fill').style.width = `${percent}%`;
+    const textElem = document.getElementById('progress-text');
+    const fillElem = document.getElementById('progress-fill');
+    if (textElem) textElem.innerText = `${percent}%`;
+    if (fillElem) fillElem.style.width = `${percent}%`;
   },
 
   initSwipeEvents(habitsList) {
     habitsList.forEach(h => {
       const card = document.getElementById(`swipe-content-${h.id}`);
-      const switchElem = document.getElementById(`switch-wrapper-${h.id}`);
       if (!card) return;
 
-      if (switchElem) {
-        ['touchstart', 'touchmove', 'touchend'].forEach(evtType => {
-          switchElem.addEventListener(evtType, (e) => e.stopPropagation(), { passive: true });
-        });
-      }
+      let startX = 0, currentX = 0, isOpen = false, isDragging = false;
 
-      let startX = 0, currentX = 0, isOpen = false;
-
-      card.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
+      const startDrag = (clientX) => {
+        startX = clientX;
         currentX = startX;
+        isDragging = true;
         card.style.transition = 'none';
-      }, { passive: true });
+      };
 
-      card.addEventListener('touchmove', (e) => {
-        currentX = e.touches[0].clientX;
+      const moveDrag = (clientX) => {
+        if (!isDragging) return;
+        currentX = clientX;
         let diffX = currentX - startX;
+
         if (isOpen) {
           let newX = -110 + diffX;
           if (newX > 0) newX = 0;
@@ -88,12 +86,15 @@ const UI = {
         } else if (diffX < 0 && diffX > -130) {
           card.style.transform = `translateX(${diffX}px)`;
         }
-      }, { passive: true });
+      };
 
-      card.addEventListener('touchend', () => {
+      const endDrag = () => {
+        if (!isDragging) return;
+        isDragging = false;
         card.style.transition = 'transform 0.2s ease-out';
         const diffX = currentX - startX;
-        if (!isOpen && diffX < -50) {
+
+        if (!isOpen && diffX < -40) {
           card.style.transform = 'translateX(-110px)';
           isOpen = true;
         } else if (isOpen && diffX > 30) {
@@ -102,7 +103,20 @@ const UI = {
         } else {
           card.style.transform = isOpen ? 'translateX(-110px)' : 'translateX(0px)';
         }
+      };
+
+      // Érintőképernyő (Touch)
+      card.addEventListener('touchstart', (e) => startDrag(e.touches[0].clientX), { passive: true });
+      card.addEventListener('touchmove', (e) => moveDrag(e.touches[0].clientX), { passive: true });
+      card.addEventListener('touchend', endDrag);
+
+      // Egér (Mouse / Desktop)
+      card.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.switch')) return; // Ha a kapcsolóra kattint, ne húzza a kártyát
+        startDrag(e.clientX);
       });
+      window.addEventListener('mousemove', (e) => moveDrag(e.clientX));
+      window.addEventListener('mouseup', endDrag);
     });
   },
 
