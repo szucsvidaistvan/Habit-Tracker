@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Habit Tracker</title>
-  <link rel="stylesheet" href="style.css?v=1.7">
+  <link rel="stylesheet" href="style.css?v=1.8">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -87,7 +87,7 @@
           </div>
         </div>
 
-        <!-- Szokások aránya progress bar-os lista -->
+        <!-- 1. Szokások aránya progress bar-os lista -->
         <div style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
           <div style="font-size: 14px; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
             📊 Szokások aránya a célhoz képest:
@@ -95,7 +95,7 @@
           <div id="habits-breakdown-list"></div>
         </div>
 
-        <!-- Vertikális Oszlopdiagram -->
+        <!-- 2. Vertikális Oszlopdiagram -->
         <div style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
           <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
             📊 Napi elvégzett szokások (db):
@@ -105,7 +105,7 @@
           </div>
         </div>
 
-        <!-- Teljesítmény trend vonaldiagram -->
+        <!-- 3. Teljesítmény trend vonaldiagram -->
         <div style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
           <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
             📈 Teljesítmény trend (%):
@@ -180,7 +180,6 @@
     let barChartInstance = null;
     let activeStatsTab = 'weekly';
 
-    // Helyi dátum lekérése YYYY-MM-DD formátumban (időzóna elcsúszás ellen)
     function getLocalDateString(dateObj = new Date()) {
       const year = dateObj.getFullYear();
       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -333,7 +332,7 @@
             </div>
             <div id="switch-wrapper-${h.id}">
               <label class="switch">
-                <input type="checkbox" ${h.completed ? 'checked' : ''} onchange="toggleHabit('${h.id}', this.checked)">
+                <input type="checkbox" ${h.completed ? 'checked' : ''} onchange="toggleHabit('${h.id}')">
                 <span class="slider"></span>
               </label>
             </div>
@@ -406,55 +405,45 @@
       });
     }
 
-    // Javított toggleHabit: biztosan beküldi a Supabase-nek a true/false értéket
-    async function toggleHabit(habitId, isChecked) {
+    // A 759e35a commit működő toggle habit logikája visszaállítva
+    async function toggleHabit(habitId) {
       const todayStr = getLocalDateString();
       const item = habitsList.find(h => h.id === habitId);
       if (!item) return;
 
-      item.completed = isChecked;
+      item.completed = !item.completed;
       updateProgress();
 
-      const { data: existingLogs, error: fetchErr } = await db
-        .from('daily_logs')
-        .select('id')
-        .eq('habit_id', habitId)
-        .eq('log_date', todayStr);
-
-      if (fetchErr) {
-        console.error('Lekérdezési hiba:', fetchErr);
-        return;
-      }
-
-      if (existingLogs && existingLogs.length > 0) {
-        const { error: updateErr } = await db
-          .from('daily_logs')
-          .update({ completed: isChecked })
-          .eq('id', existingLogs[0].id);
-
-        if (updateErr) {
-          console.error('Update hiba:', updateErr);
-          item.completed = !isChecked;
-          updateProgress();
-          renderHabits();
-        }
-      } else {
-        const { data: insertedData, error: insertErr } = await db
+      if (item.completed) {
+        const { data, error } = await db
           .from('daily_logs')
           .insert([{
             habit_id: habitId,
             log_date: todayStr,
-            completed: isChecked
+            completed: true
           }])
           .select();
 
-        if (insertErr) {
-          console.error('Insert hiba:', insertErr);
-          item.completed = !isChecked;
+        if (error) {
+          console.error('Hiba a daily_log mentésénél:', error);
+          item.completed = false;
           updateProgress();
-          renderHabits();
-        } else if (insertedData && insertedData.length > 0) {
-          item.log_id = insertedData[0].id;
+        } else if (data && data.length > 0) {
+          item.log_id = data[0].id;
+        }
+      } else {
+        const { error } = await db
+          .from('daily_logs')
+          .delete()
+          .eq('habit_id', habitId)
+          .eq('log_date', todayStr);
+
+        if (error) {
+          console.error('Hiba a daily_log törlésénél:', error);
+          item.completed = true;
+          updateProgress();
+        } else {
+          item.log_id = null;
         }
       }
     }
