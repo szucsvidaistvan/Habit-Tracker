@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Habit Tracker</title>
-  <link rel="stylesheet" href="style.css?v=1.9">
+  <link rel="stylesheet" href="style.css?v=2.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -258,7 +258,6 @@
 
       const todayStr = getLocalDateString();
 
-      // 1. Saját szokások lekérése
       const { data: habitsData, error: habitsErr } = await db
         .from('habits')
         .select('*')
@@ -271,7 +270,6 @@
         return;
       }
 
-      // 2. Napi logok lekérése JOIN-nal a habits táblán keresztül (RLS kompatibilis)
       const { data: logsData, error: logsErr } = await db
         .from('daily_logs')
         .select('*, habits!inner(user_id)')
@@ -293,7 +291,6 @@
         const log = logsMap[h.id];
         return {
           ...h,
-          log_id: log ? log.id : null,
           completed: log ? log.completed : false
         };
       });
@@ -408,7 +405,7 @@
       });
     }
 
-    // A 9e5dda6 commit eredeti működő toggle habit logikája
+    // Stabil, közvetlen habit_id + log_date alapú frissítés (upsert)
     async function toggleHabit(habitId) {
       const todayStr = getLocalDateString();
       const item = habitsList.find(h => h.id === habitId);
@@ -418,21 +415,18 @@
       updateProgress();
 
       if (item.completed) {
-        const { data, error } = await db
+        const { error } = await db
           .from('daily_logs')
-          .insert([{
+          .upsert({
             habit_id: habitId,
             log_date: todayStr,
             completed: true
-          }])
-          .select();
+          }, { onConflict: 'habit_id,log_date' });
 
         if (error) {
-          console.error('Hiba a daily_log mentésénél:', error);
+          console.error('Hiba az mentésnél:', error);
           item.completed = false;
           updateProgress();
-        } else if (data && data.length > 0) {
-          item.log_id = data[0].id;
         }
       } else {
         const { error } = await db
@@ -442,11 +436,9 @@
           .eq('log_date', todayStr);
 
         if (error) {
-          console.error('Hiba a daily_log törlésénél:', error);
+          console.error('Hiba a törlésnél:', error);
           item.completed = true;
           updateProgress();
-        } else {
-          item.log_id = null;
         }
       }
     }
@@ -547,7 +539,6 @@
 
       const startDateStr = datesList[0].dateStr;
 
-      // Statisztika lekérdezése JOIN-nal az RLS átlépéséhez
       const { data: logs, error } = await db
         .from('daily_logs')
         .select('*, habits!inner(user_id)')
