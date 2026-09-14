@@ -360,10 +360,13 @@ const App = {
   async loadStatistics(type) {
     if (!this.currentUser) return;
     const daysCount = type === 'weekly' ? 7 : 30;
-    const datesList = [];
-    const dateMap = {};
+    const STREAK_WINDOW_DAYS = 90;
 
-    for (let i = daysCount - 1; i >= 0; i--) {
+    // Build a 90-day date scaffold (oldest -> newest, ending today).
+    // The chart/per-habit views use a slice of this; the streak calculation
+    // always uses the full window regardless of the Weekly/Monthly toggle.
+    const allDates = [];
+    for (let i = STREAK_WINDOW_DAYS - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dateStr = UI.getLocalDateString(d);
@@ -371,38 +374,85 @@ const App = {
         ? d.toLocaleDateString('en-US', { weekday: 'short' })
         : `${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getDate().toString().padStart(2,'0')}.`;
 
-      datesList.push({ dateStr, dayLabel });
-      dateMap[dateStr] = 0;
+      allDates.push({ dateStr, dayLabel, count: 0, percent: 0 });
     }
 
-    const startDateStr = datesList[0].dateStr;
+    const dateMap = {};
+    allDates.forEach(d => dateMap[d.dateStr] = d);
+
+    const startDateStr = allDates[0].dateStr;
     const { data: logs } = await API.fetchLogsRange(startDateStr);
 
-    const habitCounts = {};
     if (logs) {
       logs.forEach(log => {
-        if (dateMap[log.log_date] !== undefined) dateMap[log.log_date]++;
-        if (log.completed !== false) {
-          habitCounts[log.habit_id] = (habitCounts[log.habit_id] || 0) + 1;
+        if (dateMap[log.log_date] !== undefined && log.completed !== false) {
+          dateMap[log.log_date].count++;
         }
       });
     }
 
-    const labels = datesList.map(d => d.dayLabel);
-    const dailyCounts = datesList.map(d => dateMap[d.dateStr]);
     const totalHabitsCount = this.habitsList.length || 1;
-    const trendData = datesList.map(d => Math.round((dateMap[d.dateStr] / totalHabitsCount) * 100));
+    allDates.forEach(d => {
+      d.percent = Math.round((d.count / totalHabitsCount) * 100);
+    });
+
+    // Slice to the selected period for the charts
+    const periodDates = allDates.slice(-daysCount);
+    const labels = periodDates.map(d => d.dayLabel);
+    const dailyCounts = periodDates.map(d => d.count);
+    const trendData = periodDates.map(d => d.percent);
 
     UI.renderBarChart(labels, dailyCounts);
     UI.renderLineChart(labels, trendData);
 
     // Per-habit completion breakdown for the selected period
+    const periodDateSet = new Set(periodDates.map(d => d.dateStr));
+    const habitPeriodCounts = {};
+    if (logs) {
+      logs.forEach(log => {
+        if (periodDateSet.has(log.log_date) && log.completed !== false) {
+          habitPeriodCounts[log.habit_id] = (habitPeriodCounts[log.habit_id] || 0) + 1;
+        }
+      });
+    }
     const habitStats = this.habitsList.map(h => {
-      const count = habitCounts[h.id] || 0;
+      const count = habitPeriodCounts[h.id] || 0;
       const percent = daysCount > 0 ? Math.min(Math.round((count / daysCount) * 100), 100) : 0;
       return { title: h.title, percent };
     });
     UI.renderHabitStats(habitStats);
+
+    // Streaks always look at the full 90-day window, independent of the toggle
+    const percentSeries = allDates.map(d => d.percent);
+    const { current, best } = this.computeStreaks(percentSeries);
+    UI.renderStreaks(current, best);
+  },
+
+  // A "perfect day" is a day where 100% of active habits were completed.
+  // current = consecutive perfect days ending today (breaks on the first non-perfect day).
+  // best = the longest run of perfect days found anywhere in the series.
+  computeStreaks(percentSeries) {
+    let current = 0;
+    for (let i = percentSeries.length - 1; i >= 0; i--) {
+      if (percentSeries[i] >= 100) {
+        current++;
+      } else {
+        break;
+      }
+    }
+
+    let best = 0;
+    let run = 0;
+    percentSeries.forEach(p => {
+      if (p >= 100) {
+        run++;
+        best = Math.max(best, run);
+      } else {
+        run = 0;
+      }
+    });
+
+    return { current, best };
   },
 
   async loadProfileInactiveHabits() {
