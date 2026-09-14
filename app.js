@@ -75,56 +75,30 @@ const App = {
   },
 
   async handleToggleHabit(habitId) {
-    const todayStr = UI.getLocalDateString();
-    const habit = this.habitsList.find(h => h.id === habitId);
-    if (!habit) return;
+  const todayStr = UI.getLocalDateString();
+  const habit = this.habitsList.find(h => h.id === habitId);
+  if (!habit) return;
 
-    habit.completed = !habit.completed;
-    UI.updateProgress(this.habitsList);
+  console.log('[App Debug] Kapcsoló kattintva:', habit.title, '| Új állapot lesz:', !habit.completed);
 
-    if (habit.completed) {
-      const { error } = await API.addLog(habitId, todayStr);
-      if (error) habit.completed = false;
-    } else {
-      const { error } = await API.removeLog(habitId, todayStr);
-      if (error) habit.completed = true;
+  habit.completed = !habit.completed;
+  UI.updateProgress(this.habitsList);
+
+  if (habit.completed) {
+    const { error } = await API.addLog(habitId, todayStr);
+    if (error) {
+      console.error('[App Debug] Hiba az addLog során:', error);
+      habit.completed = false; // Visszaállítás hiba esetén
     }
-    UI.updateProgress(this.habitsList);
-  },
-
-  async handleDeleteHabit(id) {
-    if (!confirm('Biztosan inaktiválni szeretnéd ezt a szokást? (A korábbi adatok megmaradnak)')) return;
-    
-    const { error } = await API.softDeleteHabit(id);
-    if (!error) {
-      await this.loadHabits();
-    } else {
-      console.error('Inaktiválási hiba:', error);
+  } else {
+    const { error } = await API.removeLog(habitId, todayStr);
+    if (error) {
+      console.error('[App Debug] Hiba a removeLog során:', error);
+      habit.completed = true; // Visszaállítás hiba esetén
     }
-  },
-
-  openAddModal() {
-    this.editingHabitId = null;
-    document.getElementById('modal-title-text').innerText = 'Új szokás';
-    document.getElementById('habit-name-input').value = '';
-    document.getElementById('habit-freq-input').value = '';
-    document.getElementById('habit-modal').classList.add('active');
-  },
-
-  openEditModal(id) {
-    const h = this.habitsList.find(item => item.id === id);
-    if (!h) return;
-    this.editingHabitId = id;
-    document.getElementById('modal-title-text').innerText = 'Szokás szerkesztése';
-    document.getElementById('habit-name-input').value = h.title;
-    document.getElementById('habit-freq-input').value = h.weekly_target || '';
-    document.getElementById('habit-modal').classList.add('active');
-  },
-
-  closeModal() {
-    document.getElementById('habit-modal').classList.remove('active');
-  },
-
+  }
+  UI.updateProgress(this.habitsList);
+}
   async saveHabitModal() {
     const title = document.getElementById('habit-name-input').value.trim();
     const targetNum = parseInt(document.getElementById('habit-freq-input').value.trim()) || 7;
@@ -150,7 +124,7 @@ const App = {
 
     if (tab === 'stats') this.loadStatistics(this.activeStatsTab);
   },
-
+  
   switchStatsTab(type) {
     this.activeStatsTab = type;
     document.getElementById('btn-stats-weekly').classList.toggle('active', type === 'weekly');
