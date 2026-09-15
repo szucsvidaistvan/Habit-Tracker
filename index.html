@@ -9,6 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.0"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Iconify (used for the RPG-style achievement badge icons) -->
+  <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
 </head>
 <body>
   <!-- Auth View -->
@@ -159,6 +161,16 @@
         <button class="btn-secondary" onclick="App.closeDeleteModal()">Cancel</button>
         <button class="btn-danger" onclick="App.confirmDeleteHabit()">Delete</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Achievement Detail Modal (tap a badge to flip it open, tap anywhere to close) -->
+  <div id="achievement-modal" class="modal-overlay" style="display: none;" onclick="App.closeAchievementModal()">
+    <div class="modal-content">
+      <div class="achievement-modal-icon" id="achievement-modal-icon"></div>
+      <div class="achievement-modal-name" id="achievement-modal-name"></div>
+      <div class="achievement-modal-desc" id="achievement-modal-desc"></div>
+      <div class="achievement-modal-status" id="achievement-modal-status"></div>
     </div>
   </div>
 
