@@ -19,6 +19,14 @@ const UI = {
     return `${mins} min`;
   },
 
+  // Completion-level color bands: <30 red, 30-54 orange, 55-74 pale yellow, 75+ green
+  getBandInfo(percent) {
+    if (percent < 30) return { color: 'var(--band-red)', glow: 'var(--band-red-glow)' };
+    if (percent < 55) return { color: 'var(--band-orange)', glow: 'var(--band-orange-glow)' };
+    if (percent < 75) return { color: 'var(--band-yellow)', glow: 'var(--band-yellow-glow)' };
+    return { color: 'var(--band-green)', glow: 'var(--band-green-glow)' };
+  },
+
   renderHabits(habitsList) {
     console.log('[UI.renderHabits] Starting render with habitsList:', habitsList);
     const container = document.getElementById('habits-container');
@@ -74,9 +82,18 @@ const UI = {
 
     const textElem = document.getElementById('progress-text');
     const fillElem = document.getElementById('progress-fill');
+    const band = this.getBandInfo(percent);
 
-    if (textElem) textElem.innerText = `${percent}%`;
-    if (fillElem) fillElem.style.width = `${percent}%`;
+    if (textElem) {
+      textElem.innerText = `${percent}%`;
+      textElem.style.color = band.color;
+      textElem.style.textShadow = `0 0 8px ${band.glow}`;
+    }
+    if (fillElem) {
+      fillElem.style.width = `${percent}%`;
+      fillElem.style.background = band.color;
+      fillElem.style.boxShadow = `0 0 12px ${band.glow}`;
+    }
   },
 
   initSwipeEvents(habitsList) {
@@ -154,7 +171,12 @@ const UI = {
         labels: labels,
         datasets: [{ data: data, backgroundColor: '#00e676', borderRadius: 6 }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
     });
   },
 
@@ -169,7 +191,14 @@ const UI = {
         labels: labels,
         datasets: [{ data: data, borderColor: '#00e676', backgroundColor: 'rgba(0, 230, 118, 0.15)', borderWidth: 2.5, fill: true, tension: 0.3 }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        // Fixed 0-100 range so a genuinely strong day (e.g. 88%) doesn't look
+        // like the chart floor just because it happens to be the period's minimum.
+        scales: { y: { min: 0, max: 100 } }
+      }
     });
   },
 
@@ -183,15 +212,18 @@ const UI = {
       return;
     }
 
-    container.innerHTML = list.map(h => `
+    container.innerHTML = list.map(h => {
+      const band = this.getBandInfo(h.percent);
+      return `
       <div class="habit-stat-row">
         <span class="habit-stat-name">${h.title}</span>
-        <span class="habit-stat-percent">${h.percent}%</span>
+        <span class="habit-stat-percent" style="color: ${band.color};">${h.percent}%</span>
         <div class="habit-stat-bar-bg">
-          <div class="habit-stat-bar-fill" style="width: ${h.percent}%;"></div>
+          <div class="habit-stat-bar-fill" style="width: ${h.percent}%; background: ${band.color};"></div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   },
 
   renderInactiveHabits(list) {
@@ -210,5 +242,14 @@ const UI = {
         <button class="btn-primary btn-sm" onclick="console.log('[UI.click] Reactivate ID:', '${h.id}'); App.reactivateFromProfile('${h.id}')">Reactivate</button>
       </div>
     `).join('');
+  },
+
+  renderStreaks(current, best) {
+    console.log('[UI.renderStreaks] current:', current, 'best:', best);
+    const currentElem = document.getElementById('current-streak-value');
+    const bestElem = document.getElementById('best-streak-value');
+
+    if (currentElem) currentElem.innerText = current;
+    if (bestElem) bestElem.innerText = best;
   }
 };
