@@ -43,6 +43,10 @@ const UI = {
       const targetText = h.weekly_target ? `${h.weekly_target}x/week` : '';
       const timeText = this.formatMinutes(h.target_minutes);
       const subInfo = [targetText, timeText].filter(Boolean).join(' • ');
+      const fulfilled = !!h.weeklyGoalMetBeforeToday;
+      const fulfilledBadge = fulfilled
+        ? `<span class="habit-fulfilled-badge">✓ Weekly goal met (${h.weekCountBeforeToday}/${h.weekly_target || 7})</span>`
+        : '';
 
       return `
         <div class="habit-card-wrapper">
@@ -54,10 +58,11 @@ const UI = {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
-          <div class="habit-item" id="swipe-content-${h.id}">
+          <div class="habit-item ${fulfilled ? 'habit-fulfilled' : ''}" id="swipe-content-${h.id}">
             <div class="habit-info">
               <span class="habit-name">${h.title}</span>
               <span class="habit-time">${subInfo}</span>
+              ${fulfilledBadge}
             </div>
             <div id="switch-wrapper-${h.id}">
               <label class="switch">
@@ -76,9 +81,12 @@ const UI = {
   },
 
   updateProgress(habitsList) {
-    const completed = habitsList.filter(h => h.completed).length;
-    const total = habitsList.length;
-    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    // Habits whose weekly goal was already met before today don't count
+    // against the daily total — they're a bonus, not something still owed.
+    const relevant = habitsList.filter(h => !h.weeklyGoalMetBeforeToday);
+    const completed = relevant.filter(h => h.completed).length;
+    const total = relevant.length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 100;
 
     const textElem = document.getElementById('progress-text');
     const fillElem = document.getElementById('progress-fill');
@@ -283,9 +291,9 @@ const UI = {
 
     const unlockedCount = list.filter(a => a.unlocked).length;
 
-    const gridHtml = list.map(a => `
-      <div class="badge ${a.unlocked ? 'badge-unlocked' : 'badge-locked'}" title="${a.description}">
-        <div class="badge-icon">${a.icon}</div>
+    const gridHtml = list.map((a, index) => `
+      <div class="badge ${a.unlocked ? 'badge-unlocked' : 'badge-locked'}" onclick="App.openAchievementModal(${index})">
+        <div class="badge-icon"><span class="iconify" data-icon="${a.icon}"></span></div>
         <div class="badge-name">${a.name}</div>
       </div>
     `).join('');
@@ -294,5 +302,23 @@ const UI = {
       <div class="badge-summary">${unlockedCount} / ${list.length} unlocked</div>
       <div class="badge-grid">${gridHtml}</div>
     `;
+  },
+
+  showAchievementDetail(achievement) {
+    const modal = document.getElementById('achievement-modal');
+    const iconElem = document.getElementById('achievement-modal-icon');
+    const nameElem = document.getElementById('achievement-modal-name');
+    const descElem = document.getElementById('achievement-modal-desc');
+    const statusElem = document.getElementById('achievement-modal-status');
+
+    if (iconElem) iconElem.innerHTML = `<span class="iconify" data-icon="${achievement.icon}"></span>`;
+    if (nameElem) nameElem.innerText = achievement.name;
+    if (descElem) descElem.innerText = achievement.description;
+    if (statusElem) {
+      statusElem.innerText = achievement.unlocked ? '✅ Achieved' : '🔒 Locked';
+      statusElem.className = 'achievement-modal-status ' + (achievement.unlocked ? 'unlocked' : 'locked');
+    }
+
+    if (modal) modal.style.display = 'flex';
   }
 };
