@@ -51,7 +51,7 @@ body {
   padding: 20px 12px 100px 12px !important;
 }
 
-/* Generic card */
+/* Generikus kártya */
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -66,7 +66,7 @@ body {
   max-width: 420px;
 }
 
-/* --- Auth --- */
+/* --- Bejelentkezés --- */
 #auth-container input {
   background: var(--bg-color);
   border: 1px solid var(--border-color);
@@ -80,7 +80,7 @@ body {
   border-color: var(--accent-color);
 }
 
-/* --- Buttons --- */
+/* --- Gombok --- */
 .btn-primary,
 .btn-secondary,
 .btn-danger {
@@ -117,7 +117,7 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
-/* --- Header --- */
+/* --- Fejléc --- */
 .app-header {
   text-align: center;
   margin-bottom: 18px;
@@ -138,7 +138,7 @@ body {
   letter-spacing: 0.3px;
 }
 
-/* --- Daily progress card --- */
+/* --- Napi haladás kártya --- */
 .progress-card {
   margin-bottom: 16px;
 }
@@ -175,7 +175,7 @@ body {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-/* --- Habit list --- */
+/* --- Szokáslista --- */
 .habits-list {
   display: flex;
   flex-direction: column;
@@ -220,7 +220,19 @@ body {
   color: var(--text-sub);
 }
 
-/* Swipe reveal buttons */
+.habit-item.habit-fulfilled {
+  border-left: 3px solid var(--accent-color);
+}
+
+.habit-fulfilled-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-color);
+  margin-top: 3px;
+}
+
+/* Swipe háttérgombok */
 .swipe-actions {
   position: absolute;
   right: 14px;
@@ -249,7 +261,7 @@ body {
 .swipe-btn.edit { background-color: var(--edit-color); }
 .swipe-btn.delete { background-color: var(--danger-color); }
 
-/* Toggle switch */
+/* Toggle kapcsoló */
 .switch {
   position: relative;
   display: inline-block;
@@ -300,7 +312,7 @@ input:checked + .slider:before { transform: translateX(20px); }
   color: var(--text-sub);
 }
 
-/* --- Stats --- */
+/* --- Statisztika --- */
 #view-stats h2,
 #view-profile h2 {
   margin: 0 0 14px 0;
@@ -529,11 +541,29 @@ input:checked + .slider:before { transform: translateX(20px); }
   background: var(--bg-color);
   border: 1px solid var(--border-color);
   transition: transform 0.15s ease;
+  cursor: pointer;
+}
+
+.badge:active {
+  transform: scale(0.93);
 }
 
 .badge-icon {
   font-size: 24px;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-icon .iconify {
+  width: 26px;
+  height: 26px;
+  color: var(--text-sub);
+}
+
+.badge-unlocked .badge-icon .iconify {
+  color: var(--accent-color);
 }
 
 .badge-name {
@@ -558,7 +588,7 @@ input:checked + .slider:before { transform: translateX(20px); }
   color: var(--text-main);
 }
 
-/* --- Profile --- */
+/* --- Profil --- */
 #view-profile .card {
   text-align: center;
 }
@@ -652,7 +682,72 @@ input:checked + .slider:before { transform: translateX(20px); }
   flex: 1;
 }
 
-/* --- Bottom navigation --- */
+/* --- Achievement detail modal (card-flip style) --- */
+#achievement-modal {
+  cursor: pointer;
+}
+
+#achievement-modal .modal-content {
+  text-align: center;
+  animation: card-flip-in 0.35s ease;
+  perspective: 800px;
+}
+
+@keyframes card-flip-in {
+  from { transform: rotateY(90deg); opacity: 0; }
+  to { transform: rotateY(0deg); opacity: 1; }
+}
+
+.achievement-modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px auto;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+}
+
+.achievement-modal-icon .iconify {
+  width: 40px;
+  height: 40px;
+  color: var(--accent-color);
+}
+
+.achievement-modal-name {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.achievement-modal-desc {
+  font-size: 13.5px;
+  color: var(--text-sub);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.achievement-modal-status {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.achievement-modal-status.locked {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-sub);
+}
+
+.achievement-modal-status.unlocked {
+  background: rgba(0, 230, 118, 0.15);
+  color: var(--accent-color);
+}
+
+/* --- Alsó navigáció --- */
 .bottom-nav {
   position: fixed;
   bottom: 0;
