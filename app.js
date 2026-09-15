@@ -8,6 +8,7 @@ const App = {
   currentUser: null,
   habitsList: [],
   inactiveHabitsList: [],
+  achievementsList: [],
   editingHabitId: null,
   pendingDeleteId: null,
   activeStatsTab: 'weekly',
@@ -132,6 +133,7 @@ const App = {
   async loadHabits() {
     if (!this.currentUser) return;
     const todayStr = UI.getLocalDateString();
+    const mondayStr = this.getWeekStartString();
     console.log(`[App.loadHabits] Loading habits (${todayStr})...`);
 
     const { data: habitsData, error: habitsError } = await API.fetchActiveHabits(this.currentUser.id);
@@ -140,15 +142,45 @@ const App = {
     const { data: logsData, error: logsError } = await API.fetchLogsByDate(todayStr);
     if (logsError) console.error('[App.loadHabits] Error:', logsError);
 
+    const { data: weekLogs, error: weekLogsError } = await API.fetchLogsRange(mondayStr);
+    if (weekLogsError) console.error('[App.loadHabits] Error:', weekLogsError);
+
     const logsMap = {};
     if (logsData) logsData.forEach(l => logsMap[l.habit_id] = l);
 
-    this.habitsList = (habitsData || []).map(h => ({
-      ...h,
-      completed: logsMap[h.id] ? logsMap[h.id].completed : false
-    }));
+    // How many times was each habit already completed this week, NOT counting today.
+    // If that already meets the weekly goal, today's checkbox becomes optional/bonus
+    // instead of something still "owed" for the day.
+    const weekCountsBeforeToday = {};
+    if (weekLogs) {
+      weekLogs.forEach(l => {
+        if (l.completed !== false && l.log_date !== todayStr) {
+          weekCountsBeforeToday[l.habit_id] = (weekCountsBeforeToday[l.habit_id] || 0) + 1;
+        }
+      });
+    }
+
+    this.habitsList = (habitsData || []).map(h => {
+      const weeklyTarget = h.weekly_target || 7;
+      const weekCountBeforeToday = weekCountsBeforeToday[h.id] || 0;
+      return {
+        ...h,
+        completed: logsMap[h.id] ? logsMap[h.id].completed : false,
+        weekCountBeforeToday,
+        weeklyGoalMetBeforeToday: weekCountBeforeToday >= weeklyTarget
+      };
+    });
 
     UI.renderHabits(this.habitsList);
+  },
+
+  // Monday of the week containing dateObj, as a 'YYYY-MM-DD' string.
+  getWeekStartString(dateObj = new Date()) {
+    const d = new Date(dateObj);
+    const dow = d.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+    const diffToMonday = (dow === 0 ? -6 : 1) - dow;
+    d.setDate(d.getDate() + diffToMonday);
+    return UI.getLocalDateString(d);
   },
 
   async handleToggleHabit(habitId) {
@@ -370,51 +402,53 @@ const App = {
     const daysCount = type === 'weekly' ? 7 : 30;
     const STREAK_WINDOW_DAYS = 90;
 
-    // Build a 90-day date scaffold (oldest -> newest, ending today).
+    // Build a 90-day date + label scaffold (oldest -> newest, ending today).
     // The chart/per-habit views use a slice of this; the streak calculation
     // always uses the full window regardless of the Weekly/Monthly toggle.
-    const allDates = [];
+    const allDateStrings = [];
+    const dayLabelByDate = {};
     for (let i = STREAK_WINDOW_DAYS - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dateStr = UI.getLocalDateString(d);
-      const dayLabel = type === 'weekly'
+      allDateStrings.push(dateStr);
+      dayLabelByDate[dateStr] = type === 'weekly'
         ? d.toLocaleDateString('en-US', { weekday: 'short' })
         : `${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getDate().toString().padStart(2,'0')}.`;
-
-      allDates.push({ dateStr, dayLabel, count: 0, percent: 0 });
     }
 
-    const dateMap = {};
-    allDates.forEach(d => dateMap[d.dateStr] = d);
-
-    const startDateStr = allDates[0].dateStr;
+    const startDateStr = allDateStrings[0];
     const { data: logs } = await API.fetchLogsRange(startDateStr);
 
+    // Weekly-quota-aware daily percentages: a habit stops counting against a
+    // day once its weekly target was already met earlier that same week.
+    const dailyResults = this.computeDailyPercents(this.habitsList, logs, allDateStrings);
+
+    // Raw completion counts per day for the "Habits Completed" bar chart —
+    // this one is a plain tally, not quota-adjusted, so bonus check-ins still show up.
+    const rawCountByDate = {};
+    allDateStrings.forEach(d => { rawCountByDate[d] = 0; });
     if (logs) {
       logs.forEach(log => {
-        if (dateMap[log.log_date] !== undefined && log.completed !== false) {
-          dateMap[log.log_date].count++;
+        if (rawCountByDate[log.log_date] !== undefined && log.completed !== false) {
+          rawCountByDate[log.log_date]++;
         }
       });
     }
 
-    const totalHabitsCount = this.habitsList.length || 1;
-    allDates.forEach(d => {
-      d.percent = Math.round((d.count / totalHabitsCount) * 100);
-    });
-
     // Slice to the selected period for the charts
-    const periodDates = allDates.slice(-daysCount);
-    const labels = periodDates.map(d => d.dayLabel);
-    const dailyCounts = periodDates.map(d => d.count);
-    const trendData = periodDates.map(d => d.percent);
+    const periodDateStrings = allDateStrings.slice(-daysCount);
+    const periodResults = dailyResults.slice(-daysCount);
+    const labels = periodDateStrings.map(d => dayLabelByDate[d]);
+    const dailyCounts = periodDateStrings.map(d => rawCountByDate[d]);
+    const trendData = periodResults.map(r => r.percent);
 
     UI.renderBarChart(labels, dailyCounts);
     UI.renderLineChart(labels, trendData);
 
-    // Per-habit completion breakdown for the selected period
-    const periodDateSet = new Set(periodDates.map(d => d.dateStr));
+    // Per-habit completion breakdown for the selected period, scaled to each
+    // habit's own weekly cadence instead of a flat "every single day" bar.
+    const periodDateSet = new Set(periodDateStrings);
     const habitPeriodCounts = {};
     if (logs) {
       logs.forEach(log => {
@@ -425,15 +459,75 @@ const App = {
     }
     const habitStats = this.habitsList.map(h => {
       const count = habitPeriodCounts[h.id] || 0;
-      const percent = daysCount > 0 ? Math.min(Math.round((count / daysCount) * 100), 100) : 0;
+      const weeklyTarget = h.weekly_target || 7;
+      const expectedForPeriod = weeklyTarget * (daysCount / 7);
+      const percent = expectedForPeriod > 0 ? Math.min(Math.round((count / expectedForPeriod) * 100), 100) : 0;
       return { title: h.title, percent };
     });
     UI.renderHabitStats(habitStats);
 
     // Streaks always look at the full 90-day window, independent of the toggle
-    const percentSeries = allDates.map(d => d.percent);
+    const percentSeries = dailyResults.map(r => r.percent);
     const { current, best, todayQualifies } = this.computeStreaks(percentSeries, STREAK_THRESHOLD);
     UI.renderStreaks(current, best, todayQualifies);
+  },
+
+  // For each date in dateStrings (oldest -> newest), works out how many active
+  // habits were still "owed" that day (a habit stops being owed once its
+  // weekly target was already met earlier in that same Mon-Sun week) and how
+  // many of those owed habits were actually completed. percent is based on
+  // that adjusted denominator, so a 4x/week habit doesn't drag the score down
+  // on days after its weekly goal is already secured.
+  computeDailyPercents(habitsList, logs, dateStrings) {
+    const completedByHabit = {};
+    habitsList.forEach(h => { completedByHabit[h.id] = new Set(); });
+
+    (logs || []).forEach(l => {
+      if (l.completed !== false && completedByHabit[l.habit_id]) {
+        completedByHabit[l.habit_id].add(l.log_date);
+      }
+    });
+
+    const weekKeyOf = (dateStr) => {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      const dow = dateObj.getDay();
+      const diffToMonday = (dow === 0 ? -6 : 1) - dow;
+      dateObj.setDate(dateObj.getDate() + diffToMonday);
+      return UI.getLocalDateString(dateObj);
+    };
+
+    const results = dateStrings.map(dateStr => ({ dateStr, count: 0, denominator: 0, percent: 0 }));
+
+    habitsList.forEach(h => {
+      const weeklyTarget = h.weekly_target || 7;
+      let currentWeekKey = null;
+      let weekCountBeforeToday = 0;
+
+      dateStrings.forEach((dateStr, idx) => {
+        const wk = weekKeyOf(dateStr);
+        if (wk !== currentWeekKey) {
+          currentWeekKey = wk;
+          weekCountBeforeToday = 0;
+        }
+
+        const doneToday = completedByHabit[h.id].has(dateStr);
+        const owedToday = weekCountBeforeToday < weeklyTarget;
+
+        if (owedToday) {
+          results[idx].denominator++;
+          if (doneToday) results[idx].count++;
+        }
+
+        if (doneToday) weekCountBeforeToday++;
+      });
+    });
+
+    results.forEach(r => {
+      r.percent = r.denominator > 0 ? Math.round((r.count / r.denominator) * 100) : 100;
+    });
+
+    return results;
   },
 
   // A "qualifying day" is a day where at least STREAK_THRESHOLD% of active
@@ -519,28 +613,40 @@ const App = {
     const completedLogs = (logs || []).filter(l => l.completed !== false);
     const totalCheckins = completedLogs.length;
 
-    // Group by day to derive perfect days and the all-time best streak
-    const dayCounts = {};
-    completedLogs.forEach(l => {
-      dayCounts[l.log_date] = (dayCounts[l.log_date] || 0) + 1;
-    });
-
-    const totalHabitsCount = this.habitsList.length || 1;
-    const sortedDates = Object.keys(dayCounts).sort();
-    const percentByDate = sortedDates.map(dateStr => Math.round((dayCounts[dateStr] / totalHabitsCount) * 100));
-
-    const perfectDaysCount = percentByDate.filter(p => p >= 100).length;
-
+    // Build a CONTIGUOUS day-by-day series from the earliest completion to
+    // today (not just the days that have logs) so streak runs aren't falsely
+    // stitched together across gaps, then reuse the same weekly-quota-aware
+    // percent calculation as the Stats tab.
+    let perfectDaysCount = 0;
     let bestStreakAllTime = 0;
-    let run = 0;
-    percentByDate.forEach(p => {
-      if (p >= STREAK_THRESHOLD) {
-        run++;
-        bestStreakAllTime = Math.max(bestStreakAllTime, run);
-      } else {
-        run = 0;
+
+    if (completedLogs.length > 0) {
+      const sortedLogDates = completedLogs.map(l => l.log_date).sort();
+      const [ey, em, ed] = sortedLogDates[0].split('-').map(Number);
+      const cursor = new Date(ey, em - 1, ed);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const contiguousDates = [];
+      while (cursor <= today) {
+        contiguousDates.push(UI.getLocalDateString(cursor));
+        cursor.setDate(cursor.getDate() + 1);
       }
-    });
+
+      const dailyResults = this.computeDailyPercents(this.habitsList, logs, contiguousDates);
+
+      perfectDaysCount = dailyResults.filter(r => r.denominator > 0 && r.percent >= 100).length;
+
+      let run = 0;
+      dailyResults.forEach(r => {
+        if (r.percent >= STREAK_THRESHOLD) {
+          run++;
+          bestStreakAllTime = Math.max(bestStreakAllTime, run);
+        } else {
+          run = 0;
+        }
+      });
+    }
 
     const activeHabitsCount = this.habitsList.length;
 
@@ -551,28 +657,41 @@ const App = {
       activeHabitsCount
     });
 
+    this.achievementsList = achievements;
     UI.renderAchievements(achievements);
   },
 
   buildAchievementList(stats) {
     return [
-      { icon: '🔥', name: 'Spark', description: 'Reach a 3-day streak', unlocked: stats.bestStreakAllTime >= 3 },
-      { icon: '🔥', name: 'Week Warrior', description: 'Reach a 7-day streak', unlocked: stats.bestStreakAllTime >= 7 },
-      { icon: '🔥', name: 'Fortnight Fighter', description: 'Reach a 14-day streak', unlocked: stats.bestStreakAllTime >= 14 },
-      { icon: '🔥', name: 'Monthly Master', description: 'Reach a 30-day streak', unlocked: stats.bestStreakAllTime >= 30 },
-      { icon: '🔥', name: 'Unstoppable', description: 'Reach a 60-day streak', unlocked: stats.bestStreakAllTime >= 60 },
-      { icon: '🔥', name: 'Centurion', description: 'Reach a 100-day streak', unlocked: stats.bestStreakAllTime >= 100 },
-      { icon: '✅', name: 'First Steps', description: 'Log 10 check-ins', unlocked: stats.totalCheckins >= 10 },
-      { icon: '✅', name: 'Getting Serious', description: 'Log 100 check-ins', unlocked: stats.totalCheckins >= 100 },
-      { icon: '✅', name: 'Habit Machine', description: 'Log 500 check-ins', unlocked: stats.totalCheckins >= 500 },
-      { icon: '✅', name: 'Legend', description: 'Log 1,000 check-ins', unlocked: stats.totalCheckins >= 1000 },
-      { icon: '🌟', name: 'Perfect Day', description: 'Complete every habit in one day', unlocked: stats.perfectDaysCount >= 1 },
-      { icon: '🌟', name: 'Perfectionist', description: '10 perfect days', unlocked: stats.perfectDaysCount >= 10 },
-      { icon: '🌟', name: 'Flawless', description: '30 perfect days', unlocked: stats.perfectDaysCount >= 30 },
-      { icon: '🌱', name: 'Getting Started', description: 'Track 3 active habits', unlocked: stats.activeHabitsCount >= 3 },
-      { icon: '🌱', name: 'Habit Collector', description: 'Track 5 active habits', unlocked: stats.activeHabitsCount >= 5 },
-      { icon: '🌱', name: 'Habit Master', description: 'Track 8 active habits', unlocked: stats.activeHabitsCount >= 8 }
+      { icon: 'game-icons:fire', name: 'Spark', description: 'Reach a 3-day streak', unlocked: stats.bestStreakAllTime >= 3 },
+      { icon: 'game-icons:flame', name: 'Week Warrior', description: 'Reach a 7-day streak', unlocked: stats.bestStreakAllTime >= 7 },
+      { icon: 'game-icons:fire-ring', name: 'Fortnight Fighter', description: 'Reach a 14-day streak', unlocked: stats.bestStreakAllTime >= 14 },
+      { icon: 'game-icons:phoenix', name: 'Monthly Master', description: 'Reach a 30-day streak', unlocked: stats.bestStreakAllTime >= 30 },
+      { icon: 'game-icons:dragon-head', name: 'Unstoppable', description: 'Reach a 60-day streak', unlocked: stats.bestStreakAllTime >= 60 },
+      { icon: 'game-icons:laurels', name: 'Centurion', description: 'Reach a 100-day streak', unlocked: stats.bestStreakAllTime >= 100 },
+      { icon: 'game-icons:footprints', name: 'First Steps', description: 'Log 10 check-ins', unlocked: stats.totalCheckins >= 10 },
+      { icon: 'game-icons:muscle-up', name: 'Getting Serious', description: 'Log 100 check-ins', unlocked: stats.totalCheckins >= 100 },
+      { icon: 'game-icons:gears', name: 'Habit Machine', description: 'Log 500 check-ins', unlocked: stats.totalCheckins >= 500 },
+      { icon: 'game-icons:trophy-cup', name: 'Legend', description: 'Log 1,000 check-ins', unlocked: stats.totalCheckins >= 1000 },
+      { icon: 'game-icons:star-medal', name: 'Perfect Day', description: 'Complete every habit owed in one day', unlocked: stats.perfectDaysCount >= 1 },
+      { icon: 'game-icons:gem', name: 'Perfectionist', description: '10 perfect days', unlocked: stats.perfectDaysCount >= 10 },
+      { icon: 'game-icons:gems', name: 'Flawless', description: '30 perfect days', unlocked: stats.perfectDaysCount >= 30 },
+      { icon: 'game-icons:seedling', name: 'Getting Started', description: 'Track 3 active habits', unlocked: stats.activeHabitsCount >= 3 },
+      { icon: 'game-icons:backpack', name: 'Habit Collector', description: 'Track 5 active habits', unlocked: stats.activeHabitsCount >= 5 },
+      { icon: 'game-icons:tied-scroll', name: 'Habit Master', description: 'Track 8 active habits', unlocked: stats.activeHabitsCount >= 8 }
     ];
+  },
+
+  openAchievementModal(index) {
+    const achievement = this.achievementsList ? this.achievementsList[index] : null;
+    if (!achievement) return;
+    console.log('[App.openAchievementModal] Opening achievement:', achievement.name);
+    UI.showAchievementDetail(achievement);
+  },
+
+  closeAchievementModal() {
+    const modal = document.getElementById('achievement-modal');
+    if (modal) modal.style.display = 'none';
   }
 };
 
