@@ -1,3 +1,8 @@
+// A day counts toward a streak if at least this % of active habits were completed.
+// Lower than 100% on purpose: some habits only need a few times a week, so
+// demanding a literal 100% every single day would punish people unfairly.
+const STREAK_THRESHOLD = 70;
+
 // Application Controller
 const App = {
   currentUser: null,
@@ -343,7 +348,10 @@ const App = {
     if (profileView) profileView.style.display = tab === 'profile' ? 'block' : 'none';
 
     if (tab === 'stats') this.loadStatistics(this.activeStatsTab);
-    if (tab === 'profile') this.loadProfileInactiveHabits();
+    if (tab === 'profile') {
+      this.loadProfileInactiveHabits();
+      this.loadAchievements();
+    }
   },
 
   switchStatsTab(type) {
@@ -424,17 +432,25 @@ const App = {
 
     // Streaks always look at the full 90-day window, independent of the toggle
     const percentSeries = allDates.map(d => d.percent);
-    const { current, best } = this.computeStreaks(percentSeries);
-    UI.renderStreaks(current, best);
+    const { current, best, todayQualifies } = this.computeStreaks(percentSeries, STREAK_THRESHOLD);
+    UI.renderStreaks(current, best, todayQualifies);
   },
 
-  // A "perfect day" is a day where 100% of active habits were completed.
-  // current = consecutive perfect days ending today (breaks on the first non-perfect day).
-  // best = the longest run of perfect days found anywhere in the series.
-  computeStreaks(percentSeries) {
+  // A "qualifying day" is a day where at least STREAK_THRESHOLD% of active
+  // habits were completed. Today is treated specially: if it hasn't hit the
+  // threshold yet, it's still "pending" rather than counted as a broken day —
+  // the streak shown is the one secured through yesterday. As soon as today
+  // crosses the threshold, it's folded into the count immediately.
+  computeStreaks(percentSeries, threshold) {
+    const len = percentSeries.length;
+    if (len === 0) return { current: 0, best: 0, todayQualifies: false };
+
+    const todayQualifies = percentSeries[len - 1] >= threshold;
+    const startIndex = todayQualifies ? len - 1 : len - 2;
+
     let current = 0;
-    for (let i = percentSeries.length - 1; i >= 0; i--) {
-      if (percentSeries[i] >= 100) {
+    for (let i = startIndex; i >= 0; i--) {
+      if (percentSeries[i] >= threshold) {
         current++;
       } else {
         break;
@@ -444,7 +460,7 @@ const App = {
     let best = 0;
     let run = 0;
     percentSeries.forEach(p => {
-      if (p >= 100) {
+      if (p >= threshold) {
         run++;
         best = Math.max(best, run);
       } else {
@@ -452,7 +468,7 @@ const App = {
       }
     });
 
-    return { current, best };
+    return { current, best, todayQualifies };
   },
 
   async loadProfileInactiveHabits() {
@@ -486,6 +502,77 @@ const App = {
     console.log('[App.reactivateFromProfile] Successfully reactivated.');
     await this.loadProfileInactiveHabits();
     await this.loadHabits();
+  },
+
+  async loadAchievements() {
+    if (!this.currentUser) return;
+    console.log('[App.loadAchievements] Computing achievements...');
+
+    // Use a far-back start date to approximate "all-time" history for badges.
+    const ALL_TIME_START = '2020-01-01';
+    const { data: logs, error } = await API.fetchLogsRange(ALL_TIME_START);
+    if (error) {
+      console.error('[App.loadAchievements] Error:', error);
+      return;
+    }
+
+    const completedLogs = (logs || []).filter(l => l.completed !== false);
+    const totalCheckins = completedLogs.length;
+
+    // Group by day to derive perfect days and the all-time best streak
+    const dayCounts = {};
+    completedLogs.forEach(l => {
+      dayCounts[l.log_date] = (dayCounts[l.log_date] || 0) + 1;
+    });
+
+    const totalHabitsCount = this.habitsList.length || 1;
+    const sortedDates = Object.keys(dayCounts).sort();
+    const percentByDate = sortedDates.map(dateStr => Math.round((dayCounts[dateStr] / totalHabitsCount) * 100));
+
+    const perfectDaysCount = percentByDate.filter(p => p >= 100).length;
+
+    let bestStreakAllTime = 0;
+    let run = 0;
+    percentByDate.forEach(p => {
+      if (p >= STREAK_THRESHOLD) {
+        run++;
+        bestStreakAllTime = Math.max(bestStreakAllTime, run);
+      } else {
+        run = 0;
+      }
+    });
+
+    const activeHabitsCount = this.habitsList.length;
+
+    const achievements = this.buildAchievementList({
+      totalCheckins,
+      perfectDaysCount,
+      bestStreakAllTime,
+      activeHabitsCount
+    });
+
+    UI.renderAchievements(achievements);
+  },
+
+  buildAchievementList(stats) {
+    return [
+      { icon: '🔥', name: 'Spark', description: 'Reach a 3-day streak', unlocked: stats.bestStreakAllTime >= 3 },
+      { icon: '🔥', name: 'Week Warrior', description: 'Reach a 7-day streak', unlocked: stats.bestStreakAllTime >= 7 },
+      { icon: '🔥', name: 'Fortnight Fighter', description: 'Reach a 14-day streak', unlocked: stats.bestStreakAllTime >= 14 },
+      { icon: '🔥', name: 'Monthly Master', description: 'Reach a 30-day streak', unlocked: stats.bestStreakAllTime >= 30 },
+      { icon: '🔥', name: 'Unstoppable', description: 'Reach a 60-day streak', unlocked: stats.bestStreakAllTime >= 60 },
+      { icon: '🔥', name: 'Centurion', description: 'Reach a 100-day streak', unlocked: stats.bestStreakAllTime >= 100 },
+      { icon: '✅', name: 'First Steps', description: 'Log 10 check-ins', unlocked: stats.totalCheckins >= 10 },
+      { icon: '✅', name: 'Getting Serious', description: 'Log 100 check-ins', unlocked: stats.totalCheckins >= 100 },
+      { icon: '✅', name: 'Habit Machine', description: 'Log 500 check-ins', unlocked: stats.totalCheckins >= 500 },
+      { icon: '✅', name: 'Legend', description: 'Log 1,000 check-ins', unlocked: stats.totalCheckins >= 1000 },
+      { icon: '🌟', name: 'Perfect Day', description: 'Complete every habit in one day', unlocked: stats.perfectDaysCount >= 1 },
+      { icon: '🌟', name: 'Perfectionist', description: '10 perfect days', unlocked: stats.perfectDaysCount >= 10 },
+      { icon: '🌟', name: 'Flawless', description: '30 perfect days', unlocked: stats.perfectDaysCount >= 30 },
+      { icon: '🌱', name: 'Getting Started', description: 'Track 3 active habits', unlocked: stats.activeHabitsCount >= 3 },
+      { icon: '🌱', name: 'Habit Collector', description: 'Track 5 active habits', unlocked: stats.activeHabitsCount >= 5 },
+      { icon: '🌱', name: 'Habit Master', description: 'Track 8 active habits', unlocked: stats.activeHabitsCount >= 8 }
+    ];
   }
 };
 
