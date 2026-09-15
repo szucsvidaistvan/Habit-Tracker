@@ -244,12 +244,55 @@ const UI = {
     `).join('');
   },
 
-  renderStreaks(current, best) {
-    console.log('[UI.renderStreaks] current:', current, 'best:', best);
+  renderStreaks(current, best, todayQualifies) {
+    console.log('[UI.renderStreaks] current:', current, 'best:', best, 'todayQualifies:', todayQualifies);
     const currentElem = document.getElementById('current-streak-value');
     const bestElem = document.getElementById('best-streak-value');
+    const statusElem = document.getElementById('streak-status-label');
 
-    if (currentElem) currentElem.innerText = current;
+    if (currentElem) {
+      currentElem.innerText = current;
+      currentElem.classList.toggle('pending', !todayQualifies);
+      currentElem.classList.toggle('secured', todayQualifies);
+    }
+
     if (bestElem) bestElem.innerText = best;
+
+    if (statusElem) {
+      if (todayQualifies) {
+        statusElem.innerText = '✅ Secured for today';
+        statusElem.classList.remove('pending');
+        statusElem.classList.add('secured');
+      } else {
+        statusElem.innerText = '🔒 Complete today to keep it';
+        statusElem.classList.remove('secured');
+        statusElem.classList.add('pending');
+      }
+    }
+  },
+
+  renderAchievements(list) {
+    console.log('[UI.renderAchievements] Rendering achievements:', list);
+    const container = document.getElementById('achievements-container');
+    if (!container) return;
+
+    if (!list || list.length === 0) {
+      container.innerHTML = '<div class="loader">No achievements yet.</div>';
+      return;
+    }
+
+    const unlockedCount = list.filter(a => a.unlocked).length;
+
+    const gridHtml = list.map(a => `
+      <div class="badge ${a.unlocked ? 'badge-unlocked' : 'badge-locked'}" title="${a.description}">
+        <div class="badge-icon">${a.icon}</div>
+        <div class="badge-name">${a.name}</div>
+      </div>
+    `).join('');
+
+    container.innerHTML = `
+      <div class="badge-summary">${unlockedCount} / ${list.length} unlocked</div>
+      <div class="badge-grid">${gridHtml}</div>
+    `;
   }
 };
