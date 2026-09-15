@@ -72,6 +72,7 @@ body {
   border: 1px solid var(--border-color);
   color: var(--text-main);
   border-radius: 10px;
+  font-size: 14px;
   outline: none;
 }
 
@@ -170,7 +171,7 @@ body {
   height: 100%;
   background: var(--accent-color);
   border-radius: 6px;
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
@@ -349,6 +350,33 @@ input:checked + .slider:before { transform: translateX(20px); }
   letter-spacing: 0.5px;
 }
 
+.streak-value.pending {
+  color: var(--band-red);
+  text-shadow: 0 0 10px var(--band-red-glow);
+  animation: streak-pulse 1.4s ease-in-out infinite;
+}
+
+.streak-value.secured {
+  color: var(--accent-color);
+  text-shadow: 0 0 14px var(--accent-glow);
+  animation: none;
+}
+
+@keyframes streak-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.streak-status {
+  font-size: 9.5px;
+  font-weight: 700;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.streak-status.pending { color: var(--band-red); }
+.streak-status.secured { color: var(--accent-color); }
+
 .streak-divider {
   width: 1px;
   height: 46px;
@@ -435,7 +463,7 @@ input:checked + .slider:before { transform: translateX(20px); }
   height: 100%;
   background: var(--accent-color);
   border-radius: 4px;
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* --- Profile: section heading + inactive habits list --- */
@@ -474,6 +502,60 @@ input:checked + .slider:before { transform: translateX(20px); }
   font-size: 12px;
   border-radius: 10px;
   flex-shrink: 0;
+}
+
+/* --- Achievements (Profile tab) --- */
+.badge-summary {
+  font-size: 12px;
+  color: var(--text-sub);
+  text-align: center;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 4px;
+  border-radius: 14px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  transition: transform 0.15s ease;
+}
+
+.badge-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.badge-name {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-sub);
+  text-align: center;
+  line-height: 1.25;
+}
+
+.badge-locked {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.badge-unlocked {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.badge-unlocked .badge-name {
+  color: var(--text-main);
 }
 
 /* --- Profile --- */
@@ -544,6 +626,7 @@ input:checked + .slider:before { transform: translateX(20px); }
   border: 1px solid var(--border-color);
   color: var(--text-main);
   border-radius: 10px;
+  font-size: 14px;
   outline: none;
 }
 
