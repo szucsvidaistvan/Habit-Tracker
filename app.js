@@ -612,6 +612,16 @@ const App = {
     return { current, best, todayQualifies };
   },
 
+  toggleInactiveAccordion() {
+    const body = document.getElementById('inactive-accordion-body');
+    const chevron = document.getElementById('inactive-accordion-chevron');
+    if (!body) return;
+
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    if (chevron) chevron.classList.toggle('open', !isOpen);
+  },
+
   async loadProfileInactiveHabits() {
     if (!this.currentUser) return;
     console.log('[App.loadProfileInactiveHabits] Loading inactive habits...');
