@@ -696,6 +696,17 @@ input:checked + .slider:before { transform: translateX(20px); }
   line-height: 1.25;
 }
 
+.badge-date {
+  font-size: 7.5px;
+  font-weight: 600;
+  color: var(--text-sub);
+  opacity: 0.8;
+}
+
+.badge-unlocked .badge-date {
+  color: var(--accent-color);
+}
+
 .badge-locked {
   opacity: 0.35;
   filter: grayscale(1);
