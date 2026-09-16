@@ -467,9 +467,15 @@ const App = {
     const startDateStr = allDateStrings[0];
     const { data: logs } = await API.fetchLogsRange(startDateStr);
 
+    // Full habit history (active + inactive), with created_at/deactivated_at,
+    // so a habit that's since been deactivated is still correctly counted as
+    // "owed" on the past days when it actually existed.
+    const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
+
     // Weekly-quota-aware daily percentages: a habit stops counting against a
-    // day once its weekly target was already met earlier that same week.
-    const dailyResults = this.computeDailyPercents(this.habitsList, logs, allDateStrings);
+    // day once its weekly target was already met earlier that same week (and
+    // doesn't count at all on days before it existed / after it was deactivated).
+    const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs, allDateStrings);
 
     // Raw completion counts per day for the "Habits Completed" bar chart —
     // this one is a plain tally, not quota-adjusted, so bonus check-ins still show up.
@@ -519,12 +525,13 @@ const App = {
     UI.renderStreaks(current, best, todayQualifies);
   },
 
-  // For each date in dateStrings (oldest -> newest), works out how many active
-  // habits were still "owed" that day (a habit stops being owed once its
-  // weekly target was already met earlier in that same Mon-Sun week) and how
-  // many of those owed habits were actually completed. percent is based on
-  // that adjusted denominator, so a 4x/week habit doesn't drag the score down
-  // on days after its weekly goal is already secured.
+  // For each date in dateStrings (oldest -> newest), works out how many
+  // habits were still "owed" that day. A habit is only considered at all on
+  // a given day if it actually existed then (created_at <= day AND
+  // (deactivated_at is null OR deactivated_at > day)) — this is what stops
+  // deactivating a habit from retroactively inflating past days' percentages.
+  // Within the days it existed, it stops being "owed" once its weekly target
+  // was already met earlier that same Mon-Sun week.
   computeDailyPercents(habitsList, logs, dateStrings) {
     const completedByHabit = {};
     habitsList.forEach(h => { completedByHabit[h.id] = new Set(); });
@@ -548,6 +555,9 @@ const App = {
 
     habitsList.forEach(h => {
       const weeklyTarget = h.weekly_target || 7;
+      const createdDateStr = h.created_at ? h.created_at.slice(0, 10) : '1970-01-01';
+      const deactivatedDateStr = h.deactivated_at ? h.deactivated_at.slice(0, 10) : null;
+
       let currentWeekKey = null;
       let weekCountBeforeToday = 0;
 
@@ -558,15 +568,16 @@ const App = {
           weekCountBeforeToday = 0;
         }
 
+        const existedOnDay = createdDateStr <= dateStr && (!deactivatedDateStr || deactivatedDateStr > dateStr);
         const doneToday = completedByHabit[h.id].has(dateStr);
-        const owedToday = weekCountBeforeToday < weeklyTarget;
+        const owedToday = existedOnDay && weekCountBeforeToday < weeklyTarget;
 
         if (owedToday) {
           results[idx].denominator++;
           if (doneToday) results[idx].count++;
         }
 
-        if (doneToday) weekCountBeforeToday++;
+        if (existedOnDay && doneToday) weekCountBeforeToday++;
       });
     });
 
@@ -657,9 +668,21 @@ const App = {
 
   async loadAchievements() {
     if (!this.currentUser) return;
-    console.log('[App.loadAchievements] Computing achievements...');
+    console.log('[App.loadAchievements] Loading achievements...');
 
-    // Use a far-back start date to approximate "all-time" history for badges.
+    // 1. Fast read: what's already permanently unlocked, and when.
+    const { data: unlockedRows, error: unlockedError } = await API.fetchUserAchievements(this.currentUser.id);
+    if (unlockedError) {
+      console.error('[App.loadAchievements] Error fetching unlocked achievements:', unlockedError);
+    }
+    const unlockedMap = {};
+    (unlockedRows || []).forEach(row => {
+      unlockedMap[row.achievement_key] = row.unlocked_at;
+    });
+
+    // 2. Compute current live stats, only to detect thresholds crossed since
+    // the last visit. Already-unlocked badges never get re-evaluated or
+    // re-locked — they're permanent from here on, per the table above.
     const ALL_TIME_START = '2020-01-01';
     const { data: logs, error } = await API.fetchLogsRange(ALL_TIME_START);
     if (error) {
@@ -667,13 +690,15 @@ const App = {
       return;
     }
 
+    const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
+
     const completedLogs = (logs || []).filter(l => l.completed !== false);
     const totalCheckins = completedLogs.length;
 
     // Build a CONTIGUOUS day-by-day series from the earliest completion to
     // today (not just the days that have logs) so streak runs aren't falsely
-    // stitched together across gaps, then reuse the same weekly-quota-aware
-    // percent calculation as the Stats tab.
+    // stitched together across gaps, then reuse the same weekly-quota-aware,
+    // history-aware percent calculation as the Stats tab.
     let perfectDaysCount = 0;
     let bestStreakAllTime = 0;
 
@@ -690,7 +715,7 @@ const App = {
         cursor.setDate(cursor.getDate() + 1);
       }
 
-      const dailyResults = this.computeDailyPercents(this.habitsList, logs, contiguousDates);
+      const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs, contiguousDates);
 
       perfectDaysCount = dailyResults.filter(r => r.denominator > 0 && r.percent >= 100).length;
 
@@ -707,12 +732,34 @@ const App = {
 
     const activeHabitsCount = this.habitsList.length;
 
-    const achievements = this.buildAchievementList({
+    const definitions = this.buildAchievementList({
       totalCheckins,
       perfectDaysCount,
       bestStreakAllTime,
       activeHabitsCount
     });
+
+    // 3. Persist any newly-met achievement that isn't in the table yet.
+    for (const def of definitions) {
+      if (def.metCondition && !unlockedMap[def.key]) {
+        const { error: unlockError } = await API.unlockAchievement(this.currentUser.id, def.key);
+        if (!unlockError) {
+          unlockedMap[def.key] = new Date().toISOString();
+          console.log(`[App.loadAchievements] Unlocked new achievement: ${def.key}`);
+        }
+        // A duplicate-key error here just means another tab/session already
+        // unlocked it a moment ago — safe to ignore, it'll show up next load.
+      }
+    }
+
+    // 4. The render list is driven purely by what's persisted as unlocked.
+    const achievements = definitions.map(def => ({
+      icon: def.icon,
+      name: def.name,
+      description: def.description,
+      unlocked: !!unlockedMap[def.key],
+      unlockedAt: unlockedMap[def.key] || null
+    }));
 
     this.achievementsList = achievements;
     UI.renderAchievements(achievements);
@@ -720,22 +767,22 @@ const App = {
 
   buildAchievementList(stats) {
     return [
-      { icon: 'game-icons:fire', name: 'Spark', description: 'Reach a 3-day streak', unlocked: stats.bestStreakAllTime >= 3 },
-      { icon: 'game-icons:flame', name: 'Week Warrior', description: 'Reach a 7-day streak', unlocked: stats.bestStreakAllTime >= 7 },
-      { icon: 'game-icons:fire-ring', name: 'Fortnight Fighter', description: 'Reach a 14-day streak', unlocked: stats.bestStreakAllTime >= 14 },
-      { icon: 'game-icons:fire-dash', name: 'Monthly Master', description: 'Reach a 30-day streak', unlocked: stats.bestStreakAllTime >= 30 },
-      { icon: 'game-icons:dragon-head', name: 'Unstoppable', description: 'Reach a 60-day streak', unlocked: stats.bestStreakAllTime >= 60 },
-      { icon: 'game-icons:laurels', name: 'Centurion', description: 'Reach a 100-day streak', unlocked: stats.bestStreakAllTime >= 100 },
-      { icon: 'game-icons:boot-prints', name: 'First Steps', description: 'Log 10 check-ins', unlocked: stats.totalCheckins >= 10 },
-      { icon: 'game-icons:muscle-up', name: 'Getting Serious', description: 'Log 100 check-ins', unlocked: stats.totalCheckins >= 100 },
-      { icon: 'game-icons:gears', name: 'Habit Machine', description: 'Log 500 check-ins', unlocked: stats.totalCheckins >= 500 },
-      { icon: 'game-icons:trophy-cup', name: 'Legend', description: 'Log 1,000 check-ins', unlocked: stats.totalCheckins >= 1000 },
-      { icon: 'game-icons:star-medal', name: 'Perfect Day', description: 'Complete every habit owed in one day', unlocked: stats.perfectDaysCount >= 1 },
-      { icon: 'lucide:gem', name: 'Perfectionist', description: '10 perfect days', unlocked: stats.perfectDaysCount >= 10 },
-      { icon: 'game-icons:gems', name: 'Flawless', description: '30 perfect days', unlocked: stats.perfectDaysCount >= 30 },
-      { icon: 'game-icons:seedling', name: 'Getting Started', description: 'Track 3 active habits', unlocked: stats.activeHabitsCount >= 3 },
-      { icon: 'game-icons:backpack', name: 'Habit Collector', description: 'Track 5 active habits', unlocked: stats.activeHabitsCount >= 5 },
-      { icon: 'game-icons:tied-scroll', name: 'Habit Master', description: 'Track 8 active habits', unlocked: stats.activeHabitsCount >= 8 }
+      { key: 'streak_3', icon: 'game-icons:fire', name: 'Spark', description: 'Reach a 3-day streak', metCondition: stats.bestStreakAllTime >= 3 },
+      { key: 'streak_7', icon: 'game-icons:flame', name: 'Week Warrior', description: 'Reach a 7-day streak', metCondition: stats.bestStreakAllTime >= 7 },
+      { key: 'streak_14', icon: 'game-icons:fire-ring', name: 'Fortnight Fighter', description: 'Reach a 14-day streak', metCondition: stats.bestStreakAllTime >= 14 },
+      { key: 'streak_30', icon: 'game-icons:fire-dash', name: 'Monthly Master', description: 'Reach a 30-day streak', metCondition: stats.bestStreakAllTime >= 30 },
+      { key: 'streak_60', icon: 'game-icons:dragon-head', name: 'Unstoppable', description: 'Reach a 60-day streak', metCondition: stats.bestStreakAllTime >= 60 },
+      { key: 'streak_100', icon: 'game-icons:laurels', name: 'Centurion', description: 'Reach a 100-day streak', metCondition: stats.bestStreakAllTime >= 100 },
+      { key: 'checkins_10', icon: 'game-icons:boot-prints', name: 'First Steps', description: 'Log 10 check-ins', metCondition: stats.totalCheckins >= 10 },
+      { key: 'checkins_100', icon: 'game-icons:muscle-up', name: 'Getting Serious', description: 'Log 100 check-ins', metCondition: stats.totalCheckins >= 100 },
+      { key: 'checkins_500', icon: 'game-icons:gears', name: 'Habit Machine', description: 'Log 500 check-ins', metCondition: stats.totalCheckins >= 500 },
+      { key: 'checkins_1000', icon: 'game-icons:trophy-cup', name: 'Legend', description: 'Log 1,000 check-ins', metCondition: stats.totalCheckins >= 1000 },
+      { key: 'perfect_1', icon: 'game-icons:star-medal', name: 'Perfect Day', description: 'Complete every habit owed in one day', metCondition: stats.perfectDaysCount >= 1 },
+      { key: 'perfect_10', icon: 'lucide:gem', name: 'Perfectionist', description: '10 perfect days', metCondition: stats.perfectDaysCount >= 10 },
+      { key: 'perfect_30', icon: 'game-icons:gems', name: 'Flawless', description: '30 perfect days', metCondition: stats.perfectDaysCount >= 30 },
+      { key: 'habits_3', icon: 'game-icons:seedling', name: 'Getting Started', description: 'Track 3 active habits', metCondition: stats.activeHabitsCount >= 3 },
+      { key: 'habits_5', icon: 'game-icons:backpack', name: 'Habit Collector', description: 'Track 5 active habits', metCondition: stats.activeHabitsCount >= 5 },
+      { key: 'habits_8', icon: 'game-icons:tied-scroll', name: 'Habit Master', description: 'Track 8 active habits', metCondition: stats.activeHabitsCount >= 8 }
     ];
   },
 
