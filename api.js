@@ -76,7 +76,7 @@ const API = {
   async softDeleteHabit(habitId) {
     return await supabase
       .from('habits')
-      .update({ is_active: false })
+      .update({ is_active: false, deactivated_at: new Date().toISOString() })
       .eq('id', habitId);
   },
 
@@ -87,7 +87,8 @@ const API = {
         title: title,
         weekly_target: weeklyTarget,
         target_minutes: targetMinutes,
-        is_active: true
+        is_active: true,
+        deactivated_at: null
       })
       .eq('id', habitId);
   },
@@ -113,5 +114,16 @@ const API = {
 
   async fetchLogsRange(startDateStr) {
     return await supabase.from('daily_logs').select('*').gte('log_date', startDateStr);
+  },
+
+  async fetchUserAchievements(userId) {
+    return await supabase.from('user_achievements').select('*').eq('user_id', userId);
+  },
+
+  async unlockAchievement(userId, achievementKey) {
+    return await supabase.from('user_achievements').insert([{
+      user_id: userId,
+      achievement_key: achievementKey
+    }]);
   }
 };
