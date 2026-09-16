@@ -17,6 +17,15 @@ const API = {
     return await supabase.auth.signUp({ email, password });
   },
 
+  async loginWithGoogle() {
+    return await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + window.location.pathname
+      }
+    });
+  },
+
   async logout() {
     return await supabase.auth.signOut();
   },
