@@ -610,6 +610,34 @@ input:checked + .slider:before { transform: translateX(20px); }
   flex-shrink: 0;
 }
 
+/* --- Collapsible accordion (Inactive Habits) --- */
+.accordion-header {
+  width: 100%;
+  background: none;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.accordion-chevron {
+  color: var(--text-sub);
+  font-size: 13px;
+  transition: transform 0.25s ease;
+}
+
+.accordion-chevron.open {
+  transform: rotate(180deg);
+}
+
+.accordion-body {
+  margin-top: 14px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 14px;
+}
+
 /* --- Achievements (Profile tab) --- */
 .badge-summary {
   font-size: 12px;
@@ -763,12 +791,13 @@ input:checked + .slider:before { transform: translateX(20px); }
   font-size: 14px;
   color: var(--text-sub);
   line-height: 1.5;
-  margin: 0;
+  margin: 0 0 20px 0;
 }
 
 .modal-actions {
   display: flex;
   gap: 10px;
+  margin-top: 8px;
 }
 
 .modal-actions .btn-secondary,
