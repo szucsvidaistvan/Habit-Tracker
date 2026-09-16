@@ -60,24 +60,118 @@ body {
   box-shadow: 0 20px 40px rgba(0,0,0,0.35);
 }
 
-#auth-container,
-#app-container {
-  width: 100%;
-  max-width: 420px;
+/* --- Bejelentkezés --- */
+.auth-title {
+  text-align: center;
+  margin: 0 0 20px 0;
+  font-size: 22px;
+  font-weight: 800;
 }
 
-/* --- Bejelentkezés --- */
-#auth-container input {
+.auth-error {
+  min-height: 18px;
+  color: var(--danger-color);
+  font-size: 12.5px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.google-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #ffffff;
+  color: #1f1f1f;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+  margin-bottom: 18px;
+}
+
+.google-btn:active {
+  transform: scale(0.97);
+}
+
+.google-btn:hover {
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
+}
+
+.google-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.auth-divider span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-sub);
+}
+
+.auth-input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
   background: var(--bg-color);
   border: 1px solid var(--border-color);
   color: var(--text-main);
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 16px;
   outline: none;
 }
 
-#auth-container input:focus {
+.auth-input:focus {
   border-color: var(--accent-color);
+}
+
+.auth-toggle-text {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin: 16px 0 0 0;
+}
+
+.auth-toggle-link {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 4px;
+}
+
+.auth-toggle-link:active {
+  opacity: 0.7;
+}
+
+#auth-container,
+#app-container {
+  width: 100%;
+  max-width: 420px;
 }
 
 /* --- Gombok --- */
