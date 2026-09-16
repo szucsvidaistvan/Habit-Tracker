@@ -12,6 +12,7 @@ const App = {
   editingHabitId: null,
   pendingDeleteId: null,
   activeStatsTab: 'weekly',
+  authMode: 'login',
 
   async init() {
     console.log('[App.init] Starting application...');
@@ -128,6 +129,52 @@ const App = {
     await API.logout();
     this.currentUser = null;
     this.showAuth();
+  },
+
+  // Switches the auth panel between its "Log In" and "Sign Up" presentation:
+  // same single submit button, just re-labelled, plus the toggle line below it.
+  toggleAuthMode() {
+    this.authMode = this.authMode === 'login' ? 'signup' : 'login';
+
+    const titleElem = document.getElementById('auth-title');
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const promptElem = document.getElementById('auth-toggle-prompt');
+    const toggleBtn = document.getElementById('auth-toggle-btn');
+    const errElem = document.getElementById('auth-error');
+
+    if (this.authMode === 'signup') {
+      if (titleElem) titleElem.innerText = 'Sign Up';
+      if (submitBtn) submitBtn.innerText = 'Sign Up';
+      if (promptElem) promptElem.innerText = 'Already have an account?';
+      if (toggleBtn) toggleBtn.innerText = 'Log In';
+    } else {
+      if (titleElem) titleElem.innerText = 'Log In';
+      if (submitBtn) submitBtn.innerText = 'Log In';
+      if (promptElem) promptElem.innerText = "Don't have an account?";
+      if (toggleBtn) toggleBtn.innerText = 'Sign Up';
+    }
+
+    if (errElem) errElem.innerText = '';
+  },
+
+  handleAuthSubmit() {
+    if (this.authMode === 'signup') {
+      this.handleSignUp();
+    } else {
+      this.handleLogin();
+    }
+  },
+
+  async handleGoogleLogin() {
+    console.log('[App.handleGoogleLogin] Starting Google OAuth...');
+    const { error } = await API.loginWithGoogle();
+    if (error) {
+      console.error('[App.handleGoogleLogin] Error:', error);
+      const errElem = document.getElementById('auth-error');
+      if (errElem) errElem.innerText = error.message;
+    }
+    // On success the browser is redirected to Google and back automatically —
+    // nothing else to do here, App.init() picks up the session on return.
   },
 
   async loadHabits() {
