@@ -291,17 +291,28 @@ const UI = {
 
     const unlockedCount = list.filter(a => a.unlocked).length;
 
-    const gridHtml = list.map((a, index) => `
+    const gridHtml = list.map((a, index) => {
+      const dateHtml = a.unlocked && a.unlockedAt
+        ? `<span class="badge-date">${this.formatBadgeDate(a.unlockedAt)}</span>`
+        : '';
+      return `
       <div class="badge ${a.unlocked ? 'badge-unlocked' : 'badge-locked'}" onclick="App.openAchievementModal(${index})">
         <div class="badge-icon"><span class="iconify" data-icon="${a.icon}"></span></div>
         <div class="badge-name">${a.name}</div>
+        ${dateHtml}
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     container.innerHTML = `
       <div class="badge-summary">${unlockedCount} / ${list.length} unlocked</div>
       <div class="badge-grid">${gridHtml}</div>
     `;
+  },
+
+  formatBadgeDate(isoString) {
+    const d = new Date(isoString);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   },
 
   showAchievementDetail(achievement) {
@@ -315,8 +326,16 @@ const UI = {
     if (nameElem) nameElem.innerText = achievement.name;
     if (descElem) descElem.innerText = achievement.description;
     if (statusElem) {
-      statusElem.innerText = achievement.unlocked ? '✅ Achieved' : '🔒 Locked';
-      statusElem.className = 'achievement-modal-status ' + (achievement.unlocked ? 'unlocked' : 'locked');
+      if (achievement.unlocked) {
+        const dateStr = achievement.unlockedAt
+          ? new Date(achievement.unlockedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+          : null;
+        statusElem.innerText = dateStr ? `✅ Achieved — ${dateStr}` : '✅ Achieved';
+        statusElem.className = 'achievement-modal-status unlocked';
+      } else {
+        statusElem.innerText = '🔒 Locked';
+        statusElem.className = 'achievement-modal-status locked';
+      }
     }
 
     if (modal) modal.style.display = 'flex';
