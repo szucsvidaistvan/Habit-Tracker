@@ -448,26 +448,31 @@ const App = {
     const daysCount = type === 'weekly' ? 7 : 30;
     const STREAK_WINDOW_DAYS = 90;
   
-    const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
-  
-    let earliestCreatedStr = null;
-    (allHabitsHistory || []).forEach(h => {
-      if (h.created_at) {
-        const d = h.created_at.slice(0, 10);
-        if (!earliestCreatedStr || d < earliestCreatedStr) earliestCreatedStr = d;
-      }
-    });
-  
+        const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
+
     const defaultWindowStart = new Date();
     defaultWindowStart.setDate(defaultWindowStart.getDate() - (STREAK_WINDOW_DAYS - 1));
-  
+
+    const fetchStartStr = UI.getLocalDateString(defaultWindowStart);
+    const { data: logs } = await API.fetchLogsRange(fetchStartStr);
+
+    // Clamp the window to the earliest LOGGED completion, not habit created_at
+    // (created_at got backfilled to "now" for pre-existing habits by the schema
+    // migration, so it can't be trusted as a real historical creation date).
+    let earliestLogStr = null;
+    (logs || []).forEach(l => {
+      if (l.completed !== false && (!earliestLogStr || l.log_date < earliestLogStr)) {
+        earliestLogStr = l.log_date;
+      }
+    });
+
     let windowStartDate = defaultWindowStart;
-    if (earliestCreatedStr) {
-      const [ey, em, ed] = earliestCreatedStr.split('-').map(Number);
-      const createdDate = new Date(ey, em - 1, ed);
-      if (createdDate > defaultWindowStart) windowStartDate = createdDate;
+    if (earliestLogStr) {
+      const [ey, em, ed] = earliestLogStr.split('-').map(Number);
+      const firstLogDate = new Date(ey, em - 1, ed);
+      if (firstLogDate > defaultWindowStart) windowStartDate = firstLogDate;
     }
-  
+
     const allDateStrings = [];
     const dayLabelByDate = {};
     const cursor = new Date(windowStartDate);
@@ -481,12 +486,8 @@ const App = {
         : `${(cursor.getMonth()+1).toString().padStart(2,'0')}.${cursor.getDate().toString().padStart(2,'0')}.`;
       cursor.setDate(cursor.getDate() + 1);
     }
-  
-    const startDateStr = allDateStrings[0];
-    const { data: logs } = await API.fetchLogsRange(startDateStr);
-  
-    const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs, allDateStrings);
 
+    const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs, allDateStrings);
     // Raw completion counts per day for the "Habits Completed" bar chart —
     // this one is a plain tally, not quota-adjusted, so bonus check-ins still show up.
     const rawCountByDate = {};
