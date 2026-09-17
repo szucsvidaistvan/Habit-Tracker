@@ -736,7 +736,7 @@ const App = {
 
       let run = 0;
       dailyResults.forEach(r => {
-        if (r.percent >= STREAK_THRESHOLD) {
+        if (r.denominator === 0 || r.count >= 1) {
           run++;
           bestStreakAllTime = Math.max(bestStreakAllTime, run);
         } else {
