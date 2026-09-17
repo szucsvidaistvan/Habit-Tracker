@@ -460,12 +460,12 @@ const App = {
     // "already met this week's goal" day, but wrong for a day before the
     // account even existed, where it would falsely inflate the streak.
     let earliestCreatedStr = null;
-    (allHabitsHistory || []).forEach(h => {
-      if (h.created_at) {
-        const d = h.created_at.slice(0, 10);
-        if (!earliestCreatedStr || d < earliestCreatedStr) earliestCreatedStr = d;
-      }
-    });
+        (allHabitsHistory || []).forEach(h => {
+          if (h.created_at) {
+            const d = h.created_at.slice(0, 10);
+            if (!earliestCreatedStr || d < earliestCreatedStr) earliestCreatedStr = d;
+          }
+        });
 
     const defaultWindowStart = new Date();
     defaultWindowStart.setDate(defaultWindowStart.getDate() - (STREAK_WINDOW_DAYS - 1));
@@ -606,8 +606,10 @@ const App = {
       });
     });
 
-    results.forEach(r => {
-      r.percent = r.denominator > 0 ? Math.round((r.count / r.denominator) * 100) : 100;
+  results.forEach(r => {
+      // If there was no active habit on the given day (denominator == 0),
+    // then that day does not count towards the streak (0%), rather than being a false 100%!
+      r.percent = r.denominator > 0 ? Math.round((r.count / r.denominator) * 100) : 0;
     });
 
     return results;
@@ -623,6 +625,8 @@ const App = {
     if (len === 0) return { current: 0, best: 0, todayQualifies: false };
 
     const todayQualifies = percentSeries[len - 1] >= threshold;
+    
+    // Ha a mai nap még nincs teljesítve, a tegnapi naptól számolunk visszafelé
     const startIndex = todayQualifies ? len - 1 : len - 2;
 
     let current = 0;
@@ -630,6 +634,7 @@ const App = {
       if (percentSeries[i] >= threshold) {
         current++;
       } else {
+        // Amint talál egy megszakadt napot, megáll
         break;
       }
     }
