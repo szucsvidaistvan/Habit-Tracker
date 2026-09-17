@@ -449,28 +449,53 @@ const App = {
     const daysCount = type === 'weekly' ? 7 : 30;
     const STREAK_WINDOW_DAYS = 90;
 
-    // Build a 90-day date + label scaffold (oldest -> newest, ending today).
-    // The chart/per-habit views use a slice of this; the streak calculation
-    // always uses the full window regardless of the Weekly/Monthly toggle.
-    const allDateStrings = [];
-    const dayLabelByDate = {};
-    for (let i = STREAK_WINDOW_DAYS - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = UI.getLocalDateString(d);
-      allDateStrings.push(dateStr);
-      dayLabelByDate[dateStr] = type === 'weekly'
-        ? d.toLocaleDateString('en-US', { weekday: 'short' })
-        : `${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getDate().toString().padStart(2,'0')}.`;
-    }
-
-    const startDateStr = allDateStrings[0];
-    const { data: logs } = await API.fetchLogsRange(startDateStr);
-
     // Full habit history (active + inactive), with created_at/deactivated_at,
     // so a habit that's since been deactivated is still correctly counted as
     // "owed" on the past days when it actually existed.
     const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
+
+    // Never let the window reach back further than the account's oldest
+    // habit. Days before any habit existed have a 0 denominator, which
+    // defaults to "100% — nothing owed" — perfectly fine for a genuine
+    // "already met this week's goal" day, but wrong for a day before the
+    // account even existed, where it would falsely inflate the streak.
+    let earliestCreatedStr = null;
+    (allHabitsHistory || []).forEach(h => {
+      if (h.created_at) {
+        const d = h.created_at.slice(0, 10);
+        if (!earliestCreatedStr || d < earliestCreatedStr) earliestCreatedStr = d;
+      }
+    });
+
+    const defaultWindowStart = new Date();
+    defaultWindowStart.setDate(defaultWindowStart.getDate() - (STREAK_WINDOW_DAYS - 1));
+
+    let windowStartDate = defaultWindowStart;
+    if (earliestCreatedStr) {
+      const [ey, em, ed] = earliestCreatedStr.split('-').map(Number);
+      const createdDate = new Date(ey, em - 1, ed);
+      if (createdDate > defaultWindowStart) windowStartDate = createdDate;
+    }
+
+    // Build the date + label scaffold (oldest -> newest, ending today), clamped
+    // as above. The chart/per-habit views use a slice of this; the streak
+    // calculation always uses the full window regardless of the Weekly/Monthly toggle.
+    const allDateStrings = [];
+    const dayLabelByDate = {};
+    const cursor = new Date(windowStartDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    while (cursor <= today) {
+      const dateStr = UI.getLocalDateString(cursor);
+      allDateStrings.push(dateStr);
+      dayLabelByDate[dateStr] = type === 'weekly'
+        ? cursor.toLocaleDateString('en-US', { weekday: 'short' })
+        : `${(cursor.getMonth()+1).toString().padStart(2,'0')}.${cursor.getDate().toString().padStart(2,'0')}.`;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const startDateStr = allDateStrings[0];
+    const { data: logs } = await API.fetchLogsRange(startDateStr);
 
     // Weekly-quota-aware daily percentages: a habit stops counting against a
     // day once its weekly target was already met earlier that same week (and
