@@ -1,7 +1,6 @@
 // A day counts toward a streak if at least this % of active habits were completed.
 // Lower than 100% on purpose: some habits only need a few times a week, so
 // demanding a literal 100% every single day would punish people unfairly.
-const STREAK_THRESHOLD = 70;
 
 // Application Controller
 const App = {
@@ -448,38 +447,27 @@ const App = {
     if (!this.currentUser) return;
     const daysCount = type === 'weekly' ? 7 : 30;
     const STREAK_WINDOW_DAYS = 90;
-
-    // Full habit history (active + inactive), with created_at/deactivated_at,
-    // so a habit that's since been deactivated is still correctly counted as
-    // "owed" on the past days when it actually existed.
+  
     const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
-
-    // Never let the window reach back further than the account's oldest
-    // habit. Days before any habit existed have a 0 denominator, which
-    // defaults to "100% — nothing owed" — perfectly fine for a genuine
-    // "already met this week's goal" day, but wrong for a day before the
-    // account even existed, where it would falsely inflate the streak.
+  
     let earliestCreatedStr = null;
-        (allHabitsHistory || []).forEach(h => {
-          if (h.created_at) {
-            const d = h.created_at.slice(0, 10);
-            if (!earliestCreatedStr || d < earliestCreatedStr) earliestCreatedStr = d;
-          }
-        });
-
+    (allHabitsHistory || []).forEach(h => {
+      if (h.created_at) {
+        const d = h.created_at.slice(0, 10);
+        if (!earliestCreatedStr || d < earliestCreatedStr) earliestCreatedStr = d;
+      }
+    });
+  
     const defaultWindowStart = new Date();
     defaultWindowStart.setDate(defaultWindowStart.getDate() - (STREAK_WINDOW_DAYS - 1));
-
+  
     let windowStartDate = defaultWindowStart;
     if (earliestCreatedStr) {
       const [ey, em, ed] = earliestCreatedStr.split('-').map(Number);
       const createdDate = new Date(ey, em - 1, ed);
       if (createdDate > defaultWindowStart) windowStartDate = createdDate;
     }
-
-    // Build the date + label scaffold (oldest -> newest, ending today), clamped
-    // as above. The chart/per-habit views use a slice of this; the streak
-    // calculation always uses the full window regardless of the Weekly/Monthly toggle.
+  
     const allDateStrings = [];
     const dayLabelByDate = {};
     const cursor = new Date(windowStartDate);
@@ -493,13 +481,10 @@ const App = {
         : `${(cursor.getMonth()+1).toString().padStart(2,'0')}.${cursor.getDate().toString().padStart(2,'0')}.`;
       cursor.setDate(cursor.getDate() + 1);
     }
-
+  
     const startDateStr = allDateStrings[0];
     const { data: logs } = await API.fetchLogsRange(startDateStr);
-
-    // Weekly-quota-aware daily percentages: a habit stops counting against a
-    // day once its weekly target was already met earlier that same week (and
-    // doesn't count at all on days before it existed / after it was deactivated).
+  
     const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs, allDateStrings);
 
     // Raw completion counts per day for the "Habits Completed" bar chart —
@@ -545,8 +530,8 @@ const App = {
     UI.renderHabitStats(habitStats);
 
     // Streaks always look at the full 90-day window, independent of the toggle
-    const percentSeries = dailyResults.map(r => r.percent);
-    const { current, best, todayQualifies } = this.computeStreaks(percentSeries, STREAK_THRESHOLD);
+    const qualifiesSeries = dailyResults.map(r => r.denominator === 0 || r.count >= 1);
+    const { current, best, todayQualifies } = this.computeStreaks(qualifiesSeries);
     UI.renderStreaks(current, best, todayQualifies);
   },
 
@@ -620,18 +605,18 @@ const App = {
   // threshold yet, it's still "pending" rather than counted as a broken day —
   // the streak shown is the one secured through yesterday. As soon as today
   // crosses the threshold, it's folded into the count immediately.
-  computeStreaks(percentSeries, threshold) {
-    const len = percentSeries.length;
+  computeStreaks(qualifiesSeries) {
+    const len = qualifiesSeries.length;
     if (len === 0) return { current: 0, best: 0, todayQualifies: false };
 
-    const todayQualifies = percentSeries[len - 1] >= threshold;
+    const todayQualifies = qualifiesSeries[len - 1];
     
     // Ha a mai nap még nincs teljesítve, a tegnapi naptól számolunk visszafelé
     const startIndex = todayQualifies ? len - 1 : len - 2;
 
     let current = 0;
     for (let i = startIndex; i >= 0; i--) {
-      if (percentSeries[i] >= threshold) {
+      if (qualifiesSeries[i]) {
         current++;
       } else {
         // Amint talál egy megszakadt napot, megáll
@@ -641,8 +626,8 @@ const App = {
 
     let best = 0;
     let run = 0;
-    percentSeries.forEach(p => {
-      if (p >= threshold) {
+    qualifiesSeries.forEach(q => {
+      if (q) {
         run++;
         best = Math.max(best, run);
       } else {
