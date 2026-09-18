@@ -941,3 +941,72 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 .tab-item.active { color: var(--accent-color); }
+/* Bug Report lenyíló kártya */
+.bug-report-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-top: 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Alapértelmezett HTML nyíl elrejtése */
+.bug-report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.bug-report-header::-webkit-details-marker {
+  display: none;
+}
+
+/* Nyíl forgatása kinyitáskor */
+.bug-report-card[open] .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-arrow {
+  font-size: 11px;
+  color: var(--text-sub);
+  transition: transform 0.2s ease;
+}
+
+.bug-report-content {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Textarea méretezési hiba fix (Resize & Overflow Fix) */
+.bug-report-content textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 90px;
+  resize: vertical; /* Csak függőlegesen lehessen méretezni (*vertical resize*) */
+  box-sizing: border-box !important;
+  background: #0f172a !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-main) !important;
+  border-radius: 12px !important;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.bug-report-content textarea:focus {
+  border-color: #00FF00 !important;
+  outline: none;
+}
+
+.bug-report-content .btn-primary {
+  width: 100%;
+}
