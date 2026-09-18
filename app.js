@@ -464,7 +464,6 @@ const App = {
     if (tab === 'profile') {
       this.loadProfileInactiveHabits();
       this.loadAchievements();
-      this.loadHeatmap();
     }
   },
 
@@ -477,6 +476,7 @@ const App = {
     if (mBtn) mBtn.classList.toggle('active', type === 'monthly');
 
     this.loadStatistics(type);
+    this.loadHeatmap();
   },
 
   async loadStatistics(type) {
