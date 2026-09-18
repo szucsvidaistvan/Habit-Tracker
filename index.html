@@ -58,7 +58,13 @@
           <div id="progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
         </div>
       </div>
-
+      <div class="card week-widget">
+          <div class="week-widget-header">
+            <span id="week-widget-title">This Week</span>
+            <span id="week-widget-daynum"></span>
+          </div>
+          <div class="week-days-row" id="week-days-row"></div>
+      </div>
       <div id="habits-container" class="habits-list"></div>
 
       <button class="btn-primary add-habit-btn" onclick="App.openAddModal()">+ Add New Habit</button>
@@ -106,12 +112,26 @@
         <p id="user-email-display"></p>
         <button class="btn-danger" onclick="App.logout()">Log Out</button>
       </div>
-
+      <div class="card" style="margin-top: 16px;">
+          <h3 class="section-title">Activity Heatmap</h3>
+          <div class="heatmap-scroll">
+            <div id="heatmap-container" class="heatmap-grid"></div>
+          </div>
+          <div class="heatmap-legend">
+            <span>Less</span>
+            <span class="heatmap-cell band-empty"></span>
+            <span class="heatmap-cell band-red"></span>
+            <span class="heatmap-cell band-orange"></span>
+            <span class="heatmap-cell band-yellow"></span>
+            <span class="heatmap-cell band-green"></span>
+            <span>More</span>
+          </div>
+      </div>
       <div class="card" style="margin-top: 16px;">
         <h3 class="section-title">Achievements</h3>
         <div id="achievements-container"></div>
       </div>
-
+      
       <div class="card accordion-card" style="margin-top: 16px;">
         <button class="accordion-header" onclick="App.toggleInactiveAccordion()">
           <h3 class="section-title" style="margin: 0;">Inactive Habits</h3>
