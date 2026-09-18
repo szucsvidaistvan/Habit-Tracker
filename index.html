@@ -87,6 +87,21 @@
           <div class="streak-label">Best Streak</div>
         </div>
       </div>
+         <div class="card" style="margin-top: 16px;">
+          <h3 class="section-title">Activity Heatmap</h3>
+         <div class="heatmap-scroll">
+            <div id="heatmap-container" class="heatmap-grid"></div>
+          </div>
+          <div class="heatmap-legend">
+            <span>Less</span>
+            <span class="heatmap-cell band-empty"></span>
+            <span class="heatmap-cell band-red"></span>
+            <span class="heatmap-cell band-orange"></span>
+            <span class="heatmap-cell band-yellow"></span>
+            <span class="heatmap-cell band-green"></span>
+            <span>More</span>
+          </div>
+      </div>
       <div class="stats-toggle">
         <button id="btn-stats-weekly" class="toggle-btn active" onclick="App.switchStatsTab('weekly')">Weekly</button>
         <button id="btn-stats-monthly" class="toggle-btn" onclick="App.switchStatsTab('monthly')">Monthly</button>
@@ -115,21 +130,6 @@
       <div class="card" style="margin-top: 16px;">
         <h3 class="section-title">Your Data</h3>
         <button class="btn-secondary" onclick="App.exportUserData()" style="width: 100%;">Export My Data (JSON)</button>
-      </div>
-      <div class="card" style="margin-top: 16px;">
-          <h3 class="section-title">Activity Heatmap</h3>
-          <div class="heatmap-scroll">
-            <div id="heatmap-container" class="heatmap-grid"></div>
-          </div>
-          <div class="heatmap-legend">
-            <span>Less</span>
-            <span class="heatmap-cell band-empty"></span>
-            <span class="heatmap-cell band-red"></span>
-            <span class="heatmap-cell band-orange"></span>
-            <span class="heatmap-cell band-yellow"></span>
-            <span class="heatmap-cell band-green"></span>
-            <span>More</span>
-          </div>
       </div>
       <div class="card" style="margin-top: 16px;">
         <h3 class="section-title">Achievements</h3>
