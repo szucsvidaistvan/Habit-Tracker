@@ -285,6 +285,18 @@ renderWeekWidget(days, title, dayNum) {
         return;
       }
     
+      container.innerHTML = dailyResults.map(result => {
+        const band = this.getBandClass(result.percent);
+    
+        return `
+          <div
+            class="heatmap-cell ${band}"
+            title="${result.dateStr}: ${result.percent}%">
+          </div>
+        `;
+      }).join('');
+    },
+  
       const [fy, fm, fd] = dailyResults[0].dateStr.split('-').map(Number);
       const firstDate = new Date(fy, fm - 1, fd);
       const firstDow = firstDate.getDay(); // 0=Sun..6=Sat
