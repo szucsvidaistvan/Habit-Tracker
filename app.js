@@ -460,7 +460,10 @@ const App = {
     if (statsView) statsView.style.display = tab === 'stats' ? 'block' : 'none';
     if (profileView) profileView.style.display = tab === 'profile' ? 'block' : 'none';
 
-    if (tab === 'stats') this.loadStatistics(this.activeStatsTab);
+    if (tab === 'stats') {
+      this.loadStatistics(this.activeStatsTab);
+      this.loadHeatmap();
+    }
     if (tab === 'profile') {
       this.loadProfileInactiveHabits();
       this.loadAchievements();
@@ -476,7 +479,6 @@ const App = {
     if (mBtn) mBtn.classList.toggle('active', type === 'monthly');
 
     this.loadStatistics(type);
-    this.loadHeatmap();
   },
 
   async loadStatistics(type) {
