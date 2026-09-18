@@ -119,11 +119,15 @@ const API = {
   async fetchUserAchievements(userId) {
     return await supabase.from('user_achievements').select('*').eq('user_id', userId);
   },
-
+  
   async unlockAchievement(userId, achievementKey) {
     return await supabase.from('user_achievements').insert([{
       user_id: userId,
       achievement_key: achievementKey
     }]);
+  },
+  async sendBugReport(description) {
+  const { data: { user } } = await supabase.auth.getUser();
+  return await supabase.from('bug_reports').insert([{ user_id: user.id, description }]);
   }
 };
