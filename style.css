@@ -236,7 +236,18 @@ body {
 .progress-card {
   margin-bottom: 16px;
 }
-
+.week-widget { margin-bottom: 16px; }
+.week-widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--text-sub); }
+.week-widget-header span:first-child { color: var(--text-main); }
+.week-days-row { display: flex; justify-content: space-between; gap: 4px; }
+.week-day-pill { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; border-radius: 10px; background: var(--bg-color); border: 1px solid var(--border-color); }
+.week-day-pill.today { border-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-glow); }
+.week-day-label { font-size: 9.5px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; }
+.week-day-pill.today .week-day-label { color: var(--accent-color); }
+.week-day-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-color); }
+.week-day-dot.done { background: var(--accent-color); }
+.week-day-dot.missed { background: var(--band-red); }
+.week-day-dot.future { background: var(--border-color); opacity: 0.4; }
 .progress-header {
   display: flex;
   justify-content: space-between;
@@ -637,7 +648,17 @@ input:checked + .slider:before { transform: translateX(20px); }
   border-top: 1px solid var(--border-color);
   padding-top: 14px;
 }
-
+.heatmap-scroll { overflow-x: auto; padding-bottom: 6px; }
+.heatmap-grid { display: flex; gap: 3px; width: max-content; }
+.heatmap-week { display: flex; flex-direction: column; gap: 3px; }
+.heatmap-cell { width: 10px; height: 10px; border-radius: 2px; background: var(--border-color); }
+.heatmap-cell.band-empty { background: var(--border-color); opacity: 0.35; }
+.heatmap-cell.band-red { background: var(--band-red); }
+.heatmap-cell.band-orange { background: var(--band-orange); }
+.heatmap-cell.band-yellow { background: var(--band-yellow); }
+.heatmap-cell.band-green { background: var(--band-green); }
+.heatmap-legend { display: flex; align-items: center; gap: 4px; margin-top: 10px; font-size: 10px; color: var(--text-sub); }
+.heatmap-legend .heatmap-cell { width: 9px; height: 9px; }
 /* --- Achievements (Profile tab) --- */
 .badge-summary {
   font-size: 12px;
