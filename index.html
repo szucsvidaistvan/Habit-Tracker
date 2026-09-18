@@ -155,11 +155,16 @@
         </div>
         
       </div>
-      <div class="card" style="margin-top: 16px;">
-        <h3 class="section-title">Report a Bug / Feedback</h3>
-        <textarea id="bug-report-text" placeholder="Describe the issue or suggestion..." rows="3" style="width:100%; padding:8px;"></textarea>
-        <button class="btn-primary" onclick="App.submitBugReport()" style="width:100%; margin-top:8px;">Submit Report</button>
-      </div>
+        <details class="bug-report-card">
+          <summary class="bug-report-header">
+            <span>Report a Bug / Feedback</span>
+            <span class="dropdown-arrow">▼</span>
+          </summary>
+          <div class="bug-report-content">
+            <textarea id="bug-text" placeholder="Describe the issue or suggestion..."></textarea>
+            <button class="btn-primary" id="submit-bug-btn">Submit Report</button>
+          </div>
+        </details>
     </div>
   </div>
 
