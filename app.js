@@ -216,10 +216,45 @@ const App = {
         weeklyGoalMetBeforeToday: weekCountBeforeToday >= weeklyTarget
       };
     });
-
+    const weekWidgetDays = this.buildWeekWidgetData(weekLogs, mondayStr, todayStr);
+    const [my, mm, md] = mondayStr.split('-').map(Number);
+    const monday = new Date(my, mm - 1, md);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    const weekTitle = `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    const todayIndex = weekWidgetDays.findIndex(d => d.isToday);
+    const dayNum = todayIndex >= 0 ? `Day ${todayIndex + 1}/7` : '';
+    UI.renderWeekWidget(weekWidgetDays, weekTitle, dayNum);
     UI.renderHabits(this.habitsList);
-  },
+  },  
 
+    buildWeekWidgetData(weekLogs, mondayStr, todayStr) {
+    const completedDates = new Set();
+    (weekLogs || []).forEach(l => {
+      if (l.completed !== false) completedDates.add(l.log_date);
+    });
+  
+    const [my, mm, md] = mondayStr.split('-').map(Number);
+    const monday = new Date(my, mm - 1, md);
+  
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      const dateStr = UI.getLocalDateString(d);
+      const isToday = dateStr === todayStr;
+      const isFuture = dateStr > todayStr;
+  
+      let status;
+      if (isFuture) status = 'future';
+      else if (completedDates.has(dateStr)) status = 'done';
+      else if (isToday) status = 'pending';
+      else status = 'missed';
+  
+      days.push({ dateStr, label: d.toLocaleDateString('en-US', { weekday: 'narrow' }), isToday, status });
+    }
+    return days;
+  },
   // Monday of the week containing dateObj, as a 'YYYY-MM-DD' string.
   getWeekStartString(dateObj = new Date()) {
     const d = new Date(dateObj);
@@ -429,6 +464,7 @@ const App = {
     if (tab === 'profile') {
       this.loadProfileInactiveHabits();
       this.loadAchievements();
+      this.loadHeatmap();
     }
   },
 
@@ -681,7 +717,42 @@ const App = {
     await this.loadProfileInactiveHabits();
     await this.loadHabits();
   },
-
+  async loadHeatmap() {
+      if (!this.currentUser) return;
+      const HEATMAP_DAYS = 371;
+      const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
+    
+      const defaultStart = new Date();
+      defaultStart.setDate(defaultStart.getDate() - (HEATMAP_DAYS - 1));
+      const fetchStartStr = UI.getLocalDateString(defaultStart);
+      const { data: logs } = await API.fetchLogsRange(fetchStartStr);
+    
+      let earliestLogStr = null;
+      (logs || []).forEach(l => {
+        if (l.completed !== false && (!earliestLogStr || l.log_date < earliestLogStr)) {
+          earliestLogStr = l.log_date;
+        }
+      });
+    
+      let windowStart = defaultStart;
+      if (earliestLogStr) {
+        const [ey, em, ed] = earliestLogStr.split('-').map(Number);
+        const firstLogDate = new Date(ey, em - 1, ed);
+        if (firstLogDate > defaultStart) windowStart = firstLogDate;
+      }
+    
+      const dateStrings = [];
+      const cursor = new Date(windowStart);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      while (cursor <= today) {
+        dateStrings.push(UI.getLocalDateString(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    
+      const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs, dateStrings);
+      UI.renderHeatmap(dailyResults);
+    },
   async loadAchievements() {
     if (!this.currentUser) return;
     console.log('[App.loadAchievements] Loading achievements...');
