@@ -481,90 +481,77 @@ const App = {
     this.loadStatistics(type);
   },
 
-  async loadStatistics(type) {
-  if (!this.currentUser) return;
+    async loadStatistics(type) {
+    if (!this.currentUser) return;
 
-  const daysCount = type === 'weekly' ? 7 : 30;
-  const STREAK_WINDOW_DAYS = 400;
+    const daysCount = type === 'weekly' ? 7 : 30;
+    const STREAK_WINDOW_DAYS = 400;
 
-  const { data: allHabitsHistory } =
-    await API.fetchAllHabitsForStats(this.currentUser.id);
+    const { data: allHabitsHistory } =
+      await API.fetchAllHabitsForStats(this.currentUser.id);
 
-  const defaultWindowStart = new Date();
-  defaultWindowStart.setDate(
-    defaultWindowStart.getDate() - (STREAK_WINDOW_DAYS - 1)
-  );
+    const defaultWindowStart = new Date();
+    defaultWindowStart.setDate(
+      defaultWindowStart.getDate() - (STREAK_WINDOW_DAYS - 1)
+    );
 
-  const fetchStartStr = UI.getLocalDateString(defaultWindowStart);
-  const { data: logs } = await API.fetchLogsRange(fetchStartStr);
+    const fetchStartStr = UI.getLocalDateString(defaultWindowStart);
+    const { data: logs } = await API.fetchLogsRange(fetchStartStr);
 
-  const allDateStrings = [];
-  const dayLabelByDate = {};
+    const allDateStrings = [];
+    const dayLabelByDate = {};
+    const cursor = new Date(defaultWindowStart);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const cursor = new Date(defaultWindowStart);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  while (cursor <= today) {
-    const dateStr = UI.getLocalDateString(cursor);
-
-    allDateStrings.push(dateStr);
-
-    dayLabelByDate[dateStr] = type === 'weekly'
-      ? cursor.toLocaleDateString('en-US', {
-          weekday: 'short'
-        })
-      : `${(cursor.getMonth() + 1)
-          .toString()
-          .padStart(2, '0')}.${cursor
-          .getDate()
-          .toString()
-          .padStart(2, '0')}.`;
-
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  const dailyResults = this.computeDailyPercents(
-    allHabitsHistory || [],
-    logs || [],
-    allDateStrings
-  );
-
-  // Napi teljesítések száma a diagramhoz.
-  const rawCountByDate = {};
-
-  allDateStrings.forEach(date => {
-    rawCountByDate[date] = 0;
-  });
-
-  (logs || []).forEach(log => {
-    if (
-      rawCountByDate[log.log_date] !== undefined &&
-      log.completed !== false
-    ) {
-      rawCountByDate[log.log_date]++;
+    while (cursor <= today) {
+      const dateStr = UI.getLocalDateString(cursor);
+      allDateStrings.push(dateStr);
+      dayLabelByDate[dateStr] = type === 'weekly'
+        ? cursor.toLocaleDateString('en-US', { weekday: 'short' })
+        : `${(cursor.getMonth() + 1).toString().padStart(2, '0')}.${cursor.getDate().toString().padStart(2, '0')}.`;
+      cursor.setDate(cursor.getDate() + 1);
     }
-  });
 
-  // Csak a kiválasztott időszakot jelenítjük meg a diagramokon.
-  const periodDateStrings = allDateStrings.slice(-daysCount);
-  const periodResults = dailyResults.slice(-daysCount);
+    const dailyResults = this.computeDailyPercents(
+      allHabitsHistory || [],
+      logs || [],
+      allDateStrings
+    );
 
-  const labels = periodDateStrings.map(
-    date => dayLabelByDate[date]
-  );
+    const rawCountByDate = {};
+    allDateStrings.forEach(date => {
+      rawCountByDate[date] = 0;
+    });
 
-  const dailyCounts = periodDateStrings.map(
-    date => rawCountByDate[date]
-  );
+    (logs || []).forEach(log => {
+      if (
+        rawCountByDate[log.log_date] !== undefined &&
+        log.completed !== false
+      ) {
+        rawCountByDate[log.log_date]++;
+      }
+    });
 
-  const trendData = periodResults.map(
-    result => result.percent
-  );
+    const periodDateStrings = allDateStrings.slice(-daysCount);
+    const periodResults = dailyResults.slice(-daysCount);
 
-  UI.renderBarChart(labels, dailyCounts);
-  UI.renderLineChart(labels, trendData);
+    const labels = periodDateStrings.map(date => dayLabelByDate[date]);
+    const dailyCounts = periodDateStrings.map(date => rawCountByDate[date]);
+    const trendData = periodResults.map(result => result.percent);
 
+    UI.renderBarChart(labels, dailyCounts);
+    UI.renderLineChart(labels, trendData);
+
+    const qualifiesSeries = dailyResults.map(
+      result => result.denominator > 0 && result.count >= 1
+    );
+
+    const { current, best, todayQualifies } =
+      this.computeStreaks(qualifiesSeries);
+
+    UI.renderStreaks(current, best, todayQualifies);
+  },
   /*
    * Egy nap akkor számít streak napnak, ha legalább egy,
    * az adott napon esedékes szokás teljesítve lett.
