@@ -809,10 +809,26 @@ async exportUserData() {
         dateStrings.push(UI.getLocalDateString(cursor));
         cursor.setDate(cursor.getDate() + 1);
       }
-    
-      const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs, dateStrings);
-      UI.renderHeatmap(dailyResults);
-    },
+          
+      const dailyResults = this.computeDailyPercents(
+        allHabitsHistory || [],
+        logs,
+        dateStrings
+      );
+      
+      const completedDates = new Set(
+        (logs || [])
+          .filter(log => log.completed !== false)
+          .map(log => log.log_date)
+      );
+      
+      // Csak a tényleges aktivitással rendelkező napokat mutatjuk.
+      const activityResults = dailyResults.filter(result =>
+        completedDates.has(result.dateStr)
+      );
+      
+      UI.renderHeatmap(activityResults);
+          },
   async loadAchievements() {
     if (!this.currentUser) return;
     console.log('[App.loadAchievements] Loading achievements...');
