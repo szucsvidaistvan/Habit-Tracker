@@ -505,11 +505,6 @@ const App = {
     });
 
     let windowStartDate = defaultWindowStart;
-    if (earliestLogStr) {
-      const [ey, em, ed] = earliestLogStr.split('-').map(Number);
-      const firstLogDate = new Date(ey, em - 1, ed);
-      if (firstLogDate > defaultWindowStart) windowStartDate = firstLogDate;
-    }
 
     const allDateStrings = [];
     const dayLabelByDate = {};
@@ -785,11 +780,6 @@ async exportUserData() {
       });
     
       let windowStart = defaultStart;
-      if (earliestLogStr) {
-        const [ey, em, ed] = earliestLogStr.split('-').map(Number);
-        const firstLogDate = new Date(ey, em - 1, ed);
-        if (firstLogDate > defaultStart) windowStart = firstLogDate;
-      }
     
       const dateStrings = [];
       const cursor = new Date(windowStart);
