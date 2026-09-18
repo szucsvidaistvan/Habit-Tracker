@@ -251,7 +251,63 @@ const UI = {
       </div>
     `).join('');
   },
-
+renderWeekWidget(days, title, dayNum) {
+      const titleElem = document.getElementById('week-widget-title');
+      const dayNumElem = document.getElementById('week-widget-daynum');
+      const rowElem = document.getElementById('week-days-row');
+    
+      if (titleElem) titleElem.innerText = title;
+      if (dayNumElem) dayNumElem.innerText = dayNum;
+    
+      if (rowElem) {
+        rowElem.innerHTML = days.map(d => `
+          <div class="week-day-pill ${d.isToday ? 'today' : ''}">
+            <span class="week-day-label">${d.label}</span>
+            <span class="week-day-dot ${d.status}"></span>
+          </div>
+        `).join('');
+      }
+    },
+    
+    getBandClass(percent) {
+      if (percent < 30) return 'band-red';
+      if (percent < 55) return 'band-orange';
+      if (percent < 75) return 'band-yellow';
+      return 'band-green';
+    },
+    
+    renderHeatmap(dailyResults) {
+      const container = document.getElementById('heatmap-container');
+      if (!container) return;
+    
+      if (!dailyResults || dailyResults.length === 0) {
+        container.innerHTML = '<div class="loader">No activity yet.</div>';
+        return;
+      }
+    
+      const [fy, fm, fd] = dailyResults[0].dateStr.split('-').map(Number);
+      const firstDate = new Date(fy, fm - 1, fd);
+      const firstDow = firstDate.getDay(); // 0=Sun..6=Sat
+      const leadingPad = firstDow === 0 ? 6 : firstDow - 1; // Mon=0..Sun=6
+    
+      const cells = [];
+      for (let i = 0; i < leadingPad; i++) cells.push(null);
+      dailyResults.forEach(r => cells.push(r));
+    
+      const weeks = [];
+      for (let i = 0; i < cells.length; i += 7) {
+        weeks.push(cells.slice(i, i + 7));
+      }
+    
+      container.innerHTML = weeks.map(week => {
+        const cellsHtml = week.map(r => {
+          if (!r) return '<div class="heatmap-cell band-empty"></div>';
+          const band = r.denominator === 0 ? 'band-empty' : this.getBandClass(r.percent);
+          return `<div class="heatmap-cell ${band}" title="${r.dateStr}: ${r.percent}%"></div>`;
+        }).join('');
+        return `<div class="heatmap-week">${cellsHtml}</div>`;
+      }).join('');
+    },
   renderStreaks(current, best, todayQualifies) {
     console.log('[UI.renderStreaks] current:', current, 'best:', best, 'todayQualifies:', todayQualifies);
     const currentElem = document.getElementById('current-streak-value');
