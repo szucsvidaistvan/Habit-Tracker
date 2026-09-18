@@ -719,6 +719,47 @@ const App = {
     await this.loadProfileInactiveHabits();
     await this.loadHabits();
   },
+async exportUserData() {
+    if (!this.currentUser) return;
+
+    try {
+      // 1. Adatok lekérése (Data Fetching)
+      const { data: habits, error: habitsErr } = await API.fetchAllHabitsForStats(this.currentUser.id);
+      const { data: logs, error: logsErr } = await API.fetchLogsRange('2026-09-01');
+
+      if (habitsErr || logsErr) throw new Error('Hiba az adatok lekérésekor');
+
+      // 2. Exportálandó JSON struktúra összeállítása (Data Payload)
+      const exportData = {
+        user: {
+          id: this.currentUser.id,
+          email: this.currentUser.email
+        },
+        exportedAt: new Date().toISOString(),
+        habits: habits || [],
+        logs: logs || []
+      };
+
+      // 3. Blob objektum létrehozása és letöltés indítása (Trigger Download)
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const downloadUrl = URL.createObjectURL(blob);
+
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.href = downloadUrl;
+      downloadAnchor.download = `habit_tracker_backup_${UI.getLocalDateString()}.json`;
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      
+      // 4. Memóriatakarítás (Cleanup)
+      document.body.removeChild(downloadAnchor);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('[App.exportUserData]', error);
+      alert('Sikertelen adat-exportálás.');
+    }
+  },
+  
   async loadHeatmap() {
       if (!this.currentUser) return;
       const HEATMAP_DAYS = 371;
@@ -772,7 +813,7 @@ const App = {
     // 2. Compute current live stats, only to detect thresholds crossed since
     // the last visit. Already-unlocked badges never get re-evaluated or
     // re-locked — they're permanent from here on, per the table above.
-    const ALL_TIME_START = '2020-01-01';
+    const ALL_TIME_START = '2026-09-01';
     const { data: logs, error } = await API.fetchLogsRange(ALL_TIME_START);
     if (error) {
       console.error('[App.loadAchievements] Error:', error);
