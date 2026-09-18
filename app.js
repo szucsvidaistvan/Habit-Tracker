@@ -527,6 +527,22 @@ const App = {
     UI.renderBarChart(labels, dailyCounts);
     UI.renderLineChart(labels, trendData);
 
+    // Szokásonkénti statisztika kiszámítása a kiválasztott időszakra (7 vagy 30 nap)
+    const activeHabits = (allHabitsHistory || []).filter(h => !h.deactivated_at);
+    const habitStats = activeHabits.map(h => {
+      const habitLogs = (logs || []).filter(
+        l => l.habit_id === h.id && periodDateStrings.includes(l.log_date) && l.completed !== false
+      );
+      const percent = Math.round((habitLogs.length / daysCount) * 100);
+      return {
+        title: h.title,
+        percent: Math.min(100, percent)
+      };
+    });
+
+    // Kártya feltöltése adatokkal
+    UI.renderHabitStats(habitStats);
+
     const qualifiesSeries = dailyResults.map(
       result => result.denominator > 0 && result.count >= 1
     );
