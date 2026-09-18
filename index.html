@@ -113,6 +113,10 @@
         <button class="btn-danger" onclick="App.logout()">Log Out</button>
       </div>
       <div class="card" style="margin-top: 16px;">
+        <h3 class="section-title">Your Data</h3>
+        <button class="btn-secondary" onclick="App.exportUserData()" style="width: 100%;">Export My Data (JSON)</button>
+      </div>
+      <div class="card" style="margin-top: 16px;">
           <h3 class="section-title">Activity Heatmap</h3>
           <div class="heatmap-scroll">
             <div id="heatmap-container" class="heatmap-grid"></div>
