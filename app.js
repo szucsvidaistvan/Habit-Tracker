@@ -719,44 +719,51 @@ const App = {
     await this.loadProfileInactiveHabits();
     await this.loadHabits();
   },
+  
 async exportUserData() {
     if (!this.currentUser) return;
 
     try {
       // 1. Adatok lekérése (Data Fetching)
       const { data: habits, error: habitsErr } = await API.fetchAllHabitsForStats(this.currentUser.id);
-      const { data: logs, error: logsErr } = await API.fetchLogsRange('2026-09-01');
+      const { data: logs, error: logsErr } = await API.fetchLogsRange('2000-01-01');
 
       if (habitsErr || logsErr) throw new Error('Hiba az adatok lekérésekor');
 
-      // 2. Exportálandó JSON struktúra összeállítása (Data Payload)
-      const exportData = {
-        user: {
-          id: this.currentUser.id,
-          email: this.currentUser.email
-        },
-        exportedAt: new Date().toISOString(),
-        habits: habits || [],
-        logs: logs || []
-      };
+      // Szokások azonosítójának és nevének párosítása (Map habit_id to title)
+      const habitMap = {};
+      (habits || []).forEach(h => {
+        habitMap[h.id] = h.title;
+      });
 
-      // 3. Blob objektum létrehozása és letöltés indítása (Trigger Download)
-      const jsonString = JSON.stringify(exportData, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
+      // 2. CSV szerkezet felépítése (CSV Construction)
+      // Megjegyzés: Pontosvesszőt (;) használunk elválasztóként a magyar Excel kompatibilitásért.
+      let csvContent = "Dátum;Szokás neve;Teljesítve\n";
+
+      (logs || []).forEach(log => {
+        const habitName = habitMap[log.habit_id] || "Ismeretlen szokás";
+        const completed = log.completed ? "Igen" : "Nem";
+        csvContent += `${log.log_date};"${habitName}";${completed}\n`;
+      });
+
+      // 3. UTF-8 BOM (\uFEFF) hozzáadása az ékezetes betűk helyes megjelenítéséhez
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
       const downloadUrl = URL.createObjectURL(blob);
 
+      // 4. Letöltés elindítása (Trigger File Download)
       const downloadAnchor = document.createElement('a');
       downloadAnchor.href = downloadUrl;
-      downloadAnchor.download = `habit_tracker_backup_${UI.getLocalDateString()}.json`;
+      downloadAnchor.download = `habit_tracker_export_${UI.getLocalDateString()}.csv`;
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
-      
-      // 4. Memóriatakarítás (Cleanup)
+
+      // Memóriatakarítás (Cleanup)
       document.body.removeChild(downloadAnchor);
       URL.revokeObjectURL(downloadUrl);
+
     } catch (error) {
       console.error('[App.exportUserData]', error);
-      alert('Sikertelen adat-exportálás.');
+      alert('Sikertelen CSV exportálás.');
     }
   },
   
