@@ -545,23 +545,20 @@ const App = {
 
     // Per-habit completion breakdown for the selected period, scaled to each
     // habit's own weekly cadence instead of a flat "every single day" bar.
-    const periodDateSet = new Set(periodDateStrings);
-    const habitPeriodCounts = {};
-    if (logs) {
-      logs.forEach(log => {
-        if (periodDateSet.has(log.log_date) && log.completed !== false) {
-          habitPeriodCounts[log.habit_id] = (habitPeriodCounts[log.habit_id] || 0) + 1;
-        }
-      });
-    }
-    const habitStats = this.habitsList.map(h => {
-      const count = habitPeriodCounts[h.id] || 0;
-      const weeklyTarget = h.weekly_target || 7;
-      const expectedForPeriod = weeklyTarget * (daysCount / 7);
-      const percent = expectedForPeriod > 0 ? Math.min(Math.round((count / expectedForPeriod) * 100), 100) : 0;
-      return { title: h.title, percent };
-    });
-    UI.renderHabitStats(habitStats);
+    const completedDates = new Set(
+      (logs || [])
+        .filter(log => log.completed !== false)
+        .map(log => log.log_date)
+    );
+    
+    const qualifiesSeries = allDateStrings.map(dateStr =>
+      completedDates.has(dateStr)
+    );
+    
+    const { current, best, todayQualifies } =
+      this.computeStreaks(qualifiesSeries);
+    
+    UI.renderStreaks(current, best, todayQualifies);
 
     // Streaks always look at the full 90-day window, independent of the toggle
       const qualifiesSeries = dailyResults.map(
@@ -882,16 +879,20 @@ async exportUserData() {
 
       perfectDaysCount = dailyResults.filter(r => r.denominator > 0 && r.percent >= 100).length;
 
-      let run = 0;
-      dailyResults.forEach(r => {
-        if (r.denominator > 0 && r.count >= 1) {
-          run++;
-          bestStreakAllTime = Math.max(bestStreakAllTime, run);
-        } else {
-          run = 0;
-        }
-      });
-    }
+const completedDates = new Set(
+  completedLogs.map(log => log.log_date)
+);
+
+    let run = 0;
+    
+    contiguousDates.forEach(dateStr => {
+      if (completedDates.has(dateStr)) {
+        run++;
+        bestStreakAllTime = Math.max(bestStreakAllTime, run);
+      } else {
+        run = 0;
+      }
+    });
 
     const activeHabitsCount = this.habitsList.length;
 
