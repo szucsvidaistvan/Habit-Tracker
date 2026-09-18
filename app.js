@@ -564,7 +564,7 @@ const App = {
     UI.renderHabitStats(habitStats);
 
     // Streaks always look at the full 90-day window, independent of the toggle
-    const qualifiesSeries = dailyResults.map(r => r.denominator === 0 || r.count >= 1);
+    const qualifiesSeries = dailyResults.map(r => r.denominator > 0 && r.count >= 1);
     const { current, best, todayQualifies } = this.computeStreaks(qualifiesSeries);
     UI.renderStreaks(current, best, todayQualifies);
   },
@@ -848,7 +848,7 @@ async exportUserData() {
 
       let run = 0;
       dailyResults.forEach(r => {
-        if (r.denominator === 0 || r.count >= 1) {
+        if (r.denominator > 0 && r.count >= 1) {
           run++;
           bestStreakAllTime = Math.max(bestStreakAllTime, run);
         } else {
