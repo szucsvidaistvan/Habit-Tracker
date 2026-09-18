@@ -446,7 +446,7 @@ const App = {
   async loadStatistics(type) {
     if (!this.currentUser) return;
     const daysCount = type === 'weekly' ? 7 : 30;
-    const STREAK_WINDOW_DAYS = 90;
+    const STREAK_WINDOW_DAYS = 400;
   
         const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
 
