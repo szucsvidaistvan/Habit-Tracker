@@ -482,94 +482,112 @@ const App = {
   },
 
   async loadStatistics(type) {
-    if (!this.currentUser) return;
-    const daysCount = type === 'weekly' ? 7 : 30;
-    const STREAK_WINDOW_DAYS = 400;
-  
-        const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
+  if (!this.currentUser) return;
 
-    const defaultWindowStart = new Date();
-    defaultWindowStart.setDate(defaultWindowStart.getDate() - (STREAK_WINDOW_DAYS - 1));
+  const daysCount = type === 'weekly' ? 7 : 30;
+  const STREAK_WINDOW_DAYS = 400;
 
-    const fetchStartStr = UI.getLocalDateString(defaultWindowStart);
-    const { data: logs } = await API.fetchLogsRange(fetchStartStr);
+  const { data: allHabitsHistory } =
+    await API.fetchAllHabitsForStats(this.currentUser.id);
 
-    // Clamp the window to the earliest LOGGED completion, not habit created_at
-    // (created_at got backfilled to "now" for pre-existing habits by the schema
-    // migration, so it can't be trusted as a real historical creation date).
-    let earliestLogStr = null;
-    (logs || []).forEach(l => {
-      if (l.completed !== false && (!earliestLogStr || l.log_date < earliestLogStr)) {
-        earliestLogStr = l.log_date;
-      }
-    });
+  const defaultWindowStart = new Date();
+  defaultWindowStart.setDate(
+    defaultWindowStart.getDate() - (STREAK_WINDOW_DAYS - 1)
+  );
 
-    let windowStartDate = defaultWindowStart;
+  const fetchStartStr = UI.getLocalDateString(defaultWindowStart);
+  const { data: logs } = await API.fetchLogsRange(fetchStartStr);
 
-    const allDateStrings = [];
-    const dayLabelByDate = {};
-    const cursor = new Date(windowStartDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    while (cursor <= today) {
-      const dateStr = UI.getLocalDateString(cursor);
-      allDateStrings.push(dateStr);
-      dayLabelByDate[dateStr] = type === 'weekly'
-        ? cursor.toLocaleDateString('en-US', { weekday: 'short' })
-        : `${(cursor.getMonth()+1).toString().padStart(2,'0')}.${cursor.getDate().toString().padStart(2,'0')}.`;
-      cursor.setDate(cursor.getDate() + 1);
+  const allDateStrings = [];
+  const dayLabelByDate = {};
+
+  const cursor = new Date(defaultWindowStart);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  while (cursor <= today) {
+    const dateStr = UI.getLocalDateString(cursor);
+
+    allDateStrings.push(dateStr);
+
+    dayLabelByDate[dateStr] = type === 'weekly'
+      ? cursor.toLocaleDateString('en-US', {
+          weekday: 'short'
+        })
+      : `${(cursor.getMonth() + 1)
+          .toString()
+          .padStart(2, '0')}.${cursor
+          .getDate()
+          .toString()
+          .padStart(2, '0')}.`;
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  const dailyResults = this.computeDailyPercents(
+    allHabitsHistory || [],
+    logs || [],
+    allDateStrings
+  );
+
+  // Napi teljesítések száma a diagramhoz.
+  const rawCountByDate = {};
+
+  allDateStrings.forEach(date => {
+    rawCountByDate[date] = 0;
+  });
+
+  (logs || []).forEach(log => {
+    if (
+      rawCountByDate[log.log_date] !== undefined &&
+      log.completed !== false
+    ) {
+      rawCountByDate[log.log_date]++;
     }
+  });
 
-    const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs, allDateStrings);
-    // Raw completion counts per day for the "Habits Completed" bar chart —
-    // this one is a plain tally, not quota-adjusted, so bonus check-ins still show up.
-    const rawCountByDate = {};
-    allDateStrings.forEach(d => { rawCountByDate[d] = 0; });
-    if (logs) {
-      logs.forEach(log => {
-        if (rawCountByDate[log.log_date] !== undefined && log.completed !== false) {
-          rawCountByDate[log.log_date]++;
-        }
-      });
-    }
+  // Csak a kiválasztott időszakot jelenítjük meg a diagramokon.
+  const periodDateStrings = allDateStrings.slice(-daysCount);
+  const periodResults = dailyResults.slice(-daysCount);
 
-    // Slice to the selected period for the charts
-    const periodDateStrings = allDateStrings.slice(-daysCount);
-    const periodResults = dailyResults.slice(-daysCount);
-    const labels = periodDateStrings.map(d => dayLabelByDate[d]);
-    const dailyCounts = periodDateStrings.map(d => rawCountByDate[d]);
-    const trendData = periodResults.map(r => r.percent);
+  const labels = periodDateStrings.map(
+    date => dayLabelByDate[date]
+  );
 
-    UI.renderBarChart(labels, dailyCounts);
-    UI.renderLineChart(labels, trendData);
+  const dailyCounts = periodDateStrings.map(
+    date => rawCountByDate[date]
+  );
 
-    // Per-habit completion breakdown for the selected period, scaled to each
-    // habit's own weekly cadence instead of a flat "every single day" bar.
-    const completedDates = new Set(
-      (logs || [])
-        .filter(log => log.completed !== false)
-        .map(log => log.log_date)
-    );
-    
-    const qualifiesSeries = allDateStrings.map(dateStr =>
-      completedDates.has(dateStr)
-    );
-    
-    const { current, best, todayQualifies } =
-      this.computeStreaks(qualifiesSeries);
-    
-    UI.renderStreaks(current, best, todayQualifies);
+  const trendData = periodResults.map(
+    result => result.percent
+  );
 
-    // Streaks always look at the full 90-day window, independent of the toggle
-      const qualifiesSeries = dailyResults.map(
-        r => r.denominator > 0 && r.count >= 1
-      );
-      
-      const { current, best, todayQualifies } =
-        this.computeStreaks(qualifiesSeries);
-      
-      UI.renderStreaks(current, best, todayQualifies);
-  },
+  UI.renderBarChart(labels, dailyCounts);
+  UI.renderLineChart(labels, trendData);
+
+  /*
+   * Egy nap akkor számít streak napnak, ha legalább egy,
+   * az adott napon esedékes szokás teljesítve lett.
+   *
+   * Fontos:
+   * Itt nem deklaráljuk újra a `qualifiesSeries` változót.
+   */
+  const qualifiesSeries = dailyResults.map(result =>
+    result.denominator > 0 && result.count >= 1
+  );
+
+  const {
+    current,
+    best,
+    todayQualifies
+  } = this.computeStreaks(qualifiesSeries);
+
+  UI.renderStreaks(
+    current,
+    best,
+    todayQualifies
+  );
+},
 
   // For each date in dateStrings (oldest -> newest), works out how many
   // habits were still "owed" that day. A habit is only considered at all on
