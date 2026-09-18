@@ -916,6 +916,24 @@ checkPwaBanner() {
 closePwaBanner() {
   sessionStorage.setItem('pwa_banner_dismissed', 'true');
   document.getElementById('pwa-banner').style.display = 'none';
-}
+},
+async submitBugReport() {
+  const bugInput = document.getElementById('bug-text');
+  const description = bugInput ? bugInput.value.trim() : '';
+  if (!description) {
+      alert('Kérlek írd le a hibát vagy az észrevételt!');
+      return;
+    }
+
+    const { error } = await API.sendBugReport(description);
+
+    if (error) {
+      console.error('[App.submitBugReport]', error);
+      alert('Sikertelen beküldés.');
+    } else {
+      alert('Köszönjük! A hibajelentést sikeresen elküldted.');
+      bugInput.value = '';
+    }
+  },
 };
 document.addEventListener('DOMContentLoaded', () => App.init());
