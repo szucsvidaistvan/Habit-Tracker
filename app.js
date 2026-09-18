@@ -113,9 +113,6 @@ const App = {
       return;
     }
 
-    // Supabase returns success without an explicit error even if the account
-    // already exists (privacy behavior). An empty `identities` array is the
-    // official way to detect a duplicate sign-up attempt.
     if (data && data.user && data.user.identities && data.user.identities.length === 0) {
       if (errElem) errElem.innerText = 'An account with this email already exists. Please log in instead.';
       return;
@@ -130,8 +127,6 @@ const App = {
     this.showAuth();
   },
 
-  // Switches the auth panel between its "Log In" and "Sign Up" presentation:
-  // same single submit button, just re-labelled, plus the toggle line below it.
   toggleAuthMode() {
     this.authMode = this.authMode === 'login' ? 'signup' : 'login';
 
@@ -172,8 +167,6 @@ const App = {
       const errElem = document.getElementById('auth-error');
       if (errElem) errElem.innerText = error.message;
     }
-    // On success the browser is redirected to Google and back automatically —
-    // nothing else to do here, App.init() picks up the session on return.
   },
 
   async loadHabits() {
@@ -194,9 +187,6 @@ const App = {
     const logsMap = {};
     if (logsData) logsData.forEach(l => logsMap[l.habit_id] = l);
 
-    // How many times was each habit already completed this week, NOT counting today.
-    // If that already meets the weekly goal, today's checkbox becomes optional/bonus
-    // instead of something still "owed" for the day.
     const weekCountsBeforeToday = {};
     if (weekLogs) {
       weekLogs.forEach(l => {
@@ -228,7 +218,7 @@ const App = {
     UI.renderHabits(this.habitsList);
   },  
 
-    buildWeekWidgetData(weekLogs, mondayStr, todayStr) {
+  buildWeekWidgetData(weekLogs, mondayStr, todayStr) {
     const completedDates = new Set();
     (weekLogs || []).forEach(l => {
       if (l.completed !== false) completedDates.add(l.log_date);
@@ -255,10 +245,10 @@ const App = {
     }
     return days;
   },
-  // Monday of the week containing dateObj, as a 'YYYY-MM-DD' string.
+
   getWeekStartString(dateObj = new Date()) {
     const d = new Date(dateObj);
-    const dow = d.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+    const dow = d.getDay();
     const diffToMonday = (dow === 0 ? -6 : 1) - dow;
     d.setDate(d.getDate() + diffToMonday);
     return UI.getLocalDateString(d);
@@ -268,7 +258,6 @@ const App = {
     console.log(`[App.handleToggleHabit] Toggling ID: ${habitId}`);
     const todayStr = UI.getLocalDateString();
 
-    // Type-safe lookup via String() conversion (Type Coercion Fix)
     const habit = this.habitsList.find(h => String(h.id) === String(habitId));
 
     if (!habit) {
@@ -312,7 +301,6 @@ const App = {
     if (freqInput) freqInput.value = '7';
     if (timeInput) timeInput.value = '0';
 
-    // Fetch inactive habits for reactivation
     if (this.currentUser) {
       const { data: inactive, error } = await API.fetchInactiveHabits(this.currentUser.id);
       if (!error && inactive && inactive.length > 0) {
@@ -350,7 +338,6 @@ const App = {
   openEditModal(habitId) {
     console.log(`[App.openEditModal] Opening edit modal -> Habit ID: ${habitId}`);
 
-    // Type-safe lookup via String() conversion
     const habit = this.habitsList.find(h => String(h.id) === String(habitId));
 
     if (!habit) {
@@ -481,19 +468,16 @@ const App = {
     this.loadStatistics(type);
   },
 
-    async loadStatistics(type) {
+  async loadStatistics(type) {
     if (!this.currentUser) return;
 
     const daysCount = type === 'weekly' ? 7 : 30;
     const STREAK_WINDOW_DAYS = 400;
 
-    const { data: allHabitsHistory } =
-      await API.fetchAllHabitsForStats(this.currentUser.id);
+    const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
 
     const defaultWindowStart = new Date();
-    defaultWindowStart.setDate(
-      defaultWindowStart.getDate() - (STREAK_WINDOW_DAYS - 1)
-    );
+    defaultWindowStart.setDate(defaultWindowStart.getDate() - (STREAK_WINDOW_DAYS - 1));
 
     const fetchStartStr = UI.getLocalDateString(defaultWindowStart);
     const { data: logs } = await API.fetchLogsRange(fetchStartStr);
@@ -547,62 +531,31 @@ const App = {
       result => result.denominator > 0 && result.count >= 1
     );
 
-    const { current, best, todayQualifies } =
-      this.computeStreaks(qualifiesSeries);
+    const { current, best, todayQualifies } = this.computeStreaks(qualifiesSeries);
 
     UI.renderStreaks(current, best, todayQualifies);
   },
-  /*
-   * Egy nap akkor számít streak napnak, ha legalább egy,
-   * az adott napon esedékes szokás teljesítve lett.
-   *
-   * Fontos:
-   * Itt nem deklaráljuk újra a `qualifiesSeries` változót.
-   */
-  const qualifiesSeries = dailyResults.map(result =>
-    result.denominator > 0 && result.count >= 1
-  );
 
-  const {
-    current,
-    best,
-    todayQualifies
-  } = this.computeStreaks(qualifiesSeries);
-
-  UI.renderStreaks(
-    current,
-    best,
-    todayQualifies
-  );
-},
-
-  // For each date in dateStrings (oldest -> newest), works out how many
-  // habits were still "owed" that day. A habit is only considered at all on
-  // a given day if it actually existed then (created_at <= day AND
-  // (deactivated_at is null OR deactivated_at > day)) — this is what stops
-  // deactivating a habit from retroactively inflating past days' percentages.
-  // Within the days it existed, it stops being "owed" once its weekly target
-  // was already met earlier that same Mon-Sun week.
   computeDailyPercents(habitsList, logs, dateStrings) {
-      const completedByHabit = {};
-      const firstLogDateByHabit = {};
-      
-      habitsList.forEach(h => {
-        completedByHabit[h.id] = new Set();
-      });
-      
-      (logs || []).forEach(l => {
-        if (l.completed !== false && completedByHabit[l.habit_id]) {
-          completedByHabit[l.habit_id].add(l.log_date);
-      
-          if (
-            !firstLogDateByHabit[l.habit_id] ||
-            l.log_date < firstLogDateByHabit[l.habit_id]
-          ) {
-            firstLogDateByHabit[l.habit_id] = l.log_date;
-          }
+    const completedByHabit = {};
+    const firstLogDateByHabit = {};
+    
+    habitsList.forEach(h => {
+      completedByHabit[h.id] = new Set();
+    });
+    
+    (logs || []).forEach(l => {
+      if (l.completed !== false && completedByHabit[l.habit_id]) {
+        completedByHabit[l.habit_id].add(l.log_date);
+    
+        if (
+          !firstLogDateByHabit[l.habit_id] ||
+          l.log_date < firstLogDateByHabit[l.habit_id]
+        ) {
+          firstLogDateByHabit[l.habit_id] = l.log_date;
         }
-      });
+      }
+    });
 
     const weekKeyOf = (dateStr) => {
       const [y, m, d] = dateStr.split('-').map(Number);
@@ -617,8 +570,6 @@ const App = {
 
     habitsList.forEach(h => {
       const weeklyTarget = h.weekly_target || 7;
-      // A régi, migrációval létrehozott created_at dátum nem mindig valós.
-      // Ha van korábbi log, azt tekintjük a szokás tényleges kezdőnapjának.
       const createdDateStr =
         firstLogDateByHabit[h.id] ||
         (h.created_at ? h.created_at.slice(0, 10) : '1970-01-01');
@@ -647,27 +598,18 @@ const App = {
       });
     });
 
-  results.forEach(r => {
-      // If there was no active habit on the given day (denominator == 0),
-    // then that day does not count towards the streak (0%), rather than being a false 100%!
+    results.forEach(r => {
       r.percent = r.denominator > 0 ? Math.round((r.count / r.denominator) * 100) : 0;
     });
 
     return results;
   },
 
-  // A "qualifying day" is a day where at least STREAK_THRESHOLD% of active
-  // habits were completed. Today is treated specially: if it hasn't hit the
-  // threshold yet, it's still "pending" rather than counted as a broken day —
-  // the streak shown is the one secured through yesterday. As soon as today
-  // crosses the threshold, it's folded into the count immediately.
   computeStreaks(qualifiesSeries) {
     const len = qualifiesSeries.length;
     if (len === 0) return { current: 0, best: 0, todayQualifies: false };
 
     const todayQualifies = qualifiesSeries[len - 1];
-    
-    // Ha a mai nap még nincs teljesítve, a tegnapi naptól számolunk visszafelé
     const startIndex = todayQualifies ? len - 1 : len - 2;
 
     let current = 0;
@@ -675,7 +617,6 @@ const App = {
       if (qualifiesSeries[i]) {
         current++;
       } else {
-        // Amint talál egy megszakadt napot, megáll
         break;
       }
     }
@@ -737,24 +678,20 @@ const App = {
     await this.loadHabits();
   },
   
-async exportUserData() {
+  async exportUserData() {
     if (!this.currentUser) return;
 
     try {
-      // 1. Adatok lekérése (Data Fetching)
       const { data: habits, error: habitsErr } = await API.fetchAllHabitsForStats(this.currentUser.id);
       const { data: logs, error: logsErr } = await API.fetchLogsRange('2000-01-01');
 
       if (habitsErr || logsErr) throw new Error('Hiba az adatok lekérésekor');
 
-      // Szokások azonosítójának és nevének párosítása (Map habit_id to title)
       const habitMap = {};
       (habits || []).forEach(h => {
         habitMap[h.id] = h.title;
       });
 
-      // 2. CSV szerkezet felépítése (CSV Construction)
-      // Megjegyzés: Pontosvesszőt (;) használunk elválasztóként a magyar Excel kompatibilitásért.
       let csvContent = "Dátum;Szokás neve;Teljesítve\n";
 
       (logs || []).forEach(log => {
@@ -763,18 +700,15 @@ async exportUserData() {
         csvContent += `${log.log_date};"${habitName}";${completed}\n`;
       });
 
-      // 3. UTF-8 BOM (\uFEFF) hozzáadása az ékezetes betűk helyes megjelenítéséhez
       const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
       const downloadUrl = URL.createObjectURL(blob);
 
-      // 4. Letöltés elindítása (Trigger File Download)
       const downloadAnchor = document.createElement('a');
       downloadAnchor.href = downloadUrl;
       downloadAnchor.download = `habit_tracker_export_${UI.getLocalDateString()}.csv`;
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
 
-      // Memóriatakarítás (Cleanup)
       document.body.removeChild(downloadAnchor);
       URL.revokeObjectURL(downloadUrl);
 
@@ -785,57 +719,56 @@ async exportUserData() {
   },
   
   async loadHeatmap() {
-      if (!this.currentUser) return;
-      const HEATMAP_DAYS = 371;
-      const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
-    
-      const defaultStart = new Date();
-      defaultStart.setDate(defaultStart.getDate() - (HEATMAP_DAYS - 1));
-      const fetchStartStr = UI.getLocalDateString(defaultStart);
-      const { data: logs } = await API.fetchLogsRange(fetchStartStr);
-    
-      let earliestLogStr = null;
-      (logs || []).forEach(l => {
-        if (l.completed !== false && (!earliestLogStr || l.log_date < earliestLogStr)) {
-          earliestLogStr = l.log_date;
-        }
-      });
-    
-      let windowStart = defaultStart;
-    
-      const dateStrings = [];
-      const cursor = new Date(windowStart);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      while (cursor <= today) {
-        dateStrings.push(UI.getLocalDateString(cursor));
-        cursor.setDate(cursor.getDate() + 1);
+    if (!this.currentUser) return;
+    const HEATMAP_DAYS = 371;
+    const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
+  
+    const defaultStart = new Date();
+    defaultStart.setDate(defaultStart.getDate() - (HEATMAP_DAYS - 1));
+    const fetchStartStr = UI.getLocalDateString(defaultStart);
+    const { data: logs } = await API.fetchLogsRange(fetchStartStr);
+  
+    let earliestLogStr = null;
+    (logs || []).forEach(l => {
+      if (l.completed !== false && (!earliestLogStr || l.log_date < earliestLogStr)) {
+        earliestLogStr = l.log_date;
       }
-          
-      const dailyResults = this.computeDailyPercents(
-        allHabitsHistory || [],
-        logs,
-        dateStrings
-      );
-      
-      const completedDates = new Set(
-        (logs || [])
-          .filter(log => log.completed !== false)
-          .map(log => log.log_date)
-      );
-      
-      // Csak a tényleges aktivitással rendelkező napokat mutatjuk.
-      const activityResults = dailyResults.filter(result =>
-        completedDates.has(result.dateStr)
-      );
-      
-      UI.renderHeatmap(activityResults);
-          },
+    });
+  
+    let windowStart = defaultStart;
+  
+    const dateStrings = [];
+    const cursor = new Date(windowStart);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    while (cursor <= today) {
+      dateStrings.push(UI.getLocalDateString(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+        
+    const dailyResults = this.computeDailyPercents(
+      allHabitsHistory || [],
+      logs,
+      dateStrings
+    );
+    
+    const completedDates = new Set(
+      (logs || [])
+        .filter(log => log.completed !== false)
+        .map(log => log.log_date)
+    );
+    
+    const activityResults = dailyResults.filter(result =>
+      completedDates.has(result.dateStr)
+    );
+    
+    UI.renderHeatmap(activityResults);
+  },
+
   async loadAchievements() {
     if (!this.currentUser) return;
     console.log('[App.loadAchievements] Loading achievements...');
 
-    // 1. Fast read: what's already permanently unlocked, and when.
     const { data: unlockedRows, error: unlockedError } = await API.fetchUserAchievements(this.currentUser.id);
     if (unlockedError) {
       console.error('[App.loadAchievements] Error fetching unlocked achievements:', unlockedError);
@@ -845,9 +778,6 @@ async exportUserData() {
       unlockedMap[row.achievement_key] = row.unlocked_at;
     });
 
-    // 2. Compute current live stats, only to detect thresholds crossed since
-    // the last visit. Already-unlocked badges never get re-evaluated or
-    // re-locked — they're permanent from here on, per the table above.
     const ALL_TIME_START = '2026-09-01';
     const { data: logs, error } = await API.fetchLogsRange(ALL_TIME_START);
     if (error) {
@@ -860,10 +790,6 @@ async exportUserData() {
     const completedLogs = (logs || []).filter(l => l.completed !== false);
     const totalCheckins = completedLogs.length;
 
-    // Build a CONTIGUOUS day-by-day series from the earliest completion to
-    // today (not just the days that have logs) so streak runs aren't falsely
-    // stitched together across gaps, then reuse the same weekly-quota-aware,
-    // history-aware percent calculation as the Stats tab.
     let perfectDaysCount = 0;
     let bestStreakAllTime = 0;
 
@@ -884,20 +810,20 @@ async exportUserData() {
 
       perfectDaysCount = dailyResults.filter(r => r.denominator > 0 && r.percent >= 100).length;
 
-const completedDates = new Set(
-  completedLogs.map(log => log.log_date)
-);
+      const completedDates = new Set(
+        completedLogs.map(log => log.log_date)
+      );
 
-    let run = 0;
-    
-    contiguousDates.forEach(dateStr => {
-      if (completedDates.has(dateStr)) {
-        run++;
-        bestStreakAllTime = Math.max(bestStreakAllTime, run);
-      } else {
-        run = 0;
-      }
-    });
+      let run = 0;
+      contiguousDates.forEach(dateStr => {
+        if (completedDates.has(dateStr)) {
+          run++;
+          bestStreakAllTime = Math.max(bestStreakAllTime, run);
+        } else {
+          run = 0;
+        }
+      });
+    }
 
     const activeHabitsCount = this.habitsList.length;
 
@@ -908,7 +834,6 @@ const completedDates = new Set(
       activeHabitsCount
     });
 
-    // 3. Persist any newly-met achievement that isn't in the table yet.
     for (const def of definitions) {
       if (def.metCondition && !unlockedMap[def.key]) {
         const { error: unlockError } = await API.unlockAchievement(this.currentUser.id, def.key);
@@ -916,12 +841,9 @@ const completedDates = new Set(
           unlockedMap[def.key] = new Date().toISOString();
           console.log(`[App.loadAchievements] Unlocked new achievement: ${def.key}`);
         }
-        // A duplicate-key error here just means another tab/session already
-        // unlocked it a moment ago — safe to ignore, it'll show up next load.
       }
     }
 
-    // 4. The render list is driven purely by what's persisted as unlocked.
     const achievements = definitions.map(def => ({
       icon: def.icon,
       name: def.name,
