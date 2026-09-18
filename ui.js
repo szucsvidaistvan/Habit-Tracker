@@ -296,30 +296,6 @@ renderWeekWidget(days, title, dayNum) {
         `;
       }).join('');
     },
-  
-      const [fy, fm, fd] = dailyResults[0].dateStr.split('-').map(Number);
-      const firstDate = new Date(fy, fm - 1, fd);
-      const firstDow = firstDate.getDay(); // 0=Sun..6=Sat
-      const leadingPad = firstDow === 0 ? 6 : firstDow - 1; // Mon=0..Sun=6
-    
-      const cells = [];
-      for (let i = 0; i < leadingPad; i++) cells.push(null);
-      dailyResults.forEach(r => cells.push(r));
-    
-      const weeks = [];
-      for (let i = 0; i < cells.length; i += 7) {
-        weeks.push(cells.slice(i, i + 7));
-      }
-    
-      container.innerHTML = weeks.map(week => {
-        const cellsHtml = week.map(r => {
-          if (!r) return '<div class="heatmap-cell band-empty"></div>';
-          const band = r.denominator === 0 ? 'band-empty' : this.getBandClass(r.percent);
-          return `<div class="heatmap-cell ${band}" title="${r.dateStr}: ${r.percent}%"></div>`;
-        }).join('');
-        return `<div class="heatmap-week">${cellsHtml}</div>`;
-      }).join('');
-    },
   renderStreaks(current, best, todayQualifies) {
     console.log('[UI.renderStreaks] current:', current, 'best:', best, 'todayQualifies:', todayQualifies);
     const currentElem = document.getElementById('current-streak-value');
