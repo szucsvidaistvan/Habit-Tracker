@@ -40,7 +40,8 @@ const UI = {
     }
 
     container.innerHTML = habitsList.map(h => {
-      const targetText = h.weekly_target ? `${h.weekly_target}x/week` : '';
+      const currentCount = h.weekCountBeforeToday + (h.completed ? 1 : 0);
+      const targetText = h.weekly_target ? `${currentCount}/${h.weekly_target} this week` : '';
       const timeText = this.formatMinutes(h.target_minutes);
       const subInfo = [targetText, timeText].filter(Boolean).join(' • ');
       const fulfilled = !!h.weeklyGoalMetBeforeToday;
