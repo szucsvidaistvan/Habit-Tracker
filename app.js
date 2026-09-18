@@ -903,7 +903,7 @@ const App = {
   closeAchievementModal() {
     const modal = document.getElementById('achievement-modal');
     if (modal) modal.style.display = 'none';
-  }
+  },
 checkPwaBanner() {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   const isDismissed = sessionStorage.getItem('pwa_banner_dismissed');
