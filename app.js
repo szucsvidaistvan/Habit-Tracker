@@ -564,9 +564,14 @@ const App = {
     UI.renderHabitStats(habitStats);
 
     // Streaks always look at the full 90-day window, independent of the toggle
-    const qualifiesSeries = dailyResults.map(r => r.denominator > 0 && r.count >= 1);
-    const { current, best, todayQualifies } = this.computeStreaks(qualifiesSeries);
-    UI.renderStreaks(current, best, todayQualifies);
+      const qualifiesSeries = dailyResults.map(
+        r => r.denominator > 0 && r.count >= 1
+      );
+      
+      const { current, best, todayQualifies } =
+        this.computeStreaks(qualifiesSeries);
+      
+      UI.renderStreaks(current, best, todayQualifies);
   },
 
   // For each date in dateStrings (oldest -> newest), works out how many
@@ -577,14 +582,25 @@ const App = {
   // Within the days it existed, it stops being "owed" once its weekly target
   // was already met earlier that same Mon-Sun week.
   computeDailyPercents(habitsList, logs, dateStrings) {
-    const completedByHabit = {};
-    habitsList.forEach(h => { completedByHabit[h.id] = new Set(); });
-
-    (logs || []).forEach(l => {
-      if (l.completed !== false && completedByHabit[l.habit_id]) {
-        completedByHabit[l.habit_id].add(l.log_date);
-      }
-    });
+      const completedByHabit = {};
+      const firstLogDateByHabit = {};
+      
+      habitsList.forEach(h => {
+        completedByHabit[h.id] = new Set();
+      });
+      
+      (logs || []).forEach(l => {
+        if (l.completed !== false && completedByHabit[l.habit_id]) {
+          completedByHabit[l.habit_id].add(l.log_date);
+      
+          if (
+            !firstLogDateByHabit[l.habit_id] ||
+            l.log_date < firstLogDateByHabit[l.habit_id]
+          ) {
+            firstLogDateByHabit[l.habit_id] = l.log_date;
+          }
+        }
+      });
 
     const weekKeyOf = (dateStr) => {
       const [y, m, d] = dateStr.split('-').map(Number);
@@ -599,7 +615,11 @@ const App = {
 
     habitsList.forEach(h => {
       const weeklyTarget = h.weekly_target || 7;
-      const createdDateStr = h.created_at ? h.created_at.slice(0, 10) : '1970-01-01';
+      // A régi, migrációval létrehozott created_at dátum nem mindig valós.
+      // Ha van korábbi log, azt tekintjük a szokás tényleges kezdőnapjának.
+      const createdDateStr =
+        firstLogDateByHabit[h.id] ||
+        (h.created_at ? h.created_at.slice(0, 10) : '1970-01-01');
       const deactivatedDateStr = h.deactivated_at ? h.deactivated_at.slice(0, 10) : null;
 
       let currentWeekKey = null;
