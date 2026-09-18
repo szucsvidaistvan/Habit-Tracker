@@ -648,9 +648,9 @@ input:checked + .slider:before { transform: translateX(20px); }
   border-top: 1px solid var(--border-color);
   padding-top: 14px;
 }
-.heatmap-scroll { overflow-x: auto; padding-bottom: 6px; }
-.heatmap-grid { display: flex; gap: 3px; width: max-content; }
-.heatmap-week { display: flex; flex-direction: column; gap: 3px; }
+.heatmap-scroll { overflow: hidden; padding-bottom: 0; }
+.heatmap-grid { display: flex; flex-wrap: wrap; gap: 3px; width: 100%; }
+.heatmap-week { display: contents;}
 .heatmap-cell { width: 10px; height: 10px; border-radius: 2px; background: var(--border-color); }
 .heatmap-cell.band-empty { background: var(--border-color); opacity: 0.35; }
 .heatmap-cell.band-red { background: var(--band-red); }
