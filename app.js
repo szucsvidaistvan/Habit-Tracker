@@ -905,5 +905,18 @@ const App = {
     if (modal) modal.style.display = 'none';
   }
 };
+checkPwaBanner() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  const isDismissed = sessionStorage.getItem('pwa_banner_dismissed');
+
+  if (!isStandalone && !isDismissed) {
+    document.getElementById('pwa-banner').style.display = 'flex';
+  }
+},
+
+closePwaBanner() {
+  sessionStorage.setItem('pwa_banner_dismissed', 'true');
+  document.getElementById('pwa-banner').style.display = 'none';
+}
 
 document.addEventListener('DOMContentLoaded', () => App.init());
