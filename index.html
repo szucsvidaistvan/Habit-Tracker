@@ -18,12 +18,25 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-  <div id="pwa-banner" class="pwa-banner" style="display: none;">
-  <span>📱 Add this app to your Home Screen for faster access!</span>
-  <button onclick="App.closePwaBanner()">&times;</button>
-  </div>
   <!-- Auth View -->
   <div id="auth-container" class="card" style="display: none; max-width: 400px; margin: 40px auto; padding: 24px;">
+    
+  <div id="pwa-banner" class="pwa-banner" style="display: none;">
+    <div class="pwa-banner-icon">📱</div>
+
+    <div class="pwa-banner-content">
+      <strong>Install Habit Tracker</strong>
+      <span>Add it to your home screen for faster access.</span>
+    </div>
+
+    <button
+      class="pwa-banner-close"
+      onclick="App.closePwaBanner()"
+      aria-label="Close">
+      &times;
+    </button>
+  </div>
+    
     <h2 class="auth-title" id="auth-title">Log In</h2>
     <div id="auth-error" class="auth-error"></div>
 
