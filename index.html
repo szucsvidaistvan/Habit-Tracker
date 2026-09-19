@@ -145,13 +145,31 @@
     <!-- Profile Tab -->
     <div id="view-profile" class="tab-content" style="display: none;">
       <h2>Profile</h2>
-      <div class="card">
-        <p id="user-email-display"></p>
-        <button class="btn-danger" onclick="App.logout()">Log Out</button>
+      <div class="card profile-header-card">
+        <div class="profile-header-top">
+          <div class="profile-avatar" id="profile-avatar">?</div>
+          <div class="profile-header-info">
+            <span class="profile-header-label">Signed in as</span>
+            <span class="profile-email" id="user-email-display"></span>
+          </div>
+          <button class="profile-logout-btn" onclick="App.logout()" aria-label="Log Out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
+        </div>
+      </div>
+      <div class="card freeze-card" style="margin-top: 16px;">
+        <div class="freeze-card-header">
+          <h3 class="section-title" style="margin: 0;">Habit Freezes</h3>
+          <span class="freeze-card-hint">Protects your streak</span>
+        </div>
+        <div id="freeze-card-body"></div>
       </div>
       <div class="card" style="margin-top: 16px;">
-        <h3 class="section-title">Your Data</h3>
-        <button class="btn-secondary" onclick="App.exportUserData()" style="width: 100%;">Export My Data (CSV)</button>
+        <button class="data-export-row" onclick="App.exportUserData()">
+          <span class="data-export-icon">⬇️</span>
+          <span class="data-export-label">Export My Data (CSV)</span>
+          <span class="data-export-chevron">›</span>
+        </button>
       </div>
       <div class="card" style="margin-top: 16px;">
         <h3 class="section-title">Achievements</h3>
