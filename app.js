@@ -222,6 +222,11 @@ const App = {
     const weekTitle = `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
     const todayIndex = weekWidgetDays.findIndex(d => d.isToday);
     const dayNum = todayIndex >= 0 ? `Day ${todayIndex + 1}/7` : '';
+
+    this.weekWidgetDays = weekWidgetDays;
+    this.weekWidgetTitle = weekTitle;
+    this.weekWidgetDayNum = dayNum;
+
     UI.renderWeekWidget(weekWidgetDays, weekTitle, dayNum);
     UI.renderHabits(this.habitsList);
   },  
@@ -275,6 +280,7 @@ const App = {
 
     habit.completed = !habit.completed;
     UI.updateProgress(this.habitsList);
+    this.refreshTodayWeekDot();
 
     if (habit.completed) {
       const { error } = await API.addLog(habitId, todayStr);
@@ -290,6 +296,20 @@ const App = {
       }
     }
     UI.updateProgress(this.habitsList);
+    this.refreshTodayWeekDot();
+  },
+
+  // Keeps the "This Week" widget's today-pill in sync the instant a habit
+  // is toggled, instead of waiting for the next full reload.
+  refreshTodayWeekDot() {
+    if (!this.weekWidgetDays) return;
+    const todayEntry = this.weekWidgetDays.find(d => d.isToday);
+    if (!todayEntry) return;
+
+    const anyCompletedToday = this.habitsList.some(h => h.completed);
+    todayEntry.status = anyCompletedToday ? 'done' : 'pending';
+
+    UI.renderWeekWidget(this.weekWidgetDays, this.weekWidgetTitle, this.weekWidgetDayNum);
   },
 
   async openAddModal() {
