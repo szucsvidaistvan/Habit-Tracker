@@ -394,6 +394,32 @@ renderWeekWidget(days, title, dayNum) {
     `;
   },
 
+  renderFreezeCard(state) {
+    const container = document.getElementById('freeze-card-body');
+    if (!container || !state) return;
+
+    const { freezeCount, maxFreezeCount, daysUntilNextRefill } = state;
+
+    const icons = Array.from({ length: maxFreezeCount }, (_, i) =>
+      `<span class="freeze-icon ${i < freezeCount ? 'filled' : ''}">🧊</span>`
+    ).join('');
+
+    let statusText;
+    if (freezeCount >= maxFreezeCount) {
+      statusText = 'All freezes ready';
+    } else if (daysUntilNextRefill === 0) {
+      statusText = 'Next freeze arrives today';
+    } else {
+      statusText = `Next freeze in ${daysUntilNextRefill} day${daysUntilNextRefill === 1 ? '' : 's'}`;
+    }
+
+    container.innerHTML = `
+      <div class="freeze-icons">${icons}</div>
+      <div class="freeze-count-text">${freezeCount}/${maxFreezeCount} available</div>
+      <div class="freeze-status-text">${statusText}</div>
+    `;
+  },
+
   formatBadgeDate(isoString) {
     const d = new Date(isoString);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
