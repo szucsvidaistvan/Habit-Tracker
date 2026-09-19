@@ -1010,3 +1010,109 @@ input:checked + .slider:before { transform: translateX(20px); }
 .bug-report-content .btn-primary {
   width: 100%;
 }
+/* --- PWA install hint --- */
+
+.pwa-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: -4px 0 24px;
+  padding: 12px 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 230, 118, 0.12),
+    rgba(30, 41, 59, 0.9)
+  );
+  border: 1px solid rgba(0, 230, 118, 0.28);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  animation: pwa-banner-in 0.35s ease-out;
+}
+
+.pwa-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba(0, 230, 118, 0.14);
+  font-size: 18px;
+}
+
+.pwa-banner-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+
+.pwa-banner-content strong {
+  color: var(--text-main);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pwa-banner-content span {
+  color: var(--text-sub);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.pwa-banner-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.pwa-banner-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+.pwa-banner-close:active {
+  transform: scale(0.9);
+}
+
+@keyframes pwa-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .pwa-banner {
+    margin-bottom: 20px;
+    padding: 11px 12px;
+  }
+
+  .pwa-banner-content strong {
+    font-size: 12px;
+  }
+
+  .pwa-banner-content span {
+    font-size: 10.5px;
+  }
+}
