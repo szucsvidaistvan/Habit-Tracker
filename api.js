@@ -129,5 +129,29 @@ const API = {
   async sendBugReport(description) {
   const { data: { user } } = await supabase.auth.getUser();
   return await supabase.from('bug_reports').insert([{ user_id: user.id, description }]);
+  },
+
+  // --- Habit Freeze ---
+  async fetchStreakState(userId) {
+    return await supabase
+      .from('user_streak_state')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+  },
+
+  async createStreakState(userId) {
+    return await supabase
+      .from('user_streak_state')
+      .insert([{ user_id: userId }])
+      .select()
+      .single();
+  },
+
+  async updateStreakState(userId, fields) {
+    return await supabase
+      .from('user_streak_state')
+      .update(fields)
+      .eq('user_id', userId);
   }
 };
