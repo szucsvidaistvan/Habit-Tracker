@@ -12,6 +12,8 @@ const App = {
   pendingDeleteId: null,
   activeStatsTab: 'weekly',
   authMode: 'login',
+  streakFreeze: { freezeCount: 2, maxFreezeCount: 2, daysUntilNextRefill: null },
+  frozenDatesSet: new Set(),
 
   async init() {
     console.log('[App.init] Starting application...');
@@ -62,9 +64,15 @@ const App = {
 
     const userEmailElem = document.getElementById('user-email-display');
     if (userEmailElem && this.currentUser) {
-      userEmailElem.innerText = `Logged in as: ${this.currentUser.email}`;
+      userEmailElem.innerText = this.currentUser.email;
     }
 
+    const avatarElem = document.getElementById('profile-avatar');
+    if (avatarElem && this.currentUser && this.currentUser.email) {
+      avatarElem.innerText = this.currentUser.email.charAt(0).toUpperCase();
+    }
+
+    await this.loadStreakFreezeState();
     await this.loadHabits();
   },
 
@@ -454,6 +462,101 @@ const App = {
     if (tab === 'profile') {
       this.loadProfileInactiveHabits();
       this.loadAchievements();
+      UI.renderFreezeCard(this.streakFreeze);
+    }
+  },
+
+  // Habit Freeze: up to `max_freeze_count` freezes protect the streak.
+  // A freeze is auto-spent on any day that had habits owed but nothing was
+  // logged, so a single off day doesn't wipe out the streak. Freezes refill
+  // by 1 every 14 days, capped at the max.
+  async loadStreakFreezeState() {
+    if (!this.currentUser) return;
+    try {
+      let { data: state, error } = await API.fetchStreakState(this.currentUser.id);
+      if (error) console.error('[App.loadStreakFreezeState] fetch error:', error);
+
+      if (!state) {
+        const { data: created, error: createErr } = await API.createStreakState(this.currentUser.id);
+        if (createErr) {
+          console.error('[App.loadStreakFreezeState] create error:', createErr);
+          return;
+        }
+        state = created;
+      }
+
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const now = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      const yesterdayStr = UI.getLocalDateString(yesterday);
+
+      const maxFreeze = state.max_freeze_count || 2;
+      let freezeCount = state.freeze_count;
+      let lastRefillAt = new Date(state.last_freeze_refill_at);
+
+      // --- Refill: +1 every 14 days, capped at maxFreeze. The clock keeps
+      // advancing even once full, so hitting the cap doesn't grant an
+      // instant "free" freeze the moment one gets spent. ---
+      let daysSinceRefill = Math.floor((now - lastRefillAt) / msPerDay);
+      while (daysSinceRefill >= 14) {
+        if (freezeCount < maxFreeze) freezeCount++;
+        lastRefillAt = new Date(lastRefillAt.getTime() + 14 * msPerDay);
+        daysSinceRefill -= 14;
+      }
+
+      // --- Auto-consume for missed days since the last check ---
+      const frozenDates = new Set(state.frozen_dates || []);
+      let lastChecked = state.last_checked_date;
+
+      if (lastChecked < yesterdayStr) {
+        const [ly, lm, ld] = lastChecked.split('-').map(Number);
+        const rangeStart = new Date(ly, lm - 1, ld + 1);
+        const rangeStartStr = UI.getLocalDateString(rangeStart);
+
+        if (rangeStartStr <= yesterdayStr) {
+          const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
+          const { data: logs } = await API.fetchLogsRange(rangeStartStr);
+
+          const dateStrings = [];
+          const cursor = new Date(rangeStart);
+          while (cursor <= yesterday) {
+            dateStrings.push(UI.getLocalDateString(cursor));
+            cursor.setDate(cursor.getDate() + 1);
+          }
+
+          const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs || [], dateStrings);
+
+          dailyResults.forEach(r => {
+            const missed = r.denominator > 0 && r.count === 0;
+            if (missed && !frozenDates.has(r.dateStr) && freezeCount > 0) {
+              freezeCount--;
+              frozenDates.add(r.dateStr);
+            }
+          });
+        }
+        lastChecked = yesterdayStr;
+      }
+
+      const { error: updateErr } = await API.updateStreakState(this.currentUser.id, {
+        freeze_count: freezeCount,
+        last_freeze_refill_at: lastRefillAt.toISOString(),
+        last_checked_date: lastChecked,
+        frozen_dates: Array.from(frozenDates)
+      });
+      if (updateErr) console.error('[App.loadStreakFreezeState] update error:', updateErr);
+
+      const daysUntilNextRefill = freezeCount >= maxFreeze
+        ? null
+        : Math.max(0, 14 - Math.floor((now - lastRefillAt) / msPerDay));
+
+      this.streakFreeze = { freezeCount, maxFreezeCount: maxFreeze, daysUntilNextRefill };
+      this.frozenDatesSet = frozenDates;
+
+      UI.renderFreezeCard(this.streakFreeze);
+    } catch (err) {
+      console.error('[App.loadStreakFreezeState] Unexpected error:', err);
     }
   },
 
@@ -543,8 +646,9 @@ const App = {
     // Kártya feltöltése adatokkal
     UI.renderHabitStats(habitStats);
 
+    const frozen = this.frozenDatesSet || new Set();
     const qualifiesSeries = dailyResults.map(
-      result => result.denominator > 0 && result.count >= 1
+      result => (result.denominator > 0 && result.count >= 1) || frozen.has(result.dateStr)
     );
 
     const { current, best, todayQualifies } = this.computeStreaks(qualifiesSeries);
@@ -829,6 +933,7 @@ const App = {
       const completedDates = new Set(
         completedLogs.map(log => log.log_date)
       );
+      (this.frozenDatesSet || new Set()).forEach(d => completedDates.add(d));
 
       let run = 0;
       contiguousDates.forEach(dateStr => {
