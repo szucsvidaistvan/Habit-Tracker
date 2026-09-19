@@ -81,23 +81,62 @@ const UI = {
     this.initSwipeEvents(habitsList);
   },
 
-  updateProgress(habitsList) {
-    // Habits whose weekly goal was already met before today don't count
-    // against the daily total — they're a bonus, not something still owed.
+   updateProgress(habitsList) {
+    // Habit-kártyák valós idejű frissítése
+    habitsList.forEach(h => {
+      const card = document.getElementById(`swipe-content-${h.id}`);
+      if (!card) return;
+  
+      const weeklyTarget = h.weekly_target || 7;
+      const currentCount = h.weekCountBeforeToday + (h.completed ? 1 : 0);
+      const fulfilled = currentCount >= weeklyTarget;
+  
+      const timeText = this.formatMinutes(h.target_minutes);
+      const targetText = `${currentCount}/${weeklyTarget} this week`;
+      const subInfo = [targetText, timeText].filter(Boolean).join(' • ');
+  
+      // 3/4 -> 4/4 szöveg frissítése
+      const habitTime = card.querySelector('.habit-time');
+      if (habitTime) {
+        habitTime.innerText = subInfo;
+      }
+  
+      // CSS dizájn bekapcsolása/kikapcsolása
+      card.classList.toggle('habit-fulfilled', fulfilled);
+  
+      const habitInfo = card.querySelector('.habit-info');
+      let badge = card.querySelector('.habit-fulfilled-badge');
+  
+      if (fulfilled) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'habit-fulfilled-badge';
+          habitInfo.appendChild(badge);
+        }
+  
+        badge.innerText = `✓ Weekly goal met (${currentCount}/${weeklyTarget})`;
+      } else if (badge) {
+        badge.remove();
+      }
+    });
+  
+    // Napi progress számítása
+    // A már korábban teljesített heti célok nem számítanak bele.
     const relevant = habitsList.filter(h => !h.weeklyGoalMetBeforeToday);
     const completed = relevant.filter(h => h.completed).length;
     const total = relevant.length;
     const percent = total > 0 ? Math.round((completed / total) * 100) : 100;
-
+  
     const textElem = document.getElementById('progress-text');
     const fillElem = document.getElementById('progress-fill');
     const band = this.getBandInfo(percent);
-
+  
     if (textElem) {
       textElem.innerText = `${percent}%`;
       textElem.style.color = band.color;
       textElem.style.textShadow = `0 0 8px ${band.glow}`;
     }
+  
     if (fillElem) {
       fillElem.style.width = `${percent}%`;
       fillElem.style.background = band.color;
