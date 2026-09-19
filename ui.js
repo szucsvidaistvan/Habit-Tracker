@@ -401,7 +401,7 @@ renderWeekWidget(days, title, dayNum) {
     const { freezeCount, maxFreezeCount, daysUntilNextRefill, pendingMissedDates } = state;
 
     const icons = Array.from({ length: maxFreezeCount }, (_, i) =>
-      `<span class="freeze-icon ${i < freezeCount ? 'filled' : ''}">🧊</span>`
+      `<span class="freeze-icon ${i < freezeCount ? 'filled' : ''}"><span class="iconify" data-icon="game-icons:ice-cube"></span></span>`
     ).join('');
 
     if (pendingMissedDates && pendingMissedDates.length > 0) {
