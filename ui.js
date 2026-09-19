@@ -398,11 +398,33 @@ renderWeekWidget(days, title, dayNum) {
     const container = document.getElementById('freeze-card-body');
     if (!container || !state) return;
 
-    const { freezeCount, maxFreezeCount, daysUntilNextRefill } = state;
+    const { freezeCount, maxFreezeCount, daysUntilNextRefill, pendingMissedDates } = state;
 
     const icons = Array.from({ length: maxFreezeCount }, (_, i) =>
       `<span class="freeze-icon ${i < freezeCount ? 'filled' : ''}">🧊</span>`
     ).join('');
+
+    if (pendingMissedDates && pendingMissedDates.length > 0) {
+      const dateStr = pendingMissedDates[0];
+      const prettyDate = this.formatFreezeDate(dateStr);
+      const moreText = pendingMissedDates.length > 1
+        ? `<div class="freeze-alert-more">+${pendingMissedDates.length - 1} more day${pendingMissedDates.length - 1 === 1 ? '' : 's'} to review after this</div>`
+        : '';
+
+      container.innerHTML = `
+        <div class="freeze-icons">${icons}</div>
+        <div class="freeze-count-text">${freezeCount}/${maxFreezeCount} available</div>
+        <div class="freeze-alert">
+          <div class="freeze-alert-text">⚠️ You missed <strong>${prettyDate}</strong> — no habit was checked off that day.</div>
+          <div class="freeze-alert-actions">
+            <button class="btn-primary btn-sm" ${freezeCount === 0 ? 'disabled' : ''} onclick="App.resolvePendingFreeze('${dateStr}', true)">Use a Freeze</button>
+            <button class="btn-secondary btn-sm" onclick="App.resolvePendingFreeze('${dateStr}', false)">Let it break</button>
+          </div>
+          ${moreText}
+        </div>
+      `;
+      return;
+    }
 
     let statusText;
     if (freezeCount >= maxFreezeCount) {
@@ -418,6 +440,11 @@ renderWeekWidget(days, title, dayNum) {
       <div class="freeze-count-text">${freezeCount}/${maxFreezeCount} available</div>
       <div class="freeze-status-text">${statusText}</div>
     `;
+  },
+
+  formatFreezeDate(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   },
 
   formatBadgeDate(isoString) {
