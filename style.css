@@ -742,16 +742,138 @@ input:checked + .slider:before { transform: translateX(20px); }
   color: var(--text-main);
 }
 
-/* --- Profil --- */
-#view-profile .card {
-  text-align: center;
+/* --- Profil header --- */
+.profile-header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-#user-email-display {
-  color: var(--text-sub);
-  font-size: 14px;
-  margin-bottom: 16px;
+.profile-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 230, 118, 0.14);
+  color: var(--accent-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
 }
+
+.profile-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-header-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.profile-email {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-logout-btn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.profile-logout-btn:active { transform: scale(0.92); }
+.profile-logout-btn svg { width: 18px; height: 18px; }
+
+/* --- Habit Freeze card --- */
+.freeze-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+
+.freeze-card-hint {
+  font-size: 10.5px;
+  color: var(--text-sub);
+}
+
+.freeze-icons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.freeze-icon {
+  font-size: 30px;
+  line-height: 1;
+  opacity: 0.25;
+  filter: grayscale(1);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.freeze-icon.filled {
+  opacity: 1;
+  filter: none;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
+
+.freeze-count-text {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.freeze-status-text {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-top: 3px;
+}
+
+/* --- "Your Data" export row --- */
+.data-export-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  color: var(--text-main);
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.data-export-icon { font-size: 16px; }
+.data-export-label { flex: 1; }
+.data-export-chevron { color: var(--text-sub); font-size: 18px; }
 
 /* --- Modal --- */
 .modal-overlay {
