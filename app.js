@@ -12,7 +12,7 @@ const App = {
   pendingDeleteId: null,
   activeStatsTab: 'weekly',
   authMode: 'login',
-  streakFreeze: { freezeCount: 2, maxFreezeCount: 2, daysUntilNextRefill: null },
+  streakFreeze: { freezeCount: 2, maxFreezeCount: 2, daysUntilNextRefill: null, pendingMissedDates: [] },
   frozenDatesSet: new Set(),
 
   async init() {
@@ -467,9 +467,10 @@ const App = {
   },
 
   // Habit Freeze: up to `max_freeze_count` freezes protect the streak.
-  // A freeze is auto-spent on any day that had habits owed but nothing was
-  // logged, so a single off day doesn't wipe out the streak. Freezes refill
-  // by 1 every 14 days, capped at the max.
+  // Missed days (habits owed, nothing logged) are queued for the user to
+  // decide on — use a freeze to save that day, or let the streak break.
+  // Nothing is spent automatically. Freezes refill by 1 every 14 days,
+  // capped at the max.
   async loadStreakFreezeState() {
     if (!this.currentUser) return;
     try {
@@ -506,8 +507,10 @@ const App = {
         daysSinceRefill -= 14;
       }
 
-      // --- Auto-consume for missed days since the last check ---
+      // --- Detect newly missed days since the last check and queue them
+      // for the user to decide on (nothing gets spent here). ---
       const frozenDates = new Set(state.frozen_dates || []);
+      const pendingMissedDates = new Set(state.pending_missed_dates || []);
       let lastChecked = state.last_checked_date;
 
       if (lastChecked < yesterdayStr) {
@@ -530,9 +533,8 @@ const App = {
 
           dailyResults.forEach(r => {
             const missed = r.denominator > 0 && r.count === 0;
-            if (missed && !frozenDates.has(r.dateStr) && freezeCount > 0) {
-              freezeCount--;
-              frozenDates.add(r.dateStr);
+            if (missed && !frozenDates.has(r.dateStr)) {
+              pendingMissedDates.add(r.dateStr);
             }
           });
         }
@@ -543,7 +545,8 @@ const App = {
         freeze_count: freezeCount,
         last_freeze_refill_at: lastRefillAt.toISOString(),
         last_checked_date: lastChecked,
-        frozen_dates: Array.from(frozenDates)
+        frozen_dates: Array.from(frozenDates),
+        pending_missed_dates: Array.from(pendingMissedDates).sort()
       });
       if (updateErr) console.error('[App.loadStreakFreezeState] update error:', updateErr);
 
@@ -551,13 +554,56 @@ const App = {
         ? null
         : Math.max(0, 14 - Math.floor((now - lastRefillAt) / msPerDay));
 
-      this.streakFreeze = { freezeCount, maxFreezeCount: maxFreeze, daysUntilNextRefill };
+      this.streakFreeze = {
+        freezeCount,
+        maxFreezeCount: maxFreeze,
+        daysUntilNextRefill,
+        pendingMissedDates: Array.from(pendingMissedDates).sort()
+      };
       this.frozenDatesSet = frozenDates;
 
       UI.renderFreezeCard(this.streakFreeze);
     } catch (err) {
       console.error('[App.loadStreakFreezeState] Unexpected error:', err);
     }
+  },
+
+  // Called when the user taps "Use a Freeze" or "Let it break" on a
+  // pending missed day shown in the Habit Freezes card.
+  async resolvePendingFreeze(dateStr, useFreeze) {
+    if (!this.currentUser) return;
+    console.log(`[App.resolvePendingFreeze] date=${dateStr} useFreeze=${useFreeze}`);
+
+    const pending = new Set(this.streakFreeze.pendingMissedDates || []);
+    if (!pending.has(dateStr)) return;
+    pending.delete(dateStr);
+
+    let freezeCount = this.streakFreeze.freezeCount;
+
+    if (useFreeze) {
+      if (freezeCount <= 0) return;
+      freezeCount--;
+      this.frozenDatesSet.add(dateStr);
+    }
+
+    const { error } = await API.updateStreakState(this.currentUser.id, {
+      freeze_count: freezeCount,
+      frozen_dates: Array.from(this.frozenDatesSet),
+      pending_missed_dates: Array.from(pending).sort()
+    });
+    if (error) console.error('[App.resolvePendingFreeze] update error:', error);
+
+    this.streakFreeze = {
+      ...this.streakFreeze,
+      freezeCount,
+      pendingMissedDates: Array.from(pending).sort()
+    };
+
+    UI.renderFreezeCard(this.streakFreeze);
+
+    // Streak numbers may have changed (a freeze was used, or a day broke
+    // the streak) — refresh the Stats tab's streak display if it's loaded.
+    if (this.activeStatsTab) this.loadStatistics(this.activeStatsTab);
   },
 
   switchStatsTab(type) {
