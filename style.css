@@ -1295,3 +1295,4 @@ input:checked + .slider:before { transform: translateX(20px); }
     font-size: 10.5px;
   }
 }
+
