@@ -19,6 +19,10 @@
   --band-yellow-glow: rgba(234, 179, 8, 0.32);
   --band-green: var(--accent-color);
   --band-green-glow: var(--accent-glow);
+
+  /* Habit Freeze accent */
+  --freeze-color: #38bdf8;
+  --freeze-glow: rgba(56, 189, 248, 0.45);
 }
 
 * {
@@ -828,17 +832,27 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 .freeze-icon {
-  font-size: 30px;
-  line-height: 1;
-  opacity: 0.25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.3;
   filter: grayscale(1);
   transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.freeze-icon .iconify {
+  width: 32px;
+  height: 32px;
+  color: var(--freeze-color);
 }
 
 .freeze-icon.filled {
   opacity: 1;
   filter: none;
-  text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
+
+.freeze-icon.filled .iconify {
+  filter: drop-shadow(0 0 6px var(--freeze-glow));
 }
 
 .freeze-count-text {
