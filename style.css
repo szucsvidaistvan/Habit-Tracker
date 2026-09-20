@@ -217,8 +217,15 @@ body {
 
 /* --- Fejléc --- */
 .app-header {
+  position: relative;
   text-align: center;
   margin-bottom: 18px;
+}
+
+#freeze-badge-home {
+  position: absolute;
+  top: 2px;
+  right: 0;
 }
 
 .app-header h1 {
@@ -827,53 +834,57 @@ input:checked + .slider:before { transform: translateX(20px); }
   color: var(--text-sub);
 }
 
-.freeze-icons {
+.freeze-badge-row {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 10px;
 }
 
-.freeze-icon {
-  display: flex;
+/* Compact "currency" pill: icon + count + live countdown. Used both on the
+   Home header and the Profile card so the balance is visible everywhere. */
+.freeze-pill {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  opacity: 0.3;
-  filter: grayscale(1);
-  transition: opacity 0.2s ease, filter 0.2s ease;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
-.freeze-icon .iconify {
-  width: 32px;
-  height: 32px;
+.freeze-pill.full {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.freeze-badge-icon {
+  width: 15px;
+  height: 15px;
   color: var(--freeze-color);
+  filter: drop-shadow(0 0 4px var(--freeze-glow));
+  flex-shrink: 0;
 }
 
-.freeze-icon.filled {
-  opacity: 1;
-  filter: none;
-}
-
-.freeze-icon.filled .iconify {
-  filter: drop-shadow(0 0 6px var(--freeze-glow));
-}
-
-.freeze-count-text {
-  text-align: center;
-  font-size: 15px;
+.freeze-badge-count {
+  font-size: 12.5px;
   font-weight: 800;
   color: var(--text-main);
+  white-space: nowrap;
 }
 
-.freeze-status-text {
-  text-align: center;
-  font-size: 11px;
+.freeze-badge-sep {
+  font-size: 9px;
   color: var(--text-sub);
-  margin-top: 3px;
+}
+
+.freeze-countdown-text {
+  font-size: 10.5px;
+  color: var(--text-sub);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .freeze-alert {
-  margin-top: 4px;
+  margin-top: 14px;
   padding: 12px;
   border-radius: 14px;
   background: rgba(249, 115, 22, 0.1);
