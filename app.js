@@ -12,7 +12,8 @@ const App = {
   pendingDeleteId: null,
   activeStatsTab: 'weekly',
   authMode: 'login',
-  streakFreeze: { freezeCount: 2, maxFreezeCount: 2, daysUntilNextRefill: null, pendingMissedDates: [] },
+  streakFreeze: { freezeCount: 2, maxFreezeCount: 2, lastRefillAt: null, nextRefillAt: null, pendingMissedDates: [] },
+  freezeCountdownTimer: null,
   frozenDatesSet: new Set(),
 
   async init() {
@@ -572,22 +573,35 @@ const App = {
       });
       if (updateErr) console.error('[App.loadStreakFreezeState] update error:', updateErr);
 
-      const daysUntilNextRefill = freezeCount >= maxFreeze
+      const nextRefillAt = freezeCount >= maxFreeze
         ? null
-        : Math.max(0, 14 - Math.floor((now - lastRefillAt) / msPerDay));
+        : lastRefillAt.getTime() + 14 * msPerDay;
 
       this.streakFreeze = {
         freezeCount,
         maxFreezeCount: maxFreeze,
-        daysUntilNextRefill,
+        lastRefillAt: lastRefillAt.getTime(),
+        nextRefillAt,
         pendingMissedDates: Array.from(pendingMissedDates).sort()
       };
       this.frozenDatesSet = frozenDates;
 
       UI.renderFreezeCard(this.streakFreeze);
+      UI.renderFreezeBadgeHome(this.streakFreeze);
+      this.startFreezeCountdownTimer();
     } catch (err) {
       console.error('[App.loadStreakFreezeState] Unexpected error:', err);
     }
+  },
+
+  // Ticks the small "Xd Yh" countdown text in every freeze badge on screen
+  // once a minute, without re-rendering the whole card (so open buttons /
+  // pending-day prompts aren't disturbed).
+  startFreezeCountdownTimer() {
+    if (this.freezeCountdownTimer) clearInterval(this.freezeCountdownTimer);
+    const tick = () => UI.updateFreezeCountdowns(this.streakFreeze.nextRefillAt, this.streakFreeze.freezeCount >= this.streakFreeze.maxFreezeCount);
+    tick();
+    this.freezeCountdownTimer = setInterval(tick, 60000);
   },
 
   // Called when the user taps "Use a Freeze" or "Let it break" on a
@@ -615,13 +629,21 @@ const App = {
     });
     if (error) console.error('[App.resolvePendingFreeze] update error:', error);
 
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const nextRefillAt = freezeCount >= this.streakFreeze.maxFreezeCount
+      ? null
+      : this.streakFreeze.lastRefillAt + 14 * msPerDay;
+
     this.streakFreeze = {
       ...this.streakFreeze,
       freezeCount,
+      nextRefillAt,
       pendingMissedDates: Array.from(pending).sort()
     };
 
     UI.renderFreezeCard(this.streakFreeze);
+    UI.renderFreezeBadgeHome(this.streakFreeze);
+    this.startFreezeCountdownTimer();
 
     // If the resolved day is visible in the current "This Week" widget,
     // update its dot immediately instead of waiting for a reload.
