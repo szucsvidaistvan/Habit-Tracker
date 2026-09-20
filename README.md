@@ -16,7 +16,7 @@ My Personal, modern, fast, and responsive web application for daily habit tracki
 ## Publikált oldal
 
 You can access the deployed application here:
-👉 **[Habit Tracker on GitHub Pages](https://szucsvidaistvan.github.io/Habit-Tracker/)**[cite: 3]
+👉 **[Habit Tracker on GitHub Pages](https://szucsvidaistvan.github.io/Habit-Tracker/)**
 
 ## Tech Stack
 
@@ -27,4 +27,3 @@ You can access the deployed application here:
 
 ## License
 
-This project is open-source under the MIT License.
