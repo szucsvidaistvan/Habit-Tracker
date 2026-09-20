@@ -446,34 +446,64 @@ renderWeekWidget(days, title, dayNum) {
     mount.innerHTML = this.freezeBadgeInnerHTML(state);
   },
 
+  // Shared markup for "you missed a day, decide now" — used by both the
+  // Profile card and the auto-popup modal so they never drift apart.
+  pendingAlertHTML(pendingMissedDates, freezeCount) {
+    if (!pendingMissedDates || pendingMissedDates.length === 0) return '';
+
+    const dateStr = pendingMissedDates[0];
+    const prettyDate = this.formatFreezeDate(dateStr);
+    const moreText = pendingMissedDates.length > 1
+      ? `<div class="freeze-alert-more">+${pendingMissedDates.length - 1} more day${pendingMissedDates.length - 1 === 1 ? '' : 's'} to review after this</div>`
+      : '';
+
+    return `
+      <div class="freeze-alert">
+        <div class="freeze-alert-text">⚠️ You missed <strong>${prettyDate}</strong> — no habit was checked off that day.</div>
+        <div class="freeze-alert-actions">
+          <button class="btn-primary btn-sm" ${freezeCount === 0 ? 'disabled' : ''} onclick="App.resolvePendingFreeze('${dateStr}', true)">Use a Freeze</button>
+          <button class="btn-secondary btn-sm" onclick="App.resolvePendingFreeze('${dateStr}', false)">Let it break</button>
+        </div>
+        ${moreText}
+      </div>
+    `;
+  },
+
   renderFreezeCard(state) {
     const container = document.getElementById('freeze-card-body');
     if (!container || !state) return;
 
     const { freezeCount, pendingMissedDates } = state;
 
-    let html = `<div class="freeze-badge-row">${this.freezeBadgeInnerHTML(state)}</div>`;
-
-    if (pendingMissedDates && pendingMissedDates.length > 0) {
-      const dateStr = pendingMissedDates[0];
-      const prettyDate = this.formatFreezeDate(dateStr);
-      const moreText = pendingMissedDates.length > 1
-        ? `<div class="freeze-alert-more">+${pendingMissedDates.length - 1} more day${pendingMissedDates.length - 1 === 1 ? '' : 's'} to review after this</div>`
-        : '';
-
-      html += `
-        <div class="freeze-alert">
-          <div class="freeze-alert-text">⚠️ You missed <strong>${prettyDate}</strong> — no habit was checked off that day.</div>
-          <div class="freeze-alert-actions">
-            <button class="btn-primary btn-sm" ${freezeCount === 0 ? 'disabled' : ''} onclick="App.resolvePendingFreeze('${dateStr}', true)">Use a Freeze</button>
-            <button class="btn-secondary btn-sm" onclick="App.resolvePendingFreeze('${dateStr}', false)">Let it break</button>
-          </div>
-          ${moreText}
-        </div>
-      `;
-    }
+    const html = `<div class="freeze-badge-row">${this.freezeBadgeInnerHTML(state)}</div>`
+      + this.pendingAlertHTML(pendingMissedDates, freezeCount);
 
     container.innerHTML = html;
+  },
+
+  // Auto-popup shown right after login when there's a day waiting for a
+  // decision. Re-calling this with updated state (e.g. after resolving one
+  // of several pending days) refreshes the body in place.
+  openFreezeModal(state) {
+    const modal = document.getElementById('freeze-decision-modal');
+    const body = document.getElementById('freeze-modal-body');
+    if (!modal || !body || !state) return;
+    if (!state.pendingMissedDates || state.pendingMissedDates.length === 0) {
+      this.closeFreezeModal();
+      return;
+    }
+    body.innerHTML = this.pendingAlertHTML(state.pendingMissedDates, state.freezeCount);
+    modal.style.display = 'flex';
+  },
+
+  closeFreezeModal() {
+    const modal = document.getElementById('freeze-decision-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  isFreezeModalOpen() {
+    const modal = document.getElementById('freeze-decision-modal');
+    return !!modal && modal.style.display !== 'none';
   },
 
   formatFreezeDate(dateStr) {
