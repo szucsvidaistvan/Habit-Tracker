@@ -586,6 +586,8 @@ const App = {
       };
       this.frozenDatesSet = frozenDates;
 
+      console.log('[App.loadStreakFreezeState] state loaded:', this.streakFreeze);
+
       UI.renderFreezeCard(this.streakFreeze);
       UI.renderFreezeBadgeHome(this.streakFreeze);
       this.startFreezeCountdownTimer();
@@ -593,7 +595,10 @@ const App = {
       // Surface it immediately rather than leaving it tucked away on the
       // Profile tab — this only runs once, right after login.
       if (this.streakFreeze.pendingMissedDates.length > 0) {
+        console.log('[App.loadStreakFreezeState] pending missed day(s) found, opening popup.');
         UI.openFreezeModal(this.streakFreeze);
+      } else {
+        console.log('[App.loadStreakFreezeState] no pending missed days.');
       }
     } catch (err) {
       console.error('[App.loadStreakFreezeState] Unexpected error:', err);
