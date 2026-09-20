@@ -217,15 +217,14 @@ body {
 
 /* --- Fejléc --- */
 .app-header {
-  position: relative;
   text-align: center;
   margin-bottom: 18px;
 }
 
-#freeze-badge-home {
-  position: absolute;
-  top: 2px;
-  right: 0;
+.freeze-topbar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
 }
 
 .app-header h1 {
