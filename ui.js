@@ -91,24 +91,10 @@ const UI = {
         .sort((a, b) => (a.position || 0) - (b.position || 0))
     }));
 
-    const uncategorized = habitsList.filter(h => !categoriesById.has(String(h.category_id || '')));
-    if (uncategorized.length > 0) {
-      groups.push({
-        id: 'uncategorized',
-        name: 'Other',
-        habits: uncategorized
-      });
-    }
-
-    container.innerHTML = groups
-      .filter(group => group.habits.length > 0 || group.id !== 'uncategorized')
+    const containerHtml = groups
+      .filter(group => group.habits.length > 0)
       .map(group => `
-        <section
-          class="habit-category"
-          data-category-id="${group.id}"
-          ondragover="event.preventDefault()"
-          ondrop="App.dropHabit(event, '${group.id}')">
-
+        <section class="habit-category" data-category-id="${group.id}">
           <div class="habit-category-header">
             <h3>${this.escapeHtml(group.name)}</h3>
             <span>${group.habits.length}</span>
@@ -119,6 +105,8 @@ const UI = {
           </div>
         </section>
       `).join('');
+
+    container.innerHTML = containerHtml || '<div class="loader">No active habits.</div>';
 
     console.log('[UI.renderHabits] HTML successfully updated.');
     this.updateProgress(habitsList);
@@ -137,12 +125,7 @@ const UI = {
       : '';
 
     return `
-      <div
-        class="habit-card-wrapper"
-        draggable="true"
-        data-habit-id="${h.id}"
-        ondragstart="App.draggedHabitId='${h.id}'">
-
+      <div class="habit-card-wrapper" data-habit-id="${h.id}">
         <div class="swipe-actions">
           <button
             class="swipe-btn edit"
@@ -164,8 +147,6 @@ const UI = {
         </div>
 
         <div class="habit-item ${fulfilled ? 'habit-fulfilled' : ''}" id="swipe-content-${h.id}">
-          <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
-
           <div class="habit-info">
             <span class="habit-name">${this.escapeHtml(h.title)}</span>
             <span class="habit-time">${subInfo}</span>
