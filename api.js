@@ -1,4 +1,3 @@
-// Supabase API réteg (*API layer*)
 const SUPABASE_URL = 'https://hcnfoywtoegokphjmzpn.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Uzsb3AnDYM5bAwKWI5gwwQ_Hb3fwtNH';
 
@@ -36,6 +35,7 @@ const API = {
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
+      .order('position', { ascending: true })
       .order('id', { ascending: true });
   },
 
@@ -48,6 +48,91 @@ const API = {
       .order('id', { ascending: true });
   },
 
+  async fetchCategories(userId) {
+    const result = await supabase
+      .from('habit_categories')
+      .select('*')
+      .eq('user_id', userId)
+      .order('position', { ascending: true });
+
+    if (result.error) return result;
+
+    if (!result.data || result.data.length === 0) {
+      const defaults = [
+        { user_id: userId, name: 'Morning', position: 0 },
+        { user_id: userId, name: 'During the day', position: 1 },
+        { user_id: userId, name: 'Evening', position: 2 }
+      ];
+
+      const inserted = await supabase
+        .from('habit_categories')
+        .insert(defaults)
+        .select('*')
+        .order('position', { ascending: true });
+
+      return inserted;
+    }
+
+    return result;
+  },
+
+  async createCategory(userId, name, position = 0) {
+    return await supabase
+      .from('habit_categories')
+      .insert([{ user_id: userId, name, position }])
+      .select()
+      .single();
+  },
+
+  async updateCategory(categoryId, name) {
+    return await supabase
+      .from('habit_categories')
+      .update({ name })
+      .eq('id', categoryId);
+  },
+
+  async deleteCategory(categoryId) {
+    return await supabase
+      .from('habit_categories')
+      .delete()
+      .eq('id', categoryId);
+  },
+
+  async updateCategoryPositions(categories) {
+    const operations = categories.map(category =>
+      supabase
+        .from('habit_categories')
+        .update({ position: category.position })
+        .eq('id', category.id)
+    );
+
+    return await Promise.all(operations);
+  },
+
+  async updateHabitCategory(habitId, categoryId, position) {
+    return await supabase
+      .from('habits')
+      .update({
+        category_id: categoryId || null,
+        position
+      })
+      .eq('id', habitId);
+  },
+
+  async updateHabitPositions(habits) {
+    const operations = habits.map(habit =>
+      supabase
+        .from('habits')
+        .update({
+          category_id: habit.category_id || null,
+          position: habit.position
+        })
+        .eq('id', habit.id)
+    );
+
+    return await Promise.all(operations);
+  },
+
   async fetchLogsByDate(dateStr) {
     return await supabase
       .from('daily_logs')
@@ -55,21 +140,24 @@ const API = {
       .eq('log_date', dateStr);
   },
 
-  async createHabit(userId, title, weeklyTarget, targetMinutes = 0) {
+  async createHabit(userId, title, weeklyTarget, targetMinutes = 0, categoryId = null, position = 0) {
     return await supabase.from('habits').insert([{
       user_id: userId,
       title: title,
       weekly_target: weeklyTarget,
       target_minutes: targetMinutes,
+      category_id: categoryId || null,
+      position,
       is_active: true
     }]);
   },
 
-  async updateHabit(habitId, title, weeklyTarget, targetMinutes = 0) {
+  async updateHabit(habitId, title, weeklyTarget, targetMinutes = 0, categoryId = null) {
     return await supabase.from('habits').update({
       title: title,
       weekly_target: weeklyTarget,
-      target_minutes: targetMinutes
+      target_minutes: targetMinutes,
+      category_id: categoryId || null
     }).eq('id', habitId);
   },
 
@@ -119,19 +207,19 @@ const API = {
   async fetchUserAchievements(userId) {
     return await supabase.from('user_achievements').select('*').eq('user_id', userId);
   },
-  
+
   async unlockAchievement(userId, achievementKey) {
     return await supabase.from('user_achievements').insert([{
       user_id: userId,
       achievement_key: achievementKey
     }]);
   },
+
   async sendBugReport(description) {
-  const { data: { user } } = await supabase.auth.getUser();
-  return await supabase.from('bug_reports').insert([{ user_id: user.id, description }]);
+    const { data: { user } } = await supabase.auth.getUser();
+    return await supabase.from('bug_reports').insert([{ user_id: user.id, description }]);
   },
 
-  // --- Habit Freeze ---
   async fetchStreakState(userId) {
     return await supabase
       .from('user_streak_state')
