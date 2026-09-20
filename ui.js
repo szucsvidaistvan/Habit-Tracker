@@ -400,15 +400,59 @@ renderWeekWidget(days, title, dayNum) {
     `;
   },
 
+  // Compact "currency" style pill: icon + count + live countdown to the
+  // next refill. Reused verbatim on the Home header and the Profile card,
+  // so the freeze balance is visible everywhere at a glance.
+  freezeBadgeInnerHTML(state) {
+    const { freezeCount, maxFreezeCount, nextRefillAt } = state;
+    const full = freezeCount >= maxFreezeCount;
+    const countdownText = full ? 'Full' : (this.formatCountdown(nextRefillAt) || '');
+
+    return `
+      <span class="freeze-pill ${full ? 'full' : ''}">
+        <span class="iconify freeze-badge-icon" data-icon="game-icons:ice-cube"></span>
+        <span class="freeze-badge-count">${freezeCount}/${maxFreezeCount}</span>
+        <span class="freeze-badge-sep">•</span>
+        <span class="freeze-countdown-text">${countdownText}</span>
+      </span>
+    `;
+  },
+
+  formatCountdown(targetMs) {
+    if (!targetMs) return null;
+    const diff = targetMs - Date.now();
+    if (diff <= 0) return 'Any moment';
+    const totalMinutes = Math.floor(diff / 60000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  },
+
+  // Ticks every freeze-countdown-text node in place (Home badge + Profile
+  // card both use this class), without touching the rest of their markup.
+  updateFreezeCountdowns(nextRefillAt, isFull) {
+    const text = isFull ? 'Full' : (this.formatCountdown(nextRefillAt) || '');
+    document.querySelectorAll('.freeze-countdown-text').forEach(el => {
+      el.innerText = text;
+    });
+  },
+
+  renderFreezeBadgeHome(state) {
+    const mount = document.getElementById('freeze-badge-home');
+    if (!mount || !state) return;
+    mount.innerHTML = this.freezeBadgeInnerHTML(state);
+  },
+
   renderFreezeCard(state) {
     const container = document.getElementById('freeze-card-body');
     if (!container || !state) return;
 
-    const { freezeCount, maxFreezeCount, daysUntilNextRefill, pendingMissedDates } = state;
+    const { freezeCount, pendingMissedDates } = state;
 
-    const icons = Array.from({ length: maxFreezeCount }, (_, i) =>
-      `<span class="freeze-icon ${i < freezeCount ? 'filled' : ''}"><span class="iconify" data-icon="game-icons:ice-cube"></span></span>`
-    ).join('');
+    let html = `<div class="freeze-badge-row">${this.freezeBadgeInnerHTML(state)}</div>`;
 
     if (pendingMissedDates && pendingMissedDates.length > 0) {
       const dateStr = pendingMissedDates[0];
@@ -417,9 +461,7 @@ renderWeekWidget(days, title, dayNum) {
         ? `<div class="freeze-alert-more">+${pendingMissedDates.length - 1} more day${pendingMissedDates.length - 1 === 1 ? '' : 's'} to review after this</div>`
         : '';
 
-      container.innerHTML = `
-        <div class="freeze-icons">${icons}</div>
-        <div class="freeze-count-text">${freezeCount}/${maxFreezeCount} available</div>
+      html += `
         <div class="freeze-alert">
           <div class="freeze-alert-text">⚠️ You missed <strong>${prettyDate}</strong> — no habit was checked off that day.</div>
           <div class="freeze-alert-actions">
@@ -429,23 +471,9 @@ renderWeekWidget(days, title, dayNum) {
           ${moreText}
         </div>
       `;
-      return;
     }
 
-    let statusText;
-    if (freezeCount >= maxFreezeCount) {
-      statusText = 'All freezes ready';
-    } else if (daysUntilNextRefill === 0) {
-      statusText = 'Next freeze arrives today';
-    } else {
-      statusText = `Next freeze in ${daysUntilNextRefill} day${daysUntilNextRefill === 1 ? '' : 's'}`;
-    }
-
-    container.innerHTML = `
-      <div class="freeze-icons">${icons}</div>
-      <div class="freeze-count-text">${freezeCount}/${maxFreezeCount} available</div>
-      <div class="freeze-status-text">${statusText}</div>
-    `;
+    container.innerHTML = html;
   },
 
   formatFreezeDate(dateStr) {
