@@ -5,38 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Habit-Tracker</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Supabase CDN -->
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.0"></script>
-  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Iconify (used for the RPG-style achievement badge icons) -->
   <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
+
 <body>
   <!-- Auth View -->
   <div id="auth-container" class="card" style="display: none; max-width: 400px; margin: 40px auto; padding: 24px;">
-    
-  <div id="pwa-banner" class="pwa-banner" style="display: none;">
-    <div class="pwa-banner-icon">📱</div>
 
-    <div class="pwa-banner-content">
-      <strong>Install Habit Tracker</strong>
-      <span>Add it to your home screen for faster access.</span>
+    <div id="pwa-banner" class="pwa-banner" style="display: none;">
+      <div class="pwa-banner-icon">📱</div>
+
+      <div class="pwa-banner-content">
+        <strong>Install Habit Tracker</strong>
+        <span>Add it to your home screen for faster access.</span>
+      </div>
+
+      <button
+        class="pwa-banner-close"
+        onclick="App.closePwaBanner()"
+        aria-label="Close">
+        &times;
+      </button>
     </div>
 
-    <button
-      class="pwa-banner-close"
-      onclick="App.closePwaBanner()"
-      aria-label="Close">
-      &times;
-    </button>
-  </div>
-    
     <h2 class="auth-title" id="auth-title">Log In</h2>
     <div id="auth-error" class="auth-error"></div>
 
@@ -52,18 +52,31 @@
 
     <div class="auth-divider"><span>OR</span></div>
 
-    <input type="email" id="auth-email" placeholder="Email address" class="auth-input" />
-    <input type="password" id="auth-password" placeholder="Password" class="auth-input" />
+    <input type="email" id="auth-email" placeholder="Email address" class="auth-input">
+    <input type="password" id="auth-password" placeholder="Password" class="auth-input">
 
-    <button class="btn-primary" id="auth-submit-btn" onclick="App.handleAuthSubmit()" style="width: 100%;">Log In</button>
+    <button
+      class="btn-primary"
+      id="auth-submit-btn"
+      onclick="App.handleAuthSubmit()"
+      style="width: 100%;">
+      Log In
+    </button>
 
     <p class="auth-toggle-text">
-      <span id="auth-toggle-prompt">Don't have an account?</span><button class="auth-toggle-link" id="auth-toggle-btn" onclick="App.toggleAuthMode()">Sign Up</button>
+      <span id="auth-toggle-prompt">Don't have an account?</span>
+      <button
+        class="auth-toggle-link"
+        id="auth-toggle-btn"
+        onclick="App.toggleAuthMode()">
+        Sign Up
+      </button>
     </p>
   </div>
 
   <!-- App View -->
   <div id="app-container" style="display: none;">
+
     <!-- Home Tab -->
     <div id="view-home" class="tab-content">
       <header class="app-header">
@@ -78,25 +91,42 @@
           <span>Daily Progress</span>
           <span id="progress-text">0%</span>
         </div>
+
         <div class="progress-bar-bg">
           <div id="progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
         </div>
       </div>
+
       <div class="card week-widget">
-          <div class="week-widget-header">
-            <span id="week-widget-title">This Week</span>
-            <span id="week-widget-daynum"></span>
-          </div>
-          <div class="week-days-row" id="week-days-row"></div>
+        <div class="week-widget-header">
+          <span id="week-widget-title">This Week</span>
+          <span id="week-widget-daynum"></span>
+        </div>
+
+        <div class="week-days-row" id="week-days-row"></div>
       </div>
+
       <div id="habits-container" class="habits-list"></div>
 
-      <button class="btn-primary add-habit-btn" onclick="App.openAddModal()">+ Add New Habit</button>
+      <div class="habit-actions">
+        <button
+          class="btn-primary add-habit-btn"
+          onclick="App.openAddModal()">
+          + Add New Habit
+        </button>
+
+        <button
+          class="btn-secondary manage-categories-btn"
+          onclick="App.openCategoriesModal()">
+          Manage Categories
+        </button>
+      </div>
     </div>
 
     <!-- Stats Tab -->
     <div id="view-stats" class="tab-content" style="display: none;">
       <h2>Statistics</h2>
+
       <div class="card streak-card">
         <div class="streak-item">
           <div class="streak-icon">🔥</div>
@@ -104,71 +134,110 @@
           <div class="streak-label">Day Streak</div>
           <div class="streak-status" id="streak-status-label"></div>
         </div>
+
         <div class="streak-divider"></div>
+
         <div class="streak-item">
           <div class="streak-icon">🏆</div>
           <div class="streak-value" id="best-streak-value">0</div>
           <div class="streak-label">Best Streak</div>
         </div>
       </div>
+
       <div class="stats-toggle">
-        <button id="btn-stats-weekly" class="toggle-btn active" onclick="App.switchStatsTab('weekly')">Weekly</button>
-        <button id="btn-stats-monthly" class="toggle-btn" onclick="App.switchStatsTab('monthly')">Monthly</button>
+        <button
+          id="btn-stats-weekly"
+          class="toggle-btn active"
+          onclick="App.switchStatsTab('weekly')">
+          Weekly
+        </button>
+
+        <button
+          id="btn-stats-monthly"
+          class="toggle-btn"
+          onclick="App.switchStatsTab('monthly')">
+          Monthly
+        </button>
       </div>
+
       <div class="card chart-card">
         <h3>Habits Completed</h3>
         <canvas id="barChart"></canvas>
       </div>
+
       <div class="card chart-card">
         <h3>Completion Rate (%)</h3>
         <canvas id="statsChart"></canvas>
       </div>
+
       <div class="card chart-card">
         <h3>Completion by Habit</h3>
         <div id="habit-stats-container"></div>
       </div>
-          <div class="card">
-          <h3 class="section-title">Activity Heatmap</h3>
-         <div class="heatmap-scroll">
-            <div id="heatmap-container" class="heatmap-grid"></div>
-          </div>
-          <div class="heatmap-legend">
-            <span>Less</span>
-            <span class="heatmap-cell band-empty"></span>
-            <span class="heatmap-cell band-red"></span>
-            <span class="heatmap-cell band-orange"></span>
-            <span class="heatmap-cell band-yellow"></span>
-            <span class="heatmap-cell band-green"></span>
-            <span>More</span>
-            <span class="heatmap-legend-sep"></span>
-            <span class="heatmap-cell band-frozen"></span>
-            <span>Frozen</span>
-          </div>
+
+      <div class="card">
+        <h3 class="section-title">Activity Heatmap</h3>
+
+        <div class="heatmap-scroll">
+          <div id="heatmap-container" class="heatmap-grid"></div>
+        </div>
+
+        <div class="heatmap-legend">
+          <span>Less</span>
+          <span class="heatmap-cell band-empty"></span>
+          <span class="heatmap-cell band-red"></span>
+          <span class="heatmap-cell band-orange"></span>
+          <span class="heatmap-cell band-yellow"></span>
+          <span class="heatmap-cell band-green"></span>
+          <span>More</span>
+          <span class="heatmap-legend-sep"></span>
+          <span class="heatmap-cell band-frozen"></span>
+          <span>Frozen</span>
+        </div>
       </div>
     </div>
 
     <!-- Profile Tab -->
     <div id="view-profile" class="tab-content" style="display: none;">
       <h2>Profile</h2>
+
       <div class="card profile-header-card">
         <div class="profile-header-top">
           <div class="profile-avatar" id="profile-avatar">?</div>
+
           <div class="profile-header-info">
             <span class="profile-header-label">Signed in as</span>
             <span class="profile-email" id="user-email-display"></span>
           </div>
-          <button class="profile-logout-btn" onclick="App.logout()" aria-label="Log Out">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+
+          <button
+            class="profile-logout-btn"
+            onclick="App.logout()"
+            aria-label="Log Out">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
           </button>
         </div>
       </div>
+
       <div class="card freeze-card" style="margin-top: 16px;">
         <div class="freeze-card-header">
           <h3 class="section-title" style="margin: 0;">Habit Freezes</h3>
           <span class="freeze-card-hint">Protects your streak</span>
         </div>
+
         <div id="freeze-card-body"></div>
       </div>
+
       <div class="card" style="margin-top: 16px;">
         <button class="data-export-row" onclick="App.exportUserData()">
           <span class="data-export-icon">⬇️</span>
@@ -176,75 +245,204 @@
           <span class="data-export-chevron">›</span>
         </button>
       </div>
+
       <div class="card" style="margin-top: 16px;">
         <h3 class="section-title">Achievements</h3>
         <div id="achievements-container"></div>
       </div>
-      
+
       <div class="card accordion-card" style="margin-top: 16px;">
         <button class="accordion-header" onclick="App.toggleInactiveAccordion()">
           <h3 class="section-title" style="margin: 0;">Inactive Habits</h3>
           <span class="dropdown-arrow" id="inactive-accordion-chevron">▼</span>
         </button>
-        <div class="accordion-body" id="inactive-accordion-body" style="display: none;">
+
+        <div
+          class="accordion-body"
+          id="inactive-accordion-body"
+          style="display: none;">
           <div id="inactive-habits-list-container"></div>
         </div>
-        
       </div>
-        <details class="bug-report-card">
-          <summary class="bug-report-header">
-            <span>Report a Bug / Feedback</span>
-            <span class="dropdown-arrow">▼</span>
-          </summary>
-          <div class="bug-report-content">
-            <textarea id="bug-text" placeholder="Describe the issue or suggestion..."></textarea>
-           <button class="btn-primary" id="submit-bug-btn" onclick="App.submitBugReport()">Submit Report</button>
-          </div>
-        </details>
+
+      <details class="bug-report-card">
+        <summary class="bug-report-header">
+          <span>Report a Bug / Feedback</span>
+          <span class="dropdown-arrow">▼</span>
+        </summary>
+
+        <div class="bug-report-content">
+          <textarea
+            id="bug-text"
+            placeholder="Describe the issue or suggestion..."></textarea>
+
+          <button
+            class="btn-primary"
+            id="submit-bug-btn"
+            onclick="App.submitBugReport()">
+            Submit Report
+          </button>
+        </div>
+      </details>
     </div>
   </div>
 
   <!-- Bottom Tab Bar -->
   <nav id="bottom-tab-bar" class="bottom-nav" style="display: none;">
-    <button id="tab-home" class="tab-item active" onclick="App.switchTab('home')" aria-label="Habits">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+    <button
+      id="tab-home"
+      class="tab-item active"
+      onclick="App.switchTab('home')"
+      aria-label="Habits">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
     </button>
-    <button id="tab-stats" class="tab-item" onclick="App.switchTab('stats')" aria-label="Stats">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+
+    <button
+      id="tab-stats"
+      class="tab-item"
+      onclick="App.switchTab('stats')"
+      aria-label="Stats">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round">
+        <line x1="12" y1="20" x2="12" y2="10"></line>
+        <line x1="18" y1="20" x2="18" y2="4"></line>
+        <line x1="6" y1="20" x2="6" y2="16"></line>
+      </svg>
     </button>
-    <button id="tab-profile" class="tab-item" onclick="App.switchTab('profile')" aria-label="Profile">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+
+    <button
+      id="tab-profile"
+      class="tab-item"
+      onclick="App.switchTab('profile')"
+      aria-label="Profile">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
     </button>
   </nav>
 
-  <!-- Habit Modal (Add/Edit) -->
+  <!-- Habit Modal -->
   <div id="habit-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="modal-title">New Habit</h3>
         <button class="close-btn" onclick="App.closeModal()">&times;</button>
       </div>
+
       <div class="modal-body">
-        <!-- Inactive habit reactivation dropdown -->
         <div id="inactive-habits-wrapper" style="display: none; margin-bottom: 15px;">
-          <label for="inactive-habits-select">Reactivate a previous inactive habit:</label>
-          <select id="inactive-habits-select" onchange="App.handleSelectInactiveHabit(this.value)" style="width: 100%; padding: 10px; margin-top: 5px;">
+          <label for="inactive-habits-select">
+            Reactivate a previous inactive habit:
+          </label>
+
+          <select
+            id="inactive-habits-select"
+            onchange="App.handleSelectInactiveHabit(this.value)"
+            style="width: 100%; padding: 10px; margin-top: 5px;">
             <option value="">-- Choose from previous --</option>
           </select>
-          <div style="text-align: center; margin: 10px 0; font-size: 12px; color: #94a3b8;">— OR create a new one —</div>
+
+          <div style="text-align: center; margin: 10px 0; font-size: 12px; color: #94a3b8;">
+            — OR create a new one —
+          </div>
         </div>
 
         <label for="habit-name-input">Habit name</label>
-        <input type="text" id="habit-name-input" placeholder="e.g. Morning meditation" style="width: 100%; margin-bottom: 10px; padding: 10px;" />
+        <input
+          type="text"
+          id="habit-name-input"
+          placeholder="e.g. Morning meditation"
+          style="width: 100%; margin-bottom: 10px; padding: 10px;">
+
+        <label for="habit-category-input">Category</label>
+        <select
+          id="habit-category-input"
+          style="width: 100%; margin-bottom: 8px; padding: 10px;">
+        </select>
+
+        <button
+          type="button"
+          class="category-link"
+          onclick="App.openCategoriesModal()">
+          Manage Categories
+        </button>
 
         <label for="habit-freq-input">Weekly goal (times)</label>
-        <input type="number" id="habit-freq-input" placeholder="7" min="1" max="7" style="width: 100%; margin-bottom: 10px; padding: 10px;" />
+        <input
+          type="number"
+          id="habit-freq-input"
+          placeholder="7"
+          min="1"
+          max="7"
+          style="width: 100%; margin-bottom: 10px; padding: 10px;">
 
-        <label for="habit-time-input">Duration in minutes (0 = unlimited)</label>
-        <input type="number" id="habit-time-input" placeholder="0" min="0" style="width: 100%; margin-bottom: 15px; padding: 10px;" />
+        <label for="habit-time-input">
+          Duration in minutes (0 = unlimited)
+        </label>
+        <input
+          type="number"
+          id="habit-time-input"
+          placeholder="0"
+          min="0"
+          style="width: 100%; margin-bottom: 15px; padding: 10px;">
       </div>
+
       <div class="modal-footer">
-        <button class="btn-primary" onclick="App.saveHabitModal()" style="width: 100%;">Save</button>
+        <button
+          class="btn-primary"
+          onclick="App.saveHabitModal()"
+          style="width: 100%;">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Categories Modal -->
+  <div id="categories-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Manage Categories</h3>
+        <button class="close-btn" onclick="App.closeCategoriesModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="categories-list"></div>
+
+        <div class="category-create-row">
+          <input
+            type="text"
+            id="new-category-input"
+            placeholder="New category name"
+            maxlength="40">
+
+          <button
+            class="btn-primary btn-sm"
+            onclick="App.createNewCategory()">
+            Add
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -256,9 +454,14 @@
         <h3>Delete Habit</h3>
         <button class="close-btn" onclick="App.closeDeleteModal()">&times;</button>
       </div>
+
       <div class="modal-body">
-        <p class="modal-message">Are you sure you want to deactivate this habit? You can reactivate it anytime later from your Profile.</p>
+        <p class="modal-message">
+          Are you sure you want to deactivate this habit?
+          You can reactivate it anytime later from your Profile.
+        </p>
       </div>
+
       <div class="modal-footer modal-actions">
         <button class="btn-secondary" onclick="App.closeDeleteModal()">Cancel</button>
         <button class="btn-danger" onclick="App.confirmDeleteHabit()">Delete</button>
@@ -266,20 +469,33 @@
     </div>
   </div>
 
-  <!-- Streak Freeze decision popup: shown automatically right after login
-       if there's a missed day waiting for a Use Freeze / Let it break choice. -->
+  <!-- Streak Freeze Decision Modal -->
   <div id="freeze-decision-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
-        <h3><span class="iconify" data-icon="game-icons:ice-cube" style="width:18px;height:18px;color:var(--freeze-color);vertical-align:-3px;margin-right:6px;"></span>Streak Freeze</h3>
+        <h3>
+          <span
+            class="iconify"
+            data-icon="game-icons:ice-cube"
+            style="width:18px;height:18px;color:var(--freeze-color);vertical-align:-3px;margin-right:6px;">
+          </span>
+          Streak Freeze
+        </h3>
+
         <button class="close-btn" onclick="App.closeFreezeModal()">&times;</button>
       </div>
+
       <div class="modal-body" id="freeze-modal-body"></div>
     </div>
   </div>
 
-  <!-- Achievement Detail Modal (tap a badge to flip it open, tap anywhere to close) -->
-  <div id="achievement-modal" class="modal-overlay" style="display: none;" onclick="App.closeAchievementModal()">
+  <!-- Achievement Detail Modal -->
+  <div
+    id="achievement-modal"
+    class="modal-overlay"
+    style="display: none;"
+    onclick="App.closeAchievementModal()">
+
     <div class="modal-content">
       <div class="achievement-modal-icon" id="achievement-modal-icon"></div>
       <div class="achievement-modal-name" id="achievement-modal-name"></div>
@@ -293,3 +509,6 @@
   <script src="app.js"></script>
 </body>
 </html>
+```
+
+A következő üzenetben küldöm a teljes kész `ui.js` fájlt.
