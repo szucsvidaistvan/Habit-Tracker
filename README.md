@@ -25,5 +25,3 @@ You can access the deployed application here:
 * **Charts:** Chart.js
 * **Icons:** Iconify
 
-## License
-
