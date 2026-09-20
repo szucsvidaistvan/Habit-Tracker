@@ -252,6 +252,7 @@ body {
 .week-day-dot.done { background: var(--accent-color); }
 .week-day-dot.missed { background: var(--band-red); }
 .week-day-dot.future { background: var(--border-color); opacity: 0.4; }
+.week-day-dot.frozen { background: var(--freeze-color); box-shadow: 0 0 6px var(--freeze-glow); }
 .progress-header {
   display: flex;
   justify-content: space-between;
@@ -661,8 +662,10 @@ input:checked + .slider:before { transform: translateX(20px); }
 .heatmap-cell.band-orange { background: var(--band-orange); }
 .heatmap-cell.band-yellow { background: var(--band-yellow); }
 .heatmap-cell.band-green { background: var(--band-green); }
+.heatmap-cell.band-frozen { background: var(--freeze-color); box-shadow: 0 0 4px var(--freeze-glow); }
 .heatmap-legend { display: flex; align-items: center; gap: 4px; margin-top: 10px; font-size: 10px; color: var(--text-sub); }
 .heatmap-legend .heatmap-cell { width: 9px; height: 9px; }
+.heatmap-legend-sep { width: 1px; height: 10px; background: var(--border-color); margin: 0 4px; flex-shrink: 0; }
 /* --- Achievements (Profile tab) --- */
 .badge-summary {
   font-size: 12px;
@@ -1295,4 +1298,3 @@ input:checked + .slider:before { transform: translateX(20px); }
     font-size: 10.5px;
   }
 }
-
