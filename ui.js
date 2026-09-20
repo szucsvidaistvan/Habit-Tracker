@@ -485,15 +485,21 @@ renderWeekWidget(days, title, dayNum) {
   // decision. Re-calling this with updated state (e.g. after resolving one
   // of several pending days) refreshes the body in place.
   openFreezeModal(state) {
+    console.log('[UI.openFreezeModal] called with pendingMissedDates:', state && state.pendingMissedDates);
     const modal = document.getElementById('freeze-decision-modal');
     const body = document.getElementById('freeze-modal-body');
-    if (!modal || !body || !state) return;
+    if (!modal || !body) {
+      console.warn('[UI.openFreezeModal] #freeze-decision-modal or #freeze-modal-body not found in the DOM — index.html is likely out of date.');
+      return;
+    }
+    if (!state) return;
     if (!state.pendingMissedDates || state.pendingMissedDates.length === 0) {
       this.closeFreezeModal();
       return;
     }
     body.innerHTML = this.pendingAlertHTML(state.pendingMissedDates, state.freezeCount);
     modal.style.display = 'flex';
+    console.log('[UI.openFreezeModal] modal opened.');
   },
 
   closeFreezeModal() {
