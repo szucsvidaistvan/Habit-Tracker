@@ -16,6 +16,10 @@ const App = {
   freezeCountdownTimer: null,
   frozenDatesSet: new Set(),
 
+  categoriesList: [],
+  selectedCategoryId: null,
+  draggedHabitId: null,
+
   async init() {
     console.log('[App.init] Starting application...');
     const today = new Date().toLocaleDateString('en-US');
@@ -180,34 +184,45 @@ const App = {
 
   async loadHabits() {
     if (!this.currentUser) return;
+
     const todayStr = UI.getLocalDateString();
     const mondayStr = this.getWeekStartString();
     console.log(`[App.loadHabits] Loading habits (${todayStr})...`);
 
-    const { data: habitsData, error: habitsError } = await API.fetchActiveHabits(this.currentUser.id);
-    if (habitsError) console.error('[App.loadHabits] Error:', habitsError);
+    const [
+      { data: categoryData, error: categoryError },
+      { data: habitsData, error: habitsError },
+      { data: logsData, error: logsError },
+      { data: weekLogs, error: weekLogsError }
+    ] = await Promise.all([
+      API.fetchCategories(this.currentUser.id),
+      API.fetchActiveHabits(this.currentUser.id),
+      API.fetchLogsByDate(todayStr),
+      API.fetchLogsRange(mondayStr)
+    ]);
 
-    const { data: logsData, error: logsError } = await API.fetchLogsByDate(todayStr);
-    if (logsError) console.error('[App.loadHabits] Error:', logsError);
+    if (categoryError) console.error('[App.loadHabits] Categories error:', categoryError);
+    if (habitsError) console.error('[App.loadHabits] Habit error:', habitsError);
+    if (logsError) console.error('[App.loadHabits] Logs error:', logsError);
+    if (weekLogsError) console.error('[App.loadHabits] Weekly logs error:', weekLogsError);
 
-    const { data: weekLogs, error: weekLogsError } = await API.fetchLogsRange(mondayStr);
-    if (weekLogsError) console.error('[App.loadHabits] Error:', weekLogsError);
+    this.categoriesList = categoryData || [];
+    this.selectedCategoryId = this.selectedCategoryId || this.categoriesList[0]?.id || null;
 
     const logsMap = {};
-    if (logsData) logsData.forEach(l => logsMap[l.habit_id] = l);
+    (logsData || []).forEach(l => logsMap[l.habit_id] = l);
 
     const weekCountsBeforeToday = {};
-    if (weekLogs) {
-      weekLogs.forEach(l => {
-        if (l.completed !== false && l.log_date !== todayStr) {
-          weekCountsBeforeToday[l.habit_id] = (weekCountsBeforeToday[l.habit_id] || 0) + 1;
-        }
-      });
-    }
+    (weekLogs || []).forEach(l => {
+      if (l.completed !== false && l.log_date !== todayStr) {
+        weekCountsBeforeToday[l.habit_id] = (weekCountsBeforeToday[l.habit_id] || 0) + 1;
+      }
+    });
 
     this.habitsList = (habitsData || []).map(h => {
       const weeklyTarget = h.weekly_target || 7;
       const weekCountBeforeToday = weekCountsBeforeToday[h.id] || 0;
+
       return {
         ...h,
         completed: logsMap[h.id] ? logsMap[h.id].completed : false,
@@ -215,6 +230,7 @@ const App = {
         weeklyGoalMetBeforeToday: weekCountBeforeToday >= weeklyTarget
       };
     });
+
     const weekWidgetDays = this.buildWeekWidgetData(weekLogs, mondayStr, todayStr, this.frozenDatesSet);
     const [my, mm, md] = mondayStr.split('-').map(Number);
     const monday = new Date(my, mm - 1, md);
@@ -228,9 +244,10 @@ const App = {
     this.weekWidgetTitle = weekTitle;
     this.weekWidgetDayNum = dayNum;
 
+    UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId);
     UI.renderWeekWidget(weekWidgetDays, weekTitle, dayNum);
-    UI.renderHabits(this.habitsList);
-  },  
+    UI.renderHabits(this.habitsList, this.categoriesList);
+  },
 
   buildWeekWidgetData(weekLogs, mondayStr, todayStr, frozenDates) {
     const frozen = frozenDates || new Set();
@@ -238,10 +255,10 @@ const App = {
     (weekLogs || []).forEach(l => {
       if (l.completed !== false) completedDates.add(l.log_date);
     });
-  
+
     const [my, mm, md] = mondayStr.split('-').map(Number);
     const monday = new Date(my, mm - 1, md);
-  
+
     const days = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
@@ -249,16 +266,17 @@ const App = {
       const dateStr = UI.getLocalDateString(d);
       const isToday = dateStr === todayStr;
       const isFuture = dateStr > todayStr;
-  
+
       let status;
       if (isFuture) status = 'future';
       else if (completedDates.has(dateStr)) status = 'done';
       else if (frozen.has(dateStr)) status = 'frozen';
       else if (isToday) status = 'pending';
       else status = 'missed';
-  
+
       days.push({ dateStr, label: d.toLocaleDateString('en-US', { weekday: 'narrow' }), isToday, status });
     }
+
     return days;
   },
 
@@ -275,7 +293,6 @@ const App = {
     const todayStr = UI.getLocalDateString();
 
     const habit = this.habitsList.find(h => String(h.id) === String(habitId));
-
     if (!habit) {
       console.error(`[App.handleToggleHabit] Habit not found. ID: ${habitId}`);
       return;
@@ -298,12 +315,11 @@ const App = {
         habit.completed = true;
       }
     }
+
     UI.updateProgress(this.habitsList);
     this.refreshTodayWeekDot();
   },
 
-  // Keeps the "This Week" widget's today-pill in sync the instant a habit
-  // is toggled, instead of waiting for the next full reload.
   refreshTodayWeekDot() {
     if (!this.weekWidgetDays) return;
     const todayEntry = this.weekWidgetDays.find(d => d.isToday);
@@ -318,10 +334,12 @@ const App = {
   async openAddModal() {
     console.log('[App.openAddModal] Opening new habit modal.');
     this.editingHabitId = null;
+    this.selectedCategoryId = this.categoriesList[0]?.id || null;
 
     const nameInput = document.getElementById('habit-name-input');
     const freqInput = document.getElementById('habit-freq-input');
     const timeInput = document.getElementById('habit-time-input');
+    const categoryInput = document.getElementById('habit-category-input');
     const modalTitle = document.getElementById('modal-title');
     const modal = document.getElementById('habit-modal');
     const inactiveWrapper = document.getElementById('inactive-habits-wrapper');
@@ -331,6 +349,8 @@ const App = {
     if (nameInput) nameInput.value = '';
     if (freqInput) freqInput.value = '7';
     if (timeInput) timeInput.value = '0';
+
+    UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId);
 
     if (this.currentUser) {
       const { data: inactive, error } = await API.fetchInactiveHabits(this.currentUser.id);
@@ -353,16 +373,23 @@ const App = {
     console.log('[App.handleSelectInactiveHabit] Selected inactive habit ID:', habitId);
     if (!habitId) {
       this.editingHabitId = null;
-      document.getElementById('habit-name-input').value = '';
+      const nameInput = document.getElementById('habit-name-input');
+      if (nameInput) nameInput.value = '';
       return;
     }
 
     const selected = this.inactiveHabitsList.find(h => String(h.id) === String(habitId));
     if (selected) {
       this.editingHabitId = selected.id;
-      document.getElementById('habit-name-input').value = selected.title;
-      document.getElementById('habit-freq-input').value = selected.weekly_target || 7;
-      document.getElementById('habit-time-input').value = selected.target_minutes || 0;
+      const nameInput = document.getElementById('habit-name-input');
+      const freqInput = document.getElementById('habit-freq-input');
+      const timeInput = document.getElementById('habit-time-input');
+      const categoryInput = document.getElementById('habit-category-input');
+
+      if (nameInput) nameInput.value = selected.title;
+      if (freqInput) freqInput.value = selected.weekly_target || 7;
+      if (timeInput) timeInput.value = selected.target_minutes || 0;
+      if (categoryInput) categoryInput.value = selected.category_id || this.categoriesList[0]?.id || '';
     }
   },
 
@@ -370,13 +397,13 @@ const App = {
     console.log(`[App.openEditModal] Opening edit modal -> Habit ID: ${habitId}`);
 
     const habit = this.habitsList.find(h => String(h.id) === String(habitId));
-
     if (!habit) {
       console.error(`[App.openEditModal] Habit not found. ID: ${habitId}`);
       return;
     }
 
     this.editingHabitId = habitId;
+    this.selectedCategoryId = habit.category_id || this.categoriesList[0]?.id || null;
 
     const inactiveWrapper = document.getElementById('inactive-habits-wrapper');
     if (inactiveWrapper) inactiveWrapper.style.display = 'none';
@@ -384,6 +411,7 @@ const App = {
     const nameInput = document.getElementById('habit-name-input');
     const freqInput = document.getElementById('habit-freq-input');
     const timeInput = document.getElementById('habit-time-input');
+    const categoryInput = document.getElementById('habit-category-input');
     const modalTitle = document.getElementById('modal-title');
     const modal = document.getElementById('habit-modal');
 
@@ -391,6 +419,10 @@ const App = {
     if (nameInput) nameInput.value = habit.title;
     if (freqInput) freqInput.value = habit.weekly_target || 7;
     if (timeInput) timeInput.value = habit.target_minutes || 0;
+    if (categoryInput) categoryInput.value = habit.category_id || '';
+
+    UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId);
+
     if (modal) modal.style.display = 'flex';
   },
 
@@ -405,10 +437,12 @@ const App = {
     const titleElem = document.getElementById('habit-name-input');
     const freqElem = document.getElementById('habit-freq-input');
     const timeElem = document.getElementById('habit-time-input');
+    const categoryElem = document.getElementById('habit-category-input');
 
     const title = titleElem ? titleElem.value.trim() : '';
     const targetNum = freqElem ? (parseInt(freqElem.value.trim()) || 7) : 7;
     const targetMins = timeElem ? (parseInt(timeElem.value.trim()) || 0) : 0;
+    const categoryId = categoryElem ? categoryElem.value || null : null;
 
     if (!title) {
       alert('Please enter a habit name.');
@@ -424,11 +458,12 @@ const App = {
         await API.reactivateHabit(this.editingHabitId, title, targetNum, targetMins);
       } else {
         console.log('[App.saveHabitModal] Updating active habit...');
-        await API.updateHabit(this.editingHabitId, title, targetNum, targetMins);
+        await API.updateHabit(this.editingHabitId, title, targetNum, targetMins, categoryId);
       }
     } else {
       console.log('[App.saveHabitModal] Creating new habit...');
-      await API.createHabit(this.currentUser.id, title, targetNum, targetMins);
+      const currentCategoryHabits = this.habitsList.filter(h => String(h.category_id || '') === String(categoryId || ''));
+      await API.createHabit(this.currentUser.id, title, targetNum, targetMins, categoryId, currentCategoryHabits.length);
     }
 
     this.closeModal();
@@ -489,11 +524,6 @@ const App = {
     }
   },
 
-  // Habit Freeze: up to `max_freeze_count` freezes protect the streak.
-  // Missed days (habits owed, nothing logged) are queued for the user to
-  // decide on — use a freeze to save that day, or let the streak break.
-  // Nothing is spent automatically. Freezes refill by 1 every 14 days,
-  // capped at the max.
   async loadStreakFreezeState() {
     if (!this.currentUser) return;
     try {
@@ -520,9 +550,6 @@ const App = {
       let freezeCount = state.freeze_count;
       let lastRefillAt = new Date(state.last_freeze_refill_at);
 
-      // --- Refill: +1 every 14 days, capped at maxFreeze. The clock keeps
-      // advancing even once full, so hitting the cap doesn't grant an
-      // instant "free" freeze the moment one gets spent. ---
       let daysSinceRefill = Math.floor((now - lastRefillAt) / msPerDay);
       while (daysSinceRefill >= 14) {
         if (freezeCount < maxFreeze) freezeCount++;
@@ -530,8 +557,6 @@ const App = {
         daysSinceRefill -= 14;
       }
 
-      // --- Detect newly missed days since the last check and queue them
-      // for the user to decide on (nothing gets spent here). ---
       const frozenDates = new Set(state.frozen_dates || []);
       const pendingMissedDates = new Set(state.pending_missed_dates || []);
       let lastChecked = state.last_checked_date;
@@ -592,8 +617,6 @@ const App = {
       UI.renderFreezeBadgeHome(this.streakFreeze);
       this.startFreezeCountdownTimer();
 
-      // Surface it immediately rather than leaving it tucked away on the
-      // Profile tab — this only runs once, right after login.
       if (this.streakFreeze.pendingMissedDates.length > 0) {
         console.log('[App.loadStreakFreezeState] pending missed day(s) found, opening popup.');
         UI.openFreezeModal(this.streakFreeze);
@@ -605,16 +628,10 @@ const App = {
     }
   },
 
-  // "Postpone" — closes the popup without deciding. The pending day(s)
-  // stay queued and are still visible on the Profile tab's Habit Freezes
-  // card whenever the user gets to it.
   closeFreezeModal() {
     UI.closeFreezeModal();
   },
 
-  // Ticks the small "Xd Yh" countdown text in every freeze badge on screen
-  // once a minute, without re-rendering the whole card (so open buttons /
-  // pending-day prompts aren't disturbed).
   startFreezeCountdownTimer() {
     if (this.freezeCountdownTimer) clearInterval(this.freezeCountdownTimer);
     const tick = () => UI.updateFreezeCountdowns(this.streakFreeze.nextRefillAt, this.streakFreeze.freezeCount >= this.streakFreeze.maxFreezeCount);
@@ -622,8 +639,6 @@ const App = {
     this.freezeCountdownTimer = setInterval(tick, 60000);
   },
 
-  // Called when the user taps "Use a Freeze" or "Let it break" on a
-  // pending missed day shown in the Habit Freezes card.
   async resolvePendingFreeze(dateStr, useFreeze) {
     if (!this.currentUser) return;
     console.log(`[App.resolvePendingFreeze] date=${dateStr} useFreeze=${useFreeze}`);
@@ -663,16 +678,10 @@ const App = {
     UI.renderFreezeBadgeHome(this.streakFreeze);
     this.startFreezeCountdownTimer();
 
-    // If the popup is currently open, either move it on to the next
-    // pending day or close it once nothing is left to decide. If the user
-    // already dismissed it and is resolving from the Profile card instead,
-    // leave it closed rather than popping it back up.
     if (UI.isFreezeModalOpen()) {
       UI.openFreezeModal(this.streakFreeze);
     }
 
-    // If the resolved day is visible in the current "This Week" widget,
-    // update its dot immediately instead of waiting for a reload.
     if (this.weekWidgetDays) {
       const weekEntry = this.weekWidgetDays.find(d => d.dateStr === dateStr);
       if (weekEntry) {
@@ -681,9 +690,6 @@ const App = {
       }
     }
 
-    // Streak numbers may have changed (a freeze was used, or a day broke
-    // the streak) — refresh the Stats tab's streak display and heatmap
-    // if they're currently loaded.
     if (this.activeStatsTab) this.loadStatistics(this.activeStatsTab);
     this.loadHeatmap();
   },
@@ -728,11 +734,7 @@ const App = {
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    const dailyResults = this.computeDailyPercents(
-      allHabitsHistory || [],
-      logs || [],
-      allDateStrings
-    );
+    const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs || [], allDateStrings);
 
     const rawCountByDate = {};
     allDateStrings.forEach(date => {
@@ -758,7 +760,6 @@ const App = {
     UI.renderBarChart(labels, dailyCounts);
     UI.renderLineChart(labels, trendData);
 
-    // Szokásonkénti statisztika kiszámítása a kiválasztott időszakra (7 vagy 30 nap)
     const activeHabits = (allHabitsHistory || []).filter(h => !h.deactivated_at);
     const habitStats = activeHabits.map(h => {
       const habitLogs = (logs || []).filter(
@@ -771,7 +772,6 @@ const App = {
       };
     });
 
-    // Kártya feltöltése adatokkal
     UI.renderHabitStats(habitStats);
 
     const frozen = this.frozenDatesSet || new Set();
@@ -795,7 +795,7 @@ const App = {
     (logs || []).forEach(l => {
       if (l.completed !== false && completedByHabit[l.habit_id]) {
         completedByHabit[l.habit_id].add(l.log_date);
-    
+
         if (
           !firstLogDateByHabit[l.habit_id] ||
           l.log_date < firstLogDateByHabit[l.habit_id]
@@ -925,7 +925,7 @@ const App = {
     await this.loadProfileInactiveHabits();
     await this.loadHabits();
   },
-  
+
   async exportUserData() {
     if (!this.currentUser) return;
 
@@ -965,41 +965,35 @@ const App = {
       alert('Sikertelen CSV exportálás.');
     }
   },
-  
+
   async loadHeatmap() {
     if (!this.currentUser) return;
     const HEATMAP_DAYS = 371;
     const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
-  
+
     const defaultStart = new Date();
     defaultStart.setDate(defaultStart.getDate() - (HEATMAP_DAYS - 1));
     const fetchStartStr = UI.getLocalDateString(defaultStart);
     const { data: logs } = await API.fetchLogsRange(fetchStartStr);
-  
+
     let earliestLogStr = null;
     (logs || []).forEach(l => {
       if (l.completed !== false && (!earliestLogStr || l.log_date < earliestLogStr)) {
         earliestLogStr = l.log_date;
       }
     });
-  
-    let windowStart = defaultStart;
-  
+
     const dateStrings = [];
-    const cursor = new Date(windowStart);
+    const cursor = new Date(defaultStart);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     while (cursor <= today) {
       dateStrings.push(UI.getLocalDateString(cursor));
       cursor.setDate(cursor.getDate() + 1);
     }
-        
-    const dailyResults = this.computeDailyPercents(
-      allHabitsHistory || [],
-      logs,
-      dateStrings
-    );
-    
+
+    const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs || [], dateStrings);
+
     const completedDates = new Set(
       (logs || [])
         .filter(log => log.completed !== false)
@@ -1011,7 +1005,7 @@ const App = {
     const activityResults = dailyResults.filter(result =>
       completedDates.has(result.dateStr) || frozen.has(result.dateStr)
     );
-    
+
     UI.renderHeatmap(activityResults, frozen);
   },
 
@@ -1023,6 +1017,7 @@ const App = {
     if (unlockedError) {
       console.error('[App.loadAchievements] Error fetching unlocked achievements:', unlockedError);
     }
+
     const unlockedMap = {};
     (unlockedRows || []).forEach(row => {
       unlockedMap[row.achievement_key] = row.unlocked_at;
@@ -1060,9 +1055,7 @@ const App = {
 
       perfectDaysCount = dailyResults.filter(r => r.denominator > 0 && r.percent >= 100).length;
 
-      const completedDates = new Set(
-        completedLogs.map(log => log.log_date)
-      );
+      const completedDates = new Set(completedLogs.map(log => log.log_date));
       (this.frozenDatesSet || new Set()).forEach(d => completedDates.add(d));
 
       let run = 0;
@@ -1139,24 +1132,28 @@ const App = {
     const modal = document.getElementById('achievement-modal');
     if (modal) modal.style.display = 'none';
   },
-checkPwaBanner() {
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-  const isDismissed = sessionStorage.getItem('pwa_banner_dismissed');
 
-  if (!isStandalone && !isDismissed) {
-    document.getElementById('pwa-banner').style.display = 'flex';
-  }
-},
+  checkPwaBanner() {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    const isDismissed = sessionStorage.getItem('pwa_banner_dismissed');
 
-closePwaBanner() {
-  sessionStorage.setItem('pwa_banner_dismissed', 'true');
-  document.getElementById('pwa-banner').style.display = 'none';
-},
-async submitBugReport() {
-  const bugInput = document.getElementById('bug-text');
-  const description = bugInput ? bugInput.value.trim() : '';
-  if (!description) {
-      alert('Kérlek írd le a hibát vagy az észrevételt!');
+    if (!isStandalone && !isDismissed) {
+      const banner = document.getElementById('pwa-banner');
+      if (banner) banner.style.display = 'flex';
+    }
+  },
+
+  closePwaBanner() {
+    sessionStorage.setItem('pwa_banner_dismissed', 'true');
+    const banner = document.getElementById('pwa-banner');
+    if (banner) banner.style.display = 'none';
+  },
+
+  async submitBugReport() {
+    const bugInput = document.getElementById('bug-text');
+    const description = bugInput ? bugInput.value.trim() : '';
+    if (!description) {
+      alert('Please describe the bug or feedback!');
       return;
     }
 
@@ -1164,13 +1161,153 @@ async submitBugReport() {
 
     if (error) {
       console.error('[App.submitBugReport]', error);
-      alert('Sikertelen beküldés.');
+      alert('Failed to submit report.');
     } else {
-      alert('Köszönjük! A hibajelentést sikeresen elküldted.');
-      bugInput.value = '';
+      alert('Thank you! Your report has been sent successfully.');
+      if (bugInput) bugInput.value = '';
     }
   },
+
+  // Category management methods
+  openCategoriesModal() {
+    UI.renderCategories(this.categoriesList);
+    const modal = document.getElementById('categories-modal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  closeCategoriesModal() {
+    const modal = document.getElementById('categories-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  async createNewCategory() {
+    if (!this.currentUser) return;
+
+    const input = document.getElementById('new-category-input');
+    const name = input ? input.value.trim() : '';
+
+    if (!name) return;
+
+    const duplicate = this.categoriesList.some(category =>
+      category.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (duplicate) {
+      alert('This category already exists.');
+      return;
+    }
+
+    const { error } = await API.createCategory(this.currentUser.id, name, this.categoriesList.length);
+    if (error) {
+      console.error('[App.createNewCategory]', error);
+      return;
+    }
+
+    if (input) input.value = '';
+
+    const { data } = await API.fetchCategories(this.currentUser.id);
+    this.categoriesList = data || [];
+    UI.renderCategories(this.categoriesList);
+    UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId || this.categoriesList[0]?.id || null);
+  },
+
+  async renameCategory(categoryId) {
+    const category = this.categoriesList.find(item => String(item.id) === String(categoryId));
+    if (!category) return;
+
+    const newName = prompt('Category name:', category.name);
+    if (!newName || !newName.trim()) return;
+
+    const { error } = await API.updateCategory(categoryId, newName.trim());
+    if (error) {
+      console.error('[App.renameCategory]', error);
+      return;
+    }
+
+    const { data } = await API.fetchCategories(this.currentUser.id);
+    this.categoriesList = data || [];
+    UI.renderCategories(this.categoriesList);
+    UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId || this.categoriesList[0]?.id || null);
+  },
+
+  async removeCategory(categoryId) {
+    const category = this.categoriesList.find(item => String(item.id) === String(categoryId));
+    if (!category) return;
+
+    const usedByHabits = this.habitsList.some(
+      habit => String(habit.category_id || '') === String(categoryId)
+    );
+
+    if (usedByHabits) {
+      alert('Move all habits out of this category before deleting it.');
+      return;
+    }
+
+    if (!confirm(`Delete "${category.name}"?`)) return;
+
+    const { error } = await API.deleteCategory(categoryId);
+    if (error) {
+      console.error('[App.removeCategory]', error);
+      return;
+    }
+
+    const { data } = await API.fetchCategories(this.currentUser.id);
+    this.categoriesList = data || [];
+    UI.renderCategories(this.categoriesList);
+    UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId || this.categoriesList[0]?.id || null);
+  },
+
+  async moveHabit(habitId, categoryId, position) {
+    const habit = this.habitsList.find(h => String(h.id) === String(habitId));
+    if (!habit) return;
+
+    const targetCategoryId = categoryId || null;
+    const targetHabits = this.habitsList
+      .filter(h => String(h.category_id || '') === String(targetCategoryId || ''))
+      .filter(h => String(h.id) !== String(habitId))
+      .sort((a, b) => (a.position || 0) - (b.position || 0));
+
+    targetHabits.splice(position, 0, { ...habit, category_id: targetCategoryId });
+
+    const updates = [];
+    targetHabits.forEach((item, idx) => {
+      updates.push({
+        id: item.id,
+        category_id: targetCategoryId,
+        position: idx
+      });
+    });
+
+    const { error } = await API.updateHabitPositions(updates);
+    if (error) {
+      console.error('[App.moveHabit] Error saving habit order:', error);
+      return;
+    }
+
+    await this.loadHabits();
+  },
+
+  async dropHabit(event, categoryId) {
+    event.preventDefault();
+
+    const habitId = this.draggedHabitId;
+    if (!habitId) return;
+
+    const categoryList = event.currentTarget.querySelector('.habit-category-list');
+    const cards = categoryList ? [...categoryList.querySelectorAll('[data-habit-id]')] : [];
+
+    let position = cards.length;
+    const hoveredCard = event.target.closest('[data-habit-id]');
+    if (hoveredCard) {
+      position = cards.indexOf(hoveredCard);
+      if (position < 0) position = cards.length;
+    }
+
+    await this.moveHabit(habitId, categoryId, position);
+    this.draggedHabitId = null;
+  }
 };
+
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
   App.checkPwaBanner();
