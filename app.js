@@ -214,7 +214,7 @@ const App = {
         weeklyGoalMetBeforeToday: weekCountBeforeToday >= weeklyTarget
       };
     });
-    const weekWidgetDays = this.buildWeekWidgetData(weekLogs, mondayStr, todayStr);
+    const weekWidgetDays = this.buildWeekWidgetData(weekLogs, mondayStr, todayStr, this.frozenDatesSet);
     const [my, mm, md] = mondayStr.split('-').map(Number);
     const monday = new Date(my, mm - 1, md);
     const sunday = new Date(monday);
@@ -231,7 +231,8 @@ const App = {
     UI.renderHabits(this.habitsList);
   },  
 
-  buildWeekWidgetData(weekLogs, mondayStr, todayStr) {
+  buildWeekWidgetData(weekLogs, mondayStr, todayStr, frozenDates) {
+    const frozen = frozenDates || new Set();
     const completedDates = new Set();
     (weekLogs || []).forEach(l => {
       if (l.completed !== false) completedDates.add(l.log_date);
@@ -251,6 +252,7 @@ const App = {
       let status;
       if (isFuture) status = 'future';
       else if (completedDates.has(dateStr)) status = 'done';
+      else if (frozen.has(dateStr)) status = 'frozen';
       else if (isToday) status = 'pending';
       else status = 'missed';
   
@@ -621,9 +623,21 @@ const App = {
 
     UI.renderFreezeCard(this.streakFreeze);
 
+    // If the resolved day is visible in the current "This Week" widget,
+    // update its dot immediately instead of waiting for a reload.
+    if (this.weekWidgetDays) {
+      const weekEntry = this.weekWidgetDays.find(d => d.dateStr === dateStr);
+      if (weekEntry) {
+        weekEntry.status = useFreeze ? 'frozen' : 'missed';
+        UI.renderWeekWidget(this.weekWidgetDays, this.weekWidgetTitle, this.weekWidgetDayNum);
+      }
+    }
+
     // Streak numbers may have changed (a freeze was used, or a day broke
-    // the streak) — refresh the Stats tab's streak display if it's loaded.
+    // the streak) — refresh the Stats tab's streak display and heatmap
+    // if they're currently loaded.
     if (this.activeStatsTab) this.loadStatistics(this.activeStatsTab);
+    this.loadHeatmap();
   },
 
   switchStatsTab(type) {
@@ -943,12 +957,14 @@ const App = {
         .filter(log => log.completed !== false)
         .map(log => log.log_date)
     );
-    
+
+    const frozen = this.frozenDatesSet || new Set();
+
     const activityResults = dailyResults.filter(result =>
-      completedDates.has(result.dateStr)
+      completedDates.has(result.dateStr) || frozen.has(result.dateStr)
     );
     
-    UI.renderHeatmap(activityResults);
+    UI.renderHeatmap(activityResults, frozen);
   },
 
   async loadAchievements() {
