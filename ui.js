@@ -316,7 +316,7 @@ renderWeekWidget(days, title, dayNum) {
       return 'band-green';
     },
     
-    renderHeatmap(dailyResults) {
+    renderHeatmap(dailyResults, frozenDates) {
       const container = document.getElementById('heatmap-container');
       if (!container) return;
     
@@ -324,14 +324,20 @@ renderWeekWidget(days, title, dayNum) {
         container.innerHTML = '<div class="loader">No activity yet.</div>';
         return;
       }
+
+      const frozen = frozenDates || new Set();
     
       container.innerHTML = dailyResults.map(result => {
-        const band = this.getBandClass(result.percent);
+        const isFrozen = frozen.has(result.dateStr);
+        const band = isFrozen ? 'band-frozen' : this.getBandClass(result.percent);
+        const tooltip = isFrozen
+          ? `${result.dateStr}: protected with a Habit Freeze`
+          : `${result.dateStr}: ${result.percent}%`;
     
         return `
           <div
             class="heatmap-cell ${band}"
-            title="${result.dateStr}: ${result.percent}%">
+            title="${tooltip}">
           </div>
         `;
       }).join('');
