@@ -10,7 +10,6 @@
   --danger-color: #ef4444;
   --edit-color: #f59e0b;
 
-  /* Completion-level color bands */
   --band-red: #ef4444;
   --band-red-glow: rgba(239, 68, 68, 0.35);
   --band-orange: #f97316;
@@ -20,7 +19,6 @@
   --band-green: var(--accent-color);
   --band-green-glow: var(--accent-glow);
 
-  /* Habit Freeze accent */
   --freeze-color: #38bdf8;
   --freeze-glow: rgba(56, 189, 248, 0.45);
 }
@@ -30,8 +28,6 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* iOS Safari auto-zooms on focus if an input's font-size is below 16px.
-   Forcing 16px here prevents the page from zooming in when the keyboard opens. */
 input,
 select,
 textarea {
@@ -55,7 +51,6 @@ body {
   padding: 20px 12px 100px 12px !important;
 }
 
-/* Generikus kártya */
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -64,7 +59,6 @@ body {
   box-shadow: 0 20px 40px rgba(0,0,0,0.35);
 }
 
-/* --- Bejelentkezés --- */
 .auth-title {
   text-align: center;
   margin: 0 0 20px 0;
@@ -178,7 +172,6 @@ body {
   max-width: 420px;
 }
 
-/* --- Gombok --- */
 .btn-primary,
 .btn-secondary,
 .btn-danger {
@@ -215,7 +208,6 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
-/* --- Fejléc --- */
 .app-header {
   text-align: center;
   margin-bottom: 18px;
@@ -242,23 +234,87 @@ body {
   letter-spacing: 0.3px;
 }
 
-/* --- Napi haladás kártya --- */
 .progress-card {
   margin-bottom: 16px;
 }
-.week-widget { margin-bottom: 16px; }
-.week-widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--text-sub); }
-.week-widget-header span:first-child { color: var(--text-main); }
-.week-days-row { display: flex; justify-content: space-between; gap: 4px; }
-.week-day-pill { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; border-radius: 10px; background: var(--bg-color); border: 1px solid var(--border-color); }
-.week-day-pill.today { border-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-glow); }
-.week-day-label { font-size: 9.5px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; }
-.week-day-pill.today .week-day-label { color: var(--accent-color); }
-.week-day-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-color); }
-.week-day-dot.done { background: var(--accent-color); }
-.week-day-dot.missed { background: var(--band-red); }
-.week-day-dot.future { background: var(--border-color); opacity: 0.4; }
-.week-day-dot.frozen { background: var(--freeze-color); box-shadow: 0 0 6px var(--freeze-glow); }
+
+.week-widget {
+  margin-bottom: 16px;
+}
+
+.week-widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+
+.week-widget-header span:first-child {
+  color: var(--text-main);
+}
+
+.week-days-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.week-day-pill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border-radius: 10px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+}
+
+.week-day-pill.today {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.week-day-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+  text-transform: uppercase;
+}
+
+.week-day-pill.today .week-day-label {
+  color: var(--accent-color);
+}
+
+.week-day-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-color);
+}
+
+.week-day-dot.done {
+  background: var(--accent-color);
+}
+
+.week-day-dot.missed {
+  background: var(--band-red);
+}
+
+.week-day-dot.future {
+  background: var(--border-color);
+  opacity: 0.4;
+}
+
+.week-day-dot.frozen {
+  background: var(--freeze-color);
+  box-shadow: 0 0 6px var(--freeze-glow);
+}
+
 .progress-header {
   display: flex;
   justify-content: space-between;
@@ -291,7 +347,6 @@ body {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-/* --- Szokáslista --- */
 .habits-list {
   display: flex;
   flex-direction: column;
@@ -324,11 +379,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  flex: 1;
+  min-width: 0;
 }
 
 .habit-name {
   font-size: 15px;
   font-weight: 600;
+  word-break: break-word;
 }
 
 .habit-time {
@@ -348,7 +406,6 @@ body {
   margin-top: 3px;
 }
 
-/* Swipe háttérgombok */
 .swipe-actions {
   position: absolute;
   right: 14px;
@@ -372,12 +429,24 @@ body {
   transition: transform 0.15s ease;
 }
 
-.swipe-btn:active { transform: scale(0.92); }
-.swipe-btn svg { width: 20px; height: 20px; stroke: #ffffff; }
-.swipe-btn.edit { background-color: var(--edit-color); }
-.swipe-btn.delete { background-color: var(--danger-color); }
+.swipe-btn:active {
+  transform: scale(0.92);
+}
 
-/* Toggle kapcsoló */
+.swipe-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: #ffffff;
+}
+
+.swipe-btn.edit {
+  background-color: var(--edit-color);
+}
+
+.swipe-btn.delete {
+  background-color: var(--danger-color);
+}
+
 .switch {
   position: relative;
   display: inline-block;
@@ -386,12 +455,19 @@ body {
   flex-shrink: 0;
 }
 
-.switch input { opacity: 0; width: 0; height: 0; }
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
 
 .slider {
   position: absolute;
   cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-color: var(--border-color);
   transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 30px;
@@ -415,7 +491,9 @@ input:checked + .slider {
   box-shadow: 0 0 10px var(--accent-glow);
 }
 
-input:checked + .slider:before { transform: translateX(20px); }
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
 
 .add-habit-btn {
   width: 100%;
@@ -428,7 +506,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   color: var(--text-sub);
 }
 
-/* --- Statisztika --- */
 #view-stats h2,
 #view-profile h2 {
   margin: 0 0 14px 0;
@@ -441,7 +518,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   margin-bottom: 14px;
 }
 
-/* --- Streak card --- */
 .streak-card {
   display: flex;
   align-items: center;
@@ -502,8 +578,13 @@ input:checked + .slider:before { transform: translateX(20px); }
   white-space: nowrap;
 }
 
-.streak-status.pending { color: var(--band-red); }
-.streak-status.secured { color: var(--accent-color); }
+.streak-status.pending {
+  color: var(--band-red);
+}
+
+.streak-status.secured {
+  color: var(--accent-color);
+}
 
 .streak-divider {
   width: 1px;
@@ -545,7 +626,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   max-height: 220px;
 }
 
-/* --- Per-habit completion list (Stats tab) --- */
 .habit-stat-row {
   display: flex;
   align-items: center;
@@ -594,7 +674,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* --- Profile: section heading + inactive habits list --- */
 .section-title {
   margin: 0 0 12px 0;
   font-size: 14px;
@@ -632,7 +711,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   flex-shrink: 0;
 }
 
-/* --- Collapsible accordion (Inactive Habits) --- */
 .accordion-header {
   width: 100%;
   background: none;
@@ -659,20 +737,74 @@ input:checked + .slider:before { transform: translateX(20px); }
   border-top: 1px solid var(--border-color);
   padding-top: 14px;
 }
-.heatmap-scroll { overflow: hidden; padding-bottom: 0; }
-.heatmap-grid { display: flex; flex-wrap: wrap; gap: 3px; width: 100%; }
-.heatmap-week { display: contents;}
-.heatmap-cell { width: 10px; height: 10px; border-radius: 2px; background: var(--border-color); }
-.heatmap-cell.band-empty { background: var(--border-color); opacity: 0.35; }
-.heatmap-cell.band-red { background: var(--band-red); }
-.heatmap-cell.band-orange { background: var(--band-orange); }
-.heatmap-cell.band-yellow { background: var(--band-yellow); }
-.heatmap-cell.band-green { background: var(--band-green); }
-.heatmap-cell.band-frozen { background: var(--freeze-color); box-shadow: 0 0 4px var(--freeze-glow); }
-.heatmap-legend { display: flex; align-items: center; gap: 4px; margin-top: 10px; font-size: 10px; color: var(--text-sub); }
-.heatmap-legend .heatmap-cell { width: 9px; height: 9px; }
-.heatmap-legend-sep { width: 1px; height: 10px; background: var(--border-color); margin: 0 4px; flex-shrink: 0; }
-/* --- Achievements (Profile tab) --- */
+
+.heatmap-scroll {
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.heatmap-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  width: 100%;
+}
+
+.heatmap-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--border-color);
+}
+
+.heatmap-cell.band-empty {
+  background: var(--border-color);
+  opacity: 0.35;
+}
+
+.heatmap-cell.band-red {
+  background: var(--band-red);
+}
+
+.heatmap-cell.band-orange {
+  background: var(--band-orange);
+}
+
+.heatmap-cell.band-yellow {
+  background: var(--band-yellow);
+}
+
+.heatmap-cell.band-green {
+  background: var(--band-green);
+}
+
+.heatmap-cell.band-frozen {
+  background: var(--freeze-color);
+  box-shadow: 0 0 4px var(--freeze-glow);
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 10px;
+  color: var(--text-sub);
+}
+
+.heatmap-legend .heatmap-cell {
+  width: 9px;
+  height: 9px;
+}
+
+.heatmap-legend-sep {
+  width: 1px;
+  height: 10px;
+  background: var(--border-color);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
 .badge-summary {
   font-size: 12px;
   color: var(--text-sub);
@@ -755,7 +887,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   color: var(--text-main);
 }
 
-/* --- Profil header --- */
 .profile-header-top {
   display: flex;
   align-items: center;
@@ -817,10 +948,15 @@ input:checked + .slider:before { transform: translateX(20px); }
   transition: transform 0.12s ease;
 }
 
-.profile-logout-btn:active { transform: scale(0.92); }
-.profile-logout-btn svg { width: 18px; height: 18px; }
+.profile-logout-btn:active {
+  transform: scale(0.92);
+}
 
-/* --- Habit Freeze card --- */
+.profile-logout-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 .freeze-card-header {
   display: flex;
   justify-content: space-between;
@@ -838,8 +974,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   justify-content: center;
 }
 
-/* Compact "currency" pill: icon + count + live countdown. Used both on the
-   Home header and the Profile card so the balance is visible everywhere. */
 .freeze-pill {
   display: inline-flex;
   align-items: center;
@@ -925,7 +1059,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   margin-top: 8px;
 }
 
-/* --- "Your Data" export row --- */
 .data-export-row {
   width: 100%;
   display: flex;
@@ -941,14 +1074,25 @@ input:checked + .slider:before { transform: translateX(20px); }
   text-align: left;
 }
 
-.data-export-icon { font-size: 16px; }
-.data-export-label { flex: 1; }
-.data-export-chevron { color: var(--text-sub); font-size: 18px; }
+.data-export-icon {
+  font-size: 16px;
+}
 
-/* --- Modal --- */
+.data-export-label {
+  flex: 1;
+}
+
+.data-export-chevron {
+  color: var(--text-sub);
+  font-size: 18px;
+}
+
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
   z-index: 1000;
@@ -1029,7 +1173,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   flex: 1;
 }
 
-/* --- Achievement detail modal (card-flip style) --- */
 #achievement-modal {
   cursor: pointer;
 }
@@ -1094,7 +1237,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   color: var(--accent-color);
 }
 
-/* --- Alsó navigáció --- */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -1124,7 +1266,9 @@ input:checked + .slider:before { transform: translateX(20px); }
   padding: 12px 26px;
 }
 
-.tab-item:active { transform: scale(0.9); }
+.tab-item:active {
+  transform: scale(0.9);
+}
 
 .tab-item svg {
   width: 26px;
@@ -1132,8 +1276,10 @@ input:checked + .slider:before { transform: translateX(20px); }
   stroke: currentColor;
 }
 
-.tab-item.active { color: var(--accent-color); }
-/* Bug Report lenyíló kártya */
+.tab-item.active {
+  color: var(--accent-color);
+}
+
 .bug-report-card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -1144,7 +1290,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   box-sizing: border-box;
 }
 
-/* Alapértelmezett HTML nyíl elrejtése */
 .bug-report-header {
   display: flex;
   justify-content: space-between;
@@ -1160,7 +1305,6 @@ input:checked + .slider:before { transform: translateX(20px); }
   display: none;
 }
 
-/* Nyíl forgatása kinyitáskor */
 .bug-report-card[open] .dropdown-arrow {
   transform: rotate(180deg);
 }
@@ -1178,12 +1322,11 @@ input:checked + .slider:before { transform: translateX(20px); }
   gap: 12px;
 }
 
-/* Textarea méretezési hiba fix (Resize & Overflow Fix) */
 .bug-report-content textarea {
   width: 100% !important;
   max-width: 100% !important;
   min-height: 90px;
-  resize: vertical; /* Csak függőlegesen lehessen méretezni (*vertical resize*) */
+  resize: vertical;
   box-sizing: border-box !important;
   background: #0f172a !important;
   border: 1px solid var(--border-color) !important;
@@ -1202,7 +1345,6 @@ input:checked + .slider:before { transform: translateX(20px); }
 .bug-report-content .btn-primary {
   width: 100%;
 }
-/* --- PWA install hint --- */
 
 .pwa-banner {
   display: flex;
@@ -1307,4 +1449,115 @@ input:checked + .slider:before { transform: translateX(20px); }
   .pwa-banner-content span {
     font-size: 10.5px;
   }
+}
+
+/* Category feature styles */
+.habit-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.manage-categories-btn {
+  width: 100%;
+}
+
+.habit-category {
+  margin-bottom: 22px;
+}
+
+.habit-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+
+.habit-category-header h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 17px;
+}
+
+.habit-category-header span {
+  min-width: 24px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  color: var(--text-sub);
+  background: var(--card-bg);
+  font-size: 12px;
+  text-align: center;
+}
+
+.habit-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 12px;
+}
+
+.habit-card-wrapper[draggable="true"] {
+  cursor: grab;
+}
+
+.habit-card-wrapper[draggable="true"]:active {
+  cursor: grabbing;
+  opacity: 0.65;
+}
+
+.drag-handle {
+  flex-shrink: 0;
+  margin-right: 10px;
+  color: var(--text-sub);
+  font-size: 20px;
+  letter-spacing: -5px;
+  line-height: 1;
+  cursor: grab;
+}
+
+.category-link {
+  display: block;
+  margin: -2px 0 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-color);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.category-management-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.category-management-row:last-child {
+  border-bottom: 0;
+}
+
+.category-management-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.category-create-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.category-create-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text-main);
 }
