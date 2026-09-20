@@ -1,7 +1,3 @@
-// A day counts toward a streak if at least this % of active habits were completed.
-// Lower than 100% on purpose: some habits only need a few times a week, so
-// demanding a literal 100% every single day would punish people unfairly.
-
 // Application Controller
 const App = {
   currentUser: null,
@@ -18,7 +14,6 @@ const App = {
 
   categoriesList: [],
   selectedCategoryId: null,
-  draggedHabitId: null,
 
   async init() {
     console.log('[App.init] Starting application...');
@@ -339,7 +334,6 @@ const App = {
     const nameInput = document.getElementById('habit-name-input');
     const freqInput = document.getElementById('habit-freq-input');
     const timeInput = document.getElementById('habit-time-input');
-    const categoryInput = document.getElementById('habit-category-input');
     const modalTitle = document.getElementById('modal-title');
     const modal = document.getElementById('habit-modal');
     const inactiveWrapper = document.getElementById('inactive-habits-wrapper');
@@ -1255,56 +1249,6 @@ const App = {
     this.categoriesList = data || [];
     UI.renderCategories(this.categoriesList);
     UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId || this.categoriesList[0]?.id || null);
-  },
-
-  async moveHabit(habitId, categoryId, position) {
-    const habit = this.habitsList.find(h => String(h.id) === String(habitId));
-    if (!habit) return;
-
-    const targetCategoryId = categoryId || null;
-    const targetHabits = this.habitsList
-      .filter(h => String(h.category_id || '') === String(targetCategoryId || ''))
-      .filter(h => String(h.id) !== String(habitId))
-      .sort((a, b) => (a.position || 0) - (b.position || 0));
-
-    targetHabits.splice(position, 0, { ...habit, category_id: targetCategoryId });
-
-    const updates = [];
-    targetHabits.forEach((item, idx) => {
-      updates.push({
-        id: item.id,
-        category_id: targetCategoryId,
-        position: idx
-      });
-    });
-
-    const { error } = await API.updateHabitPositions(updates);
-    if (error) {
-      console.error('[App.moveHabit] Error saving habit order:', error);
-      return;
-    }
-
-    await this.loadHabits();
-  },
-
-  async dropHabit(event, categoryId) {
-    event.preventDefault();
-
-    const habitId = this.draggedHabitId;
-    if (!habitId) return;
-
-    const categoryList = event.currentTarget.querySelector('.habit-category-list');
-    const cards = categoryList ? [...categoryList.querySelectorAll('[data-habit-id]')] : [];
-
-    let position = cards.length;
-    const hoveredCard = event.target.closest('[data-habit-id]');
-    if (hoveredCard) {
-      position = cards.indexOf(hoveredCard);
-      if (position < 0) position = cards.length;
-    }
-
-    await this.moveHabit(habitId, categoryId, position);
-    this.draggedHabitId = null;
   }
 };
 
