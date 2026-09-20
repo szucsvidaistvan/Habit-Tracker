@@ -589,9 +589,22 @@ const App = {
       UI.renderFreezeCard(this.streakFreeze);
       UI.renderFreezeBadgeHome(this.streakFreeze);
       this.startFreezeCountdownTimer();
+
+      // Surface it immediately rather than leaving it tucked away on the
+      // Profile tab — this only runs once, right after login.
+      if (this.streakFreeze.pendingMissedDates.length > 0) {
+        UI.openFreezeModal(this.streakFreeze);
+      }
     } catch (err) {
       console.error('[App.loadStreakFreezeState] Unexpected error:', err);
     }
+  },
+
+  // "Postpone" — closes the popup without deciding. The pending day(s)
+  // stay queued and are still visible on the Profile tab's Habit Freezes
+  // card whenever the user gets to it.
+  closeFreezeModal() {
+    UI.closeFreezeModal();
   },
 
   // Ticks the small "Xd Yh" countdown text in every freeze badge on screen
@@ -644,6 +657,14 @@ const App = {
     UI.renderFreezeCard(this.streakFreeze);
     UI.renderFreezeBadgeHome(this.streakFreeze);
     this.startFreezeCountdownTimer();
+
+    // If the popup is currently open, either move it on to the next
+    // pending day or close it once nothing is left to decide. If the user
+    // already dismissed it and is resolving from the Profile card instead,
+    // leave it closed rather than popping it back up.
+    if (UI.isFreezeModalOpen()) {
+      UI.openFreezeModal(this.streakFreeze);
+    }
 
     // If the resolved day is visible in the current "This Week" widget,
     // update its dot immediately instead of waiting for a reload.
