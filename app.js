@@ -16,8 +16,17 @@ const App = {
   categoriesList: [],
   selectedCategoryId: null,
 
-  tabOrder: ['home', 'stats', 'profile'],
-  activeTabIndex: 0,
+  tabOrder: ['tasks', 'home', 'stats', 'profile'],
+  activeTabIndex: 1,
+
+  // Tasks
+  tasksList: [],
+  taskCategoriesList: [],
+  selectedTaskCategoryId: null,
+  editingTaskId: null,
+  pendingDeleteTaskId: null,
+  taskRecurrenceType: 'once',
+  selectedRecurrenceDays: [],
   suppressAchievementClose: false,
   achievementCoinRotation: 0,
   achievementCoinInertiaFrame: null,
@@ -80,7 +89,8 @@ const App = {
 
     await this.loadStreakFreezeState();
     await this.loadHabits();
-    this.adjustSliderHeight();
+    await this.loadTasks();
+    this.switchTab('home');
   },
 
   // Shows the app, then blocks it behind the privacy modal if the user
@@ -571,10 +581,13 @@ const App = {
     const slider = document.getElementById('tabs-slider');
     if (slider) {
       slider.classList.remove('no-transition');
-      slider.style.transform = `translateX(-${index * 33.3333}%)`;
+      slider.style.transform = `translateX(-${index * 25}%)`;
     }
     this.adjustSliderHeight();
 
+    if (tab === 'tasks') {
+      this.loadTasks();
+    }
     if (tab === 'stats') {
       this.loadStatistics(this.activeStatsTab);
       this.loadHeatmap();
@@ -620,7 +633,7 @@ const App = {
     let escapeOffset = 0;      // set once a card-originated drag "escapes" past CARD_ESCAPE_PX
     let containerWidth = 0;
 
-    const basePercent = () => -this.activeTabIndex * 33.3333;
+    const basePercent = () => -this.activeTabIndex * 25;
 
     slider.addEventListener('pointerdown', (e) => {
       // Normal form controls keep their own interactions.
@@ -671,7 +684,7 @@ const App = {
       if (atFirstTab && clampedDiff > 0) clampedDiff = clampedDiff * 0.35;
       if (atLastTab && clampedDiff < 0) clampedDiff = clampedDiff * 0.35;
 
-      const percentDiff = (clampedDiff / containerWidth) * 33.3333;
+      const percentDiff = (clampedDiff / containerWidth) * 25;
       slider.style.transform = `translateX(${basePercent() + percentDiff}%)`;
       e.preventDefault();
     });
@@ -1471,6 +1484,304 @@ const App = {
   },
 
   // Category management methods
+  // ---------- Tasks ----------
+
+  async loadTasks() {
+    if (!this.currentUser) return;
+
+    const todayStr = UI.getLocalDateString();
+    const todayWeekday = new Date().getDay(); // 0 = Sunday ... 6 = Saturday
+
+    const dateElem = document.getElementById('tasks-date');
+    if (dateElem) dateElem.innerText = `Today: ${new Date().toLocaleDateString()}`;
+
+    const [categoryRes, tasksRes, logsRes] = await Promise.all([
+      API.fetchTaskCategories(this.currentUser.id),
+      API.fetchTasks(this.currentUser.id),
+      API.fetchTaskLogs()
+    ]);
+
+    if (categoryRes.error) console.error('[App.loadTasks] categories:', categoryRes.error);
+    if (tasksRes.error) console.error('[App.loadTasks] tasks:', tasksRes.error);
+    if (logsRes.error) console.error('[App.loadTasks] logs:', logsRes.error);
+
+    this.taskCategoriesList = categoryRes.data || [];
+    this.allTasks = tasksRes.data || [];
+    this.selectedTaskCategoryId =
+      this.selectedTaskCategoryId || this.taskCategoriesList[0]?.id || null;
+
+    const logDatesByTask = {};
+    (logsRes.data || []).forEach(log => {
+      (logDatesByTask[log.task_id] = logDatesByTask[log.task_id] || []).push(log.log_date);
+    });
+
+    this.tasksList = this.allTasks.filter(task => {
+      const doneDates = logDatesByTask[task.id] || [];
+
+      if (task.recurrence_type === 'weekly') {
+        const days = Array.isArray(task.recurrence_days) ? task.recurrence_days : [];
+        return days.includes(todayWeekday) && !doneDates.includes(todayStr);
+      }
+
+      // one-time: shown from its due date on (overdue stays visible) until checked off
+      return doneDates.length === 0 && !!task.due_date && task.due_date <= todayStr;
+    });
+
+    UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
+    UI.renderTasks(this.tasksList, this.taskCategoriesList);
+    this.adjustSliderHeight();
+  },
+
+  async handleToggleTask(taskId) {
+    const todayStr = UI.getLocalDateString();
+
+    const { error } = await API.addTaskLog(taskId, todayStr);
+    if (error) {
+      console.error('[App.handleToggleTask] Error saving completion:', error);
+      await this.loadTasks(); // put the switch back to its real state
+      return;
+    }
+
+    UI.removeTaskCard(taskId, () => {
+      this.tasksList = this.tasksList.filter(t => String(t.id) !== String(taskId));
+      UI.renderTasks(this.tasksList, this.taskCategoriesList);
+      this.adjustSliderHeight();
+    });
+  },
+
+  setTaskRecurrenceType(type) {
+    this.taskRecurrenceType = type;
+
+    const onceBtn = document.getElementById('task-recurrence-once');
+    const weeklyBtn = document.getElementById('task-recurrence-weekly');
+    const dueWrapper = document.getElementById('task-due-date-wrapper');
+    const daysWrapper = document.getElementById('task-weekdays-wrapper');
+
+    if (onceBtn) onceBtn.classList.toggle('active', type === 'once');
+    if (weeklyBtn) weeklyBtn.classList.toggle('active', type === 'weekly');
+    if (dueWrapper) dueWrapper.style.display = type === 'once' ? 'block' : 'none';
+    if (daysWrapper) daysWrapper.style.display = type === 'weekly' ? 'block' : 'none';
+  },
+
+  toggleRecurrenceDay(dayIndex) {
+    const i = this.selectedRecurrenceDays.indexOf(dayIndex);
+    if (i === -1) this.selectedRecurrenceDays.push(dayIndex);
+    else this.selectedRecurrenceDays.splice(i, 1);
+
+    UI.renderWeekdayPicker(this.selectedRecurrenceDays);
+  },
+
+  openAddTaskModal() {
+    this.editingTaskId = null;
+    this.selectedTaskCategoryId = this.taskCategoriesList[0]?.id || null;
+    this.selectedRecurrenceDays = [];
+
+    const titleElem = document.getElementById('task-modal-title');
+    const nameInput = document.getElementById('task-name-input');
+    const dueInput = document.getElementById('task-due-date-input');
+
+    if (titleElem) titleElem.innerText = 'Add New Task';
+    if (nameInput) nameInput.value = '';
+    if (dueInput) dueInput.value = UI.getLocalDateString();
+
+    UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
+    UI.renderWeekdayPicker(this.selectedRecurrenceDays);
+    this.setTaskRecurrenceType('once');
+
+    const modal = document.getElementById('task-modal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  openEditTaskModal(taskId) {
+    const task = (this.allTasks || []).find(t => String(t.id) === String(taskId));
+    if (!task) return;
+
+    this.editingTaskId = task.id;
+    this.selectedTaskCategoryId = task.category_id || this.taskCategoriesList[0]?.id || null;
+    this.selectedRecurrenceDays = Array.isArray(task.recurrence_days) ? [...task.recurrence_days] : [];
+
+    const titleElem = document.getElementById('task-modal-title');
+    const nameInput = document.getElementById('task-name-input');
+    const dueInput = document.getElementById('task-due-date-input');
+
+    if (titleElem) titleElem.innerText = 'Edit Task';
+    if (nameInput) nameInput.value = task.title;
+    if (dueInput) dueInput.value = task.due_date || UI.getLocalDateString();
+
+    UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
+    UI.renderWeekdayPicker(this.selectedRecurrenceDays);
+    this.setTaskRecurrenceType(task.recurrence_type === 'weekly' ? 'weekly' : 'once');
+
+    const modal = document.getElementById('task-modal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  closeTaskModal() {
+    this.editingTaskId = null;
+    const modal = document.getElementById('task-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  async saveTaskModal() {
+    if (!this.currentUser) return;
+
+    const nameInput = document.getElementById('task-name-input');
+    const categoryInput = document.getElementById('task-category-input');
+    const dueInput = document.getElementById('task-due-date-input');
+
+    const title = nameInput ? nameInput.value.trim() : '';
+    const categoryId = categoryInput ? categoryInput.value || null : null;
+    const dueDate = dueInput ? dueInput.value : '';
+    const recurrenceType = this.taskRecurrenceType;
+    const recurrenceDays = [...this.selectedRecurrenceDays].sort((a, b) => a - b);
+
+    if (!title) {
+      alert('Please enter a task name.');
+      return;
+    }
+    if (recurrenceType === 'once' && !dueDate) {
+      alert('Please choose a due date.');
+      return;
+    }
+    if (recurrenceType === 'weekly' && recurrenceDays.length === 0) {
+      alert('Please choose at least one day of the week.');
+      return;
+    }
+
+    const fields = { title, categoryId, recurrenceType, dueDate, recurrenceDays };
+
+    let error;
+    if (this.editingTaskId) {
+      ({ error } = await API.updateTask(this.editingTaskId, fields));
+    } else {
+      const sameCategory = (this.allTasks || []).filter(
+        t => String(t.category_id || '') === String(categoryId || '')
+      );
+      ({ error } = await API.createTask(this.currentUser.id, { ...fields, position: sameCategory.length }));
+    }
+
+    if (error) {
+      console.error('[App.saveTaskModal] Error:', error);
+      alert('Could not save the task. Did you run the tasks SQL migration in Supabase?');
+      return;
+    }
+
+    this.closeTaskModal();
+    await this.loadTasks();
+  },
+
+  handleDeleteTask(taskId) {
+    this.pendingDeleteTaskId = taskId;
+    const modal = document.getElementById('delete-task-modal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  closeDeleteTaskModal() {
+    this.pendingDeleteTaskId = null;
+    const modal = document.getElementById('delete-task-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  async confirmDeleteTask() {
+    const taskId = this.pendingDeleteTaskId;
+    if (!taskId) return;
+
+    const { error } = await API.deleteTask(taskId);
+    if (error) console.error('[App.confirmDeleteTask] Error:', error);
+
+    this.closeDeleteTaskModal();
+    await this.loadTasks();
+  },
+
+  openTaskCategoriesModal() {
+    UI.renderTaskCategories(this.taskCategoriesList);
+    const modal = document.getElementById('task-categories-modal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  closeTaskCategoriesModal() {
+    const modal = document.getElementById('task-categories-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  async refreshTaskCategories() {
+    const { data } = await API.fetchTaskCategories(this.currentUser.id);
+    this.taskCategoriesList = data || [];
+    UI.renderTaskCategories(this.taskCategoriesList);
+    UI.renderTaskCategorySelect(
+      this.taskCategoriesList,
+      this.selectedTaskCategoryId || this.taskCategoriesList[0]?.id || null
+    );
+    UI.renderTasks(this.tasksList, this.taskCategoriesList);
+    this.adjustSliderHeight();
+  },
+
+  async createNewTaskCategory() {
+    if (!this.currentUser) return;
+
+    const input = document.getElementById('new-task-category-input');
+    const name = input ? input.value.trim() : '';
+    if (!name) return;
+
+    const duplicate = this.taskCategoriesList.some(
+      c => c.name.toLowerCase() === name.toLowerCase()
+    );
+    if (duplicate) {
+      alert('This category already exists.');
+      return;
+    }
+
+    const { error } = await API.createTaskCategory(
+      this.currentUser.id, name, this.taskCategoriesList.length
+    );
+    if (error) {
+      console.error('[App.createNewTaskCategory]', error);
+      return;
+    }
+
+    if (input) input.value = '';
+    await this.refreshTaskCategories();
+  },
+
+  async renameTaskCategory(categoryId) {
+    const category = this.taskCategoriesList.find(c => String(c.id) === String(categoryId));
+    if (!category) return;
+
+    const newName = prompt('Category name:', category.name);
+    if (!newName || !newName.trim()) return;
+
+    const { error } = await API.updateTaskCategory(categoryId, newName.trim());
+    if (error) {
+      console.error('[App.renameTaskCategory]', error);
+      return;
+    }
+
+    await this.refreshTaskCategories();
+  },
+
+  async removeTaskCategory(categoryId) {
+    const category = this.taskCategoriesList.find(c => String(c.id) === String(categoryId));
+    if (!category) return;
+
+    const usedByTasks = (this.allTasks || []).some(
+      t => String(t.category_id || '') === String(categoryId)
+    );
+    if (usedByTasks) {
+      alert('Move or delete all tasks in this category before deleting it.');
+      return;
+    }
+
+    if (!confirm(`Delete "${category.name}"?`)) return;
+
+    const { error } = await API.deleteTaskCategory(categoryId);
+    if (error) {
+      console.error('[App.removeTaskCategory]', error);
+      return;
+    }
+
+    await this.refreshTaskCategories();
+  },
+
   openCategoriesModal() {
     UI.renderCategories(this.categoriesList);
     const modal = document.getElementById('categories-modal');
