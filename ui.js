@@ -289,6 +289,233 @@ const UI = {
     });
   },
 
+  // ---------- Tasks ----------
+
+  renderTaskCategorySelect(categories, selectedCategoryId = null) {
+    const select = document.getElementById('task-category-input');
+    if (!select) return;
+
+    select.innerHTML = (categories || []).map(category => `
+      <option value="${category.id}" ${String(category.id) === String(selectedCategoryId) ? 'selected' : ''}>
+        ${this.escapeHtml(category.name)}
+      </option>
+    `).join('');
+  },
+
+  renderTaskCategories(categories) {
+    const container = document.getElementById('task-categories-list');
+    if (!container) return;
+
+    container.innerHTML = (categories || []).map(category => `
+      <div class="category-management-row">
+        <span>${this.escapeHtml(category.name)}</span>
+
+        <div class="category-management-actions">
+          <button class="btn-secondary btn-sm" onclick="App.renameTaskCategory('${category.id}')">
+            Rename
+          </button>
+
+          <button class="btn-danger btn-sm" onclick="App.removeTaskCategory('${category.id}')">
+            Delete
+          </button>
+        </div>
+      </div>
+    `).join('');
+  },
+
+  renderWeekdayPicker(selectedDays = []) {
+    const container = document.getElementById('task-weekday-picker');
+    if (!container) return;
+
+    const labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    container.innerHTML = labels.map((label, i) => `
+      <button
+        type="button"
+        class="weekday-chip ${selectedDays.includes(i) ? 'selected' : ''}"
+        onclick="App.toggleRecurrenceDay(${i})">
+        ${label}
+      </button>
+    `).join('');
+  },
+
+  formatTaskSubInfo(t) {
+    if (t.recurrence_type === 'weekly') {
+      const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const days = (t.recurrence_days || [])
+        .slice()
+        .sort((a, b) => a - b)
+        .map(d => names[d])
+        .join(', ');
+      return `<span class="habit-time">Repeats: ${days || '—'}</span>`;
+    }
+
+    if (!t.due_date) return '';
+
+    const todayStr = this.getLocalDateString();
+    if (t.due_date < todayStr) {
+      return `<span class="habit-time task-due-overdue">Overdue • ${t.due_date}</span>`;
+    }
+    return `<span class="habit-time">Due today</span>`;
+  },
+
+  renderTasks(tasksList, categories = []) {
+    const container = document.getElementById('tasks-container');
+    if (!container) return;
+
+    if (!tasksList || tasksList.length === 0) {
+      container.innerHTML = '<div class="loader">Nothing to do today 🎉</div>';
+      return;
+    }
+
+    const groups = (categories || []).map(category => ({
+      id: category.id,
+      name: category.name,
+      tasks: tasksList
+        .filter(t => String(t.category_id || '') === String(category.id))
+        .sort((a, b) => (a.position || 0) - (b.position || 0))
+    }));
+
+    // Tasks whose category was deleted still need to show up somewhere.
+    const knownIds = new Set((categories || []).map(c => String(c.id)));
+    const orphans = tasksList.filter(t => !knownIds.has(String(t.category_id || '')));
+    if (orphans.length > 0) {
+      groups.push({ id: '', name: 'Other', tasks: orphans });
+    }
+
+    container.innerHTML = groups
+      .filter(group => group.tasks.length > 0)
+      .map(group => `
+        <section class="habit-category" data-category-id="${group.id}">
+          <div class="habit-category-header">
+            <h3>${this.escapeHtml(group.name)}</h3>
+            <span>${group.tasks.length}</span>
+          </div>
+
+          <div class="habit-category-list">
+            ${group.tasks.map(t => this.renderTaskCard(t)).join('')}
+          </div>
+        </section>
+      `).join('');
+
+    this.initTaskSwipeEvents(tasksList);
+  },
+
+  renderTaskCard(t) {
+    return `
+      <div class="habit-card-wrapper" data-task-id="${t.id}">
+        <div class="swipe-actions">
+          <button
+            class="swipe-btn edit"
+            onclick="App.openEditTaskModal('${t.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+
+          <button
+            class="swipe-btn delete"
+            onclick="App.handleDeleteTask('${t.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="habit-item" id="task-swipe-content-${t.id}">
+          <div class="habit-info">
+            <span class="habit-name">${this.escapeHtml(t.title)}</span>
+            ${this.formatTaskSubInfo(t)}
+          </div>
+
+          <div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                onchange="App.handleToggleTask('${t.id}')">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  // Collapses and fades out a completed task's card, then calls onDone.
+  removeTaskCard(taskId, onDone) {
+    const wrapper = document.querySelector(`.habit-card-wrapper[data-task-id="${taskId}"]`);
+    if (!wrapper) {
+      onDone();
+      return;
+    }
+
+    wrapper.style.maxHeight = wrapper.offsetHeight + 'px';
+    wrapper.style.overflow = 'hidden';
+    void wrapper.offsetWidth; // force reflow so the transition starts from the real height
+    wrapper.classList.add('task-removing');
+
+    setTimeout(onDone, 330);
+  },
+
+  initTaskSwipeEvents(tasksList) {
+    tasksList.forEach(t => {
+      const card = document.getElementById(`task-swipe-content-${t.id}`);
+      if (!card) return;
+
+      let startX = 0, currentX = 0, isOpen = false, isDragging = false;
+
+      card.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.switch')) return;
+
+        startX = e.clientX;
+        currentX = startX;
+        isDragging = true;
+
+        try { card.setPointerCapture(e.pointerId); } catch (_) {}
+        card.style.transition = 'none';
+      });
+
+      card.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        currentX = e.clientX;
+        const diffX = currentX - startX;
+
+        if (isOpen) {
+          let newX = -128 + diffX;
+          if (newX > 0) newX = 0;
+          if (newX < -128) newX = -128;
+          card.style.transform = `translateX(${newX}px)`;
+        } else if (diffX < 0 && diffX > -148) {
+          card.style.transform = `translateX(${diffX}px)`;
+        }
+      });
+
+      const handlePointerUp = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+
+        try { card.releasePointerCapture(e.pointerId); } catch (_) {}
+
+        card.style.transition = 'transform 0.2s ease-out';
+        const diffX = currentX - startX;
+
+        if (!isOpen && diffX < -40) {
+          card.style.transform = 'translateX(-128px)';
+          isOpen = true;
+        } else if (isOpen && diffX > 30) {
+          card.style.transform = 'translateX(0px)';
+          isOpen = false;
+        } else {
+          card.style.transform = isOpen ? 'translateX(-128px)' : 'translateX(0px)';
+        }
+      };
+
+      card.addEventListener('pointerup', handlePointerUp);
+      card.addEventListener('pointercancel', handlePointerUp);
+    });
+  },
+
   renderBarChart(labels, data) {
     const ctx = document.getElementById('barChart');
     if (!ctx) return;
