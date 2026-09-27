@@ -13,7 +13,25 @@ const API = {
   },
 
   async signUp(email, password) {
-    return await supabase.auth.signUp({ email, password });
+    return await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          privacy_consent_at: new Date().toISOString(),
+          privacy_consent_version: 1
+        }
+      }
+    });
+  },
+
+  async updateConsent(consentAtIso) {
+    return await supabase.auth.updateUser({
+      data: {
+        privacy_consent_at: consentAtIso,
+        privacy_consent_version: 1
+      }
+    });
   },
 
   async loginWithGoogle() {
