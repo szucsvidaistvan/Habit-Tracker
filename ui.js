@@ -614,14 +614,21 @@ const UI = {
 
   showAchievementDetail(achievement) {
     const modal = document.getElementById('achievement-modal');
+    const coin = document.getElementById('achievement-coin');
     const iconElem = document.getElementById('achievement-modal-icon');
     const nameElem = document.getElementById('achievement-modal-name');
     const descElem = document.getElementById('achievement-modal-desc');
     const statusElem = document.getElementById('achievement-modal-status');
+    const backMarkElem = document.getElementById('achievement-coin-back-mark');
 
     if (iconElem) iconElem.innerHTML = `<span class="iconify" data-icon="${achievement.icon}"></span>`;
     if (nameElem) nameElem.innerText = achievement.name;
     if (descElem) descElem.innerText = achievement.description;
+    if (backMarkElem) backMarkElem.innerText = achievement.unlocked ? '✓' : '🔒';
+    if (coin) {
+      coin.classList.toggle('locked', !achievement.unlocked);
+      coin.classList.toggle('unlocked', !!achievement.unlocked);
+    }
     if (statusElem) {
       if (achievement.unlocked) {
         const dateStr = achievement.unlockedAt
