@@ -56,6 +56,16 @@
     <input type="email" id="auth-email" placeholder="Email address" class="auth-input">
     <input type="password" id="auth-password" placeholder="Password" class="auth-input">
 
+    <div id="auth-consent-row" class="consent-row" style="display: none;">
+      <label class="consent-checkbox-label">
+        <input type="checkbox" id="auth-consent-checkbox" class="consent-checkbox">
+        <span>
+          Elfogadom az
+          <button type="button" class="consent-policy-link" onclick="App.openPrivacyModal(false)">Adatvédelmi tájékoztatót</button>
+        </span>
+      </label>
+    </div>
+
     <button
       class="btn-primary"
       id="auth-submit-btn"
@@ -502,6 +512,98 @@
       <div class="achievement-modal-name" id="achievement-modal-name"></div>
       <div class="achievement-modal-desc" id="achievement-modal-desc"></div>
       <div class="achievement-modal-status" id="achievement-modal-status"></div>
+    </div>
+  </div>
+
+  <!-- Privacy Policy Modal -->
+  <div id="privacy-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content privacy-modal-content">
+      <div class="modal-header">
+        <h3>Adatvédelmi tájékoztató</h3>
+        <button
+          id="privacy-modal-close-btn"
+          class="close-btn"
+          onclick="App.closePrivacyModal()">&times;</button>
+      </div>
+
+      <div class="modal-body privacy-modal-body">
+        <h4>1. Az adatkezelő</h4>
+        <p>
+          A Habit Tracker alkalmazást (a továbbiakban: „Alkalmazás”) egyéni fejlesztőként
+          üzemeltetem. Az Alkalmazás használatával megadott személyes adatok kezelője a
+          fejlesztő. Adatvédelmi kérdésekkel az Alkalmazásban elérhető
+          „Hibabejelentés / Visszajelzés” funkción keresztül lehet kapcsolatba lépni.
+        </p>
+
+        <h4>2. Kezelt adatok köre</h4>
+        <ul>
+          <li><strong>Regisztrációs adatok:</strong> e-mail cím, valamint a jelszó titkosított (hash) formában (Google bejelentkezés esetén a Google-fiók alapadatai: név, e-mail cím, profilkép).</li>
+          <li><strong>Szokás- és feladatadatok:</strong> az Ön által rögzített szokások, kategóriák, napi teljesítések (pipálások), sorozatok (streak), fagyasztások (streak freeze) és elért kitűzők (achievement).</li>
+          <li><strong>Használati és technikai adatok:</strong> az adatok mentésének időpontja, valamint az Alkalmazás működéséhez technikailag szükséges munkamenet-azonosítók.</li>
+        </ul>
+
+        <h4>3. Az adatkezelés célja</h4>
+        <p>Az Ön adatait kizárólag az alábbi célokra használjuk fel:</p>
+        <ul>
+          <li>a fiók létrehozása, azonosítás és bejelentkeztetés;</li>
+          <li>a szokáskövető funkció biztosítása (napi állapot, sorozatok megjelenítése);</li>
+          <li><strong>kimutatások, statisztikák és elemzések készítése</strong> az Ön saját fejlődéséről (pl. heti/havi grafikonok, teljesítési arány, aktivitási hőtérkép);</li>
+          <li>az Alkalmazás hibáinak elhárítása és minőségének javítása.</li>
+        </ul>
+        <p>Az adatokat harmadik fél számára reklám- vagy marketingcéllal nem adjuk át, és nem értékesítjük.</p>
+
+        <h4>4. Az adatkezelés jogalapja</h4>
+        <p>
+          A regisztrációs és szokáskövetési adatok kezelésének jogalapja a GDPR 6. cikk (1)
+          bekezdés b) pontja szerinti szerződés teljesítése (az Alkalmazás funkcióinak
+          nyújtása), valamint a jelen tájékoztató elfogadásával megadott
+          <strong>hozzájárulás</strong> (GDPR 6. cikk (1) bekezdés a) pont) a statisztikai és
+          elemzési célú feldolgozásra vonatkozóan.
+        </p>
+
+        <h4>5. Adattárolás és adatfeldolgozók</h4>
+        <p>
+          Az adatok tárolása és a hitelesítés a Supabase Inc. szolgáltatásain keresztül
+          történik, amely adatfeldolgozóként jár el. Az adatok az Alkalmazás fiókjának
+          fennállásáig, illetve a fiók törléséig kerülnek tárolásra.
+        </p>
+
+        <h4>6. Az Ön jogai</h4>
+        <p>Önt az alábbi jogok illetik meg a kezelt adataival kapcsolatban:</p>
+        <ul>
+          <li>hozzáférés a kezelt adatokhoz (az Alkalmazásban az „Adataim exportálása” funkcióval bármikor letölthető CSV formátumban);</li>
+          <li>helyesbítés kérése pontatlan adatok esetén;</li>
+          <li>törlés kérése („elfeledtetéshez való jog”);</li>
+          <li>az adatkezelés korlátozásának kérése, illetve tiltakozás az adatkezelés ellen;</li>
+          <li>adathordozhatósághoz való jog;</li>
+          <li>a hozzájárulás bármikor, indokolás nélkül visszavonható, ez azonban nem érinti a visszavonás előtti adatkezelés jogszerűségét.</li>
+        </ul>
+
+        <h4>7. Jogorvoslat</h4>
+        <p>
+          Amennyiben úgy ítéli meg, hogy adatai kezelése sérti a jogszabályi előírásokat,
+          panasszal élhet a Nemzeti Adatvédelmi és Információszabadság Hatóságnál (NAIH,
+          székhely: 1055 Budapest, Falk Miksa utca 9–11.), vagy bírósághoz fordulhat.
+        </p>
+
+        <h4>8. Módosítások</h4>
+        <p>
+          A jelen tájékoztatót időről időre frissíthetjük. A tájékoztató legutóbbi frissítése:
+          2026. szeptember.
+        </p>
+      </div>
+
+      <div class="modal-footer" id="privacy-modal-gate-footer" style="display: none;">
+        <p class="privacy-gate-note">
+          A folytatáshoz kérjük, fogadd el az adatvédelmi tájékoztatót.
+        </p>
+        <button
+          class="btn-primary"
+          style="width: 100%;"
+          onclick="App.acceptPrivacyPolicy()">
+          Elfogadom és folytatom
+        </button>
+      </div>
     </div>
   </div>
 
