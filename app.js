@@ -587,16 +587,24 @@ const App = {
     const slider = document.getElementById('tabs-slider');
     if (!slider) return;
 
+    // How far (in px) a drag that starts on a habit card has to travel
+    // before we treat it as "the user wants to change page" instead of
+    // "the user wants to reveal the edit/delete buttons". The card's own
+    // gesture (in ui.js) tops out around 128-148px, so this sits safely
+    // beyond that.
+    const CARD_ESCAPE_PX = 170;
+
     let startX = 0, startY = 0, currentX = 0;
-    let tracking = false;   // a pointer is down and we're watching it
-    let decided = false;    // we've classified this gesture as a horizontal swipe
+    let tracking = false;      // a pointer is down and we're watching it
+    let decided = false;       // this gesture is now driving the page slider
+    let startedOnCard = false; // the gesture began on a swipeable habit row
+    let escapeOffset = 0;      // set once a card-originated drag "escapes" past CARD_ESCAPE_PX
     let containerWidth = 0;
 
     const basePercent = () => -this.activeTabIndex * 33.3333;
 
     slider.addEventListener('pointerdown', (e) => {
-      // Let habit-card swipe-to-delete and normal form controls keep their own gestures.
-      if (e.target.closest('#habits-container')) return;
+      // Normal form controls keep their own interactions.
       if (e.target.closest('input, textarea, select')) return;
 
       startX = e.clientX;
@@ -604,6 +612,8 @@ const App = {
       currentX = startX;
       tracking = true;
       decided = false;
+      escapeOffset = 0;
+      startedOnCard = !!e.target.closest('.habit-item');
       containerWidth = slider.parentElement.getBoundingClientRect().width || 1;
     });
 
@@ -619,16 +629,28 @@ const App = {
           tracking = false; // vertical scroll intent, let the page scroll normally
           return;
         }
+
+        if (startedOnCard && Math.abs(diffX) <= CARD_ESCAPE_PX) {
+          // Still within the habit card's own reveal range - let its
+          // listener (in ui.js) handle this movement. Keep watching in
+          // case the drag keeps going and turns into a real page swipe.
+          return;
+        }
+
         decided = true;
+        if (startedOnCard) escapeOffset = diffX > 0 ? CARD_ESCAPE_PX : -CARD_ESCAPE_PX;
+        slider.style.willChange = 'transform';
         slider.classList.add('no-transition');
         try { slider.setPointerCapture(e.pointerId); } catch (_) {}
       }
 
-      let clampedDiff = diffX;
+      const effectiveDiff = diffX - escapeOffset;
+
+      let clampedDiff = effectiveDiff;
       const atFirstTab = this.activeTabIndex === 0;
       const atLastTab = this.activeTabIndex === this.tabOrder.length - 1;
-      if (atFirstTab && diffX > 0) clampedDiff = diffX * 0.35;
-      if (atLastTab && diffX < 0) clampedDiff = diffX * 0.35;
+      if (atFirstTab && clampedDiff > 0) clampedDiff = clampedDiff * 0.35;
+      if (atLastTab && clampedDiff < 0) clampedDiff = clampedDiff * 0.35;
 
       const percentDiff = (clampedDiff / containerWidth) * 33.3333;
       slider.style.transform = `translateX(${basePercent() + percentDiff}%)`;
@@ -639,18 +661,19 @@ const App = {
       if (!tracking) return;
       tracking = false;
       slider.classList.remove('no-transition');
+      slider.style.willChange = 'auto';
 
-      if (!decided) return; // was just a tap, nothing was moved
+      if (!decided) return; // stayed inside the card's own gesture, or was just a tap
 
       try { slider.releasePointerCapture(e.pointerId); } catch (_) {}
 
-      const diffX = currentX - startX;
+      const effectiveDiff = (currentX - startX) - escapeOffset;
       const threshold = containerWidth * 0.18;
 
       let targetIndex = this.activeTabIndex;
-      if (diffX < -threshold && this.activeTabIndex < this.tabOrder.length - 1) {
+      if (effectiveDiff < -threshold && this.activeTabIndex < this.tabOrder.length - 1) {
         targetIndex = this.activeTabIndex + 1;
-      } else if (diffX > threshold && this.activeTabIndex > 0) {
+      } else if (effectiveDiff > threshold && this.activeTabIndex > 0) {
         targetIndex = this.activeTabIndex - 1;
       }
 
