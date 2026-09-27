@@ -8,6 +8,7 @@ const App = {
   pendingDeleteId: null,
   activeStatsTab: 'weekly',
   authMode: 'login',
+  privacyGateActive: false,
   streakFreeze: { freezeCount: 2, maxFreezeCount: 2, lastRefillAt: null, nextRefillAt: null, pendingMissedDates: [] },
   freezeCountdownTimer: null,
   frozenDatesSet: new Set(),
@@ -32,8 +33,7 @@ const App = {
 
       if (session) {
         console.log('[App.init] Logged in user:', session.user.email);
-        this.currentUser = session.user;
-        this.showApp();
+        await this.proceedAfterAuth(session.user);
       } else {
         console.log('[App.init] Showing auth view.');
         this.showAuth();
@@ -76,6 +76,55 @@ const App = {
     await this.loadHabits();
   },
 
+  // Shows the app, then blocks it behind the privacy modal if the user
+  // (e.g. a Google sign-up, or a pre-existing account from before this
+  // feature existed) has not yet recorded consent.
+  async proceedAfterAuth(user) {
+    this.currentUser = user;
+    await this.showApp();
+
+    const consentAt = user && user.user_metadata ? user.user_metadata.privacy_consent_at : null;
+    if (!consentAt) {
+      this.openPrivacyModal(true);
+    }
+  },
+
+  openPrivacyModal(gate = false) {
+    this.privacyGateActive = gate;
+
+    const modal = document.getElementById('privacy-modal');
+    const footer = document.getElementById('privacy-modal-gate-footer');
+    const closeBtn = document.getElementById('privacy-modal-close-btn');
+
+    if (footer) footer.style.display = gate ? 'block' : 'none';
+    if (closeBtn) closeBtn.style.display = gate ? 'none' : 'block';
+    if (modal) modal.style.display = 'flex';
+  },
+
+  closePrivacyModal() {
+    if (this.privacyGateActive) return;
+    const modal = document.getElementById('privacy-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  async acceptPrivacyPolicy() {
+    const nowIso = new Date().toISOString();
+    const { data, error } = await API.updateConsent(nowIso);
+
+    if (error) {
+      console.error('[App.acceptPrivacyPolicy] Failed to save consent:', error);
+      const note = document.querySelector('.privacy-gate-note');
+      if (note) note.innerText = 'Hiba történt a mentés során, próbáld újra.';
+      return;
+    }
+
+    if (data && data.user) this.currentUser = data.user;
+
+    this.privacyGateActive = false;
+    const modal = document.getElementById('privacy-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
   async handleLogin() {
     const emailElem = document.getElementById('auth-email');
     const passElem = document.getElementById('auth-password');
@@ -96,8 +145,7 @@ const App = {
       if (errElem) errElem.innerText = 'Invalid login credentials!';
     } else {
       if (errElem) errElem.innerText = '';
-      this.currentUser = data.user;
-      this.showApp();
+      await this.proceedAfterAuth(data.user);
     }
   },
 
@@ -111,6 +159,12 @@ const App = {
 
     if (!email || !password) {
       if (errElem) errElem.innerText = 'Please enter both an email address and a password to sign up.';
+      return;
+    }
+
+    const consentElem = document.getElementById('auth-consent-checkbox');
+    if (!consentElem || !consentElem.checked) {
+      if (errElem) errElem.innerText = 'Az adatvédelmi tájékoztató elfogadása kötelező a regisztrációhoz.';
       return;
     }
 
@@ -143,17 +197,20 @@ const App = {
     const promptElem = document.getElementById('auth-toggle-prompt');
     const toggleBtn = document.getElementById('auth-toggle-btn');
     const errElem = document.getElementById('auth-error');
+    const consentRow = document.getElementById('auth-consent-row');
 
     if (this.authMode === 'signup') {
       if (titleElem) titleElem.innerText = 'Sign Up';
       if (submitBtn) submitBtn.innerText = 'Sign Up';
       if (promptElem) promptElem.innerText = 'Already have an account?';
       if (toggleBtn) toggleBtn.innerText = 'Log In';
+      if (consentRow) consentRow.style.display = 'flex';
     } else {
       if (titleElem) titleElem.innerText = 'Log In';
       if (submitBtn) submitBtn.innerText = 'Log In';
       if (promptElem) promptElem.innerText = "Don't have an account?";
       if (toggleBtn) toggleBtn.innerText = 'Sign Up';
+      if (consentRow) consentRow.style.display = 'none';
     }
 
     if (errElem) errElem.innerText = '';
