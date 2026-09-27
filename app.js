@@ -80,6 +80,7 @@ const App = {
 
     await this.loadStreakFreezeState();
     await this.loadHabits();
+    this.adjustSliderHeight();
   },
 
   // Shows the app, then blocks it behind the privacy modal if the user
@@ -305,6 +306,7 @@ const App = {
     UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId);
     UI.renderWeekWidget(weekWidgetDays, weekTitle, dayNum);
     UI.renderHabits(this.habitsList, this.categoriesList);
+    this.adjustSliderHeight();
   },
 
   buildWeekWidgetData(weekLogs, mondayStr, todayStr, frozenDates) {
@@ -571,6 +573,7 @@ const App = {
       slider.classList.remove('no-transition');
       slider.style.transform = `translateX(-${index * 33.3333}%)`;
     }
+    this.adjustSliderHeight();
 
     if (tab === 'stats') {
       this.loadStatistics(this.activeStatsTab);
@@ -581,6 +584,20 @@ const App = {
       this.loadAchievements();
       UI.renderFreezeCard(this.streakFreeze);
     }
+  },
+
+  // Sizes the sliding row to the height of the tab that's currently visible,
+  // instead of the flex-row default of stretching every tab to match the
+  // tallest one (which was leaving a big empty gap under shorter tabs).
+  adjustSliderHeight() {
+    const slider = document.getElementById('tabs-slider');
+    if (!slider) return;
+    const activePanel = slider.children[this.activeTabIndex];
+    if (!activePanel) return;
+
+    requestAnimationFrame(() => {
+      slider.style.height = activePanel.offsetHeight + 'px';
+    });
   },
 
   // Lets the user swipe left/right between the Home / Stats / Profile
@@ -944,6 +961,7 @@ const App = {
     const { current, best, todayQualifies } = this.computeStreaks(qualifiesSeries);
 
     UI.renderStreaks(current, best, todayQualifies);
+    this.adjustSliderHeight();
   },
 
   computeDailyPercents(habitsList, logs, dateStrings) {
@@ -1053,6 +1071,7 @@ const App = {
     const isOpen = body.style.display !== 'none';
     body.style.display = isOpen ? 'none' : 'block';
     if (chevron) chevron.classList.toggle('open', !isOpen);
+    this.adjustSliderHeight();
   },
 
   async loadProfileInactiveHabits() {
@@ -1067,6 +1086,7 @@ const App = {
 
     this.inactiveHabitsList = inactive || [];
     UI.renderInactiveHabits(this.inactiveHabitsList);
+    this.adjustSliderHeight();
   },
 
   async reactivateFromProfile(habitId) {
@@ -1169,6 +1189,7 @@ const App = {
     );
 
     UI.renderHeatmap(activityResults, frozen);
+    this.adjustSliderHeight();
   },
 
   async loadAchievements() {
@@ -1260,6 +1281,7 @@ const App = {
 
     this.achievementsList = achievements;
     UI.renderAchievements(achievements);
+    this.adjustSliderHeight();
   },
 
   buildAchievementList(stats) {
@@ -1543,4 +1565,9 @@ document.addEventListener('DOMContentLoaded', () => {
   App.checkPwaBanner();
   App.setupSwipeNavigation();
   App.setupAchievementCardTilt();
+
+  const bugDetails = document.querySelector('.bug-report-card');
+  if (bugDetails) {
+    bugDetails.addEventListener('toggle', () => App.adjustSliderHeight());
+  }
 });
