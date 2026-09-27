@@ -56,7 +56,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 20px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.22);
 }
 
 .auth-title {
@@ -1284,39 +1284,106 @@ input:checked + .slider:before {
   cursor: pointer;
 }
 
-#achievement-modal .modal-content {
-  text-align: center;
-  animation: card-flip-in 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  perspective: 800px;
-  touch-action: none;
-  cursor: grab;
+.achievement-coin-content {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 10px 16px 28px;
+  max-width: 320px;
 }
 
-#achievement-modal .modal-content:active {
+.achievement-coin-stage {
+  display: flex;
+  justify-content: center;
+  perspective: 900px;
+  margin-bottom: 30px;
+}
+
+.achievement-coin {
+  position: relative;
+  width: 122px;
+  height: 122px;
+  transform-style: preserve-3d;
+  cursor: grab;
+  touch-action: none;
+  animation: coin-drop-in 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.achievement-coin:active {
   cursor: grabbing;
 }
 
-@keyframes card-flip-in {
-  from { transform: rotateY(90deg); opacity: 0; }
-  to { transform: rotateY(0deg); opacity: 1; }
+@keyframes coin-drop-in {
+  from { transform: translateY(-36px) rotateY(-55deg); opacity: 0; }
+  to { transform: translateY(0) rotateY(0deg); opacity: 1; }
+}
+
+.coin-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.5),
+    inset 0 3px 6px rgba(255, 255, 255, 0.55),
+    inset 0 -8px 14px rgba(0, 0, 0, 0.28);
+}
+
+.coin-front {
+  background: radial-gradient(circle at 35% 28%, #d3ffe9, var(--accent-color) 55%, #049150 100%);
+}
+
+.coin-back {
+  transform: rotateY(180deg);
+  background: radial-gradient(circle at 35% 28%, #fff3cf, #e2b23f 55%, #8a651a 100%);
+}
+
+.coin-back-mark {
+  font-size: 40px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.achievement-coin.locked .coin-front,
+.achievement-coin.locked .coin-back {
+  background: radial-gradient(circle at 35% 28%, #cbd5e1, #64748b 55%, #334155 100%);
 }
 
 .achievement-modal-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 14px auto;
-  width: 72px;
-  height: 72px;
-  border-radius: 20px;
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
 }
 
 .achievement-modal-icon .iconify {
-  width: 40px;
-  height: 40px;
-  color: var(--accent-color);
+  width: 48px;
+  height: 48px;
+  color: #04160c;
+}
+
+.achievement-coin.locked .achievement-modal-icon .iconify {
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.achievement-float-text {
+  text-align: center;
+}
+
+.achievement-float-text > * {
+  animation: achievement-float 3.4s ease-in-out infinite;
+}
+
+.achievement-modal-name { animation-delay: 0s; }
+.achievement-modal-desc { animation-delay: 0.12s; }
+.achievement-modal-status { animation-delay: 0.24s; }
+
+@keyframes achievement-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 
 .achievement-modal-name {
