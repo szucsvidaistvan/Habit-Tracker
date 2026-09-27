@@ -87,6 +87,7 @@
 
   <!-- App View -->
   <div id="app-container" style="display: none;">
+   <div id="tabs-slider" class="tabs-slider">
 
     <!-- Home Tab -->
     <div id="view-home" class="tab-content">
@@ -135,7 +136,7 @@
     </div>
 
     <!-- Stats Tab -->
-    <div id="view-stats" class="tab-content" style="display: none;">
+    <div id="view-stats" class="tab-content">
       <h2>Statistics</h2>
 
       <div class="card streak-card">
@@ -209,7 +210,7 @@
     </div>
 
     <!-- Profile Tab -->
-    <div id="view-profile" class="tab-content" style="display: none;">
+    <div id="view-profile" class="tab-content">
       <h2>Profile</h2>
 
       <div class="card profile-header-card">
@@ -296,6 +297,7 @@
         </div>
       </details>
     </div>
+   </div>
   </div>
 
   <!-- Bottom Tab Bar -->
@@ -504,8 +506,7 @@
   <div
     id="achievement-modal"
     class="modal-overlay"
-    style="display: none;"
-    onclick="App.closeAchievementModal()">
+    style="display: none;">
 
     <div class="modal-content">
       <div class="achievement-modal-icon" id="achievement-modal-icon"></div>
