@@ -261,10 +261,76 @@ body {
   overflow: hidden;
 }
 
+.recurrence-toggle {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 14px;
+}
+
+.recurrence-option {
+  flex: 1;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-sub);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.recurrence-option.active {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  background: rgba(0, 230, 118, 0.1);
+}
+
+.weekday-picker {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 15px;
+}
+
+.weekday-chip {
+  flex: 1;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-sub);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.weekday-chip.selected {
+  border-color: var(--accent-color);
+  color: #04160c;
+  background: var(--accent-color);
+}
+
+.habit-card-wrapper {
+  transition: max-height 0.32s ease, opacity 0.28s ease, margin-bottom 0.32s ease, transform 0.28s ease;
+}
+
+.habit-card-wrapper.task-removing {
+  max-height: 0 !important;
+  opacity: 0;
+  transform: scale(0.95);
+  margin-bottom: 0 !important;
+  pointer-events: none;
+}
+
+.task-due-overdue {
+  color: #f87171;
+  font-weight: 700;
+}
+
 .tabs-slider {
   display: flex;
   align-items: flex-start;
-  width: 300%;
+  width: 400%;
   overflow: hidden;
   transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), height 0.28s ease;
   touch-action: pan-y;
@@ -275,8 +341,8 @@ body {
 }
 
 .tabs-slider > .tab-content {
-  flex: 0 0 33.3333%;
-  width: 33.3333%;
+  flex: 0 0 25%;
+  width: 25%;
   min-width: 0;
   box-sizing: border-box;
 }
@@ -1309,6 +1375,20 @@ input:checked + .slider:before {
   cursor: grab;
   touch-action: none;
   animation: coin-drop-in 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.achievement-coin::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #0a7a45, #02502c 70%, #012717 100%);
+  z-index: -1;
+  transform: translateZ(-6px);
+}
+
+.achievement-coin.locked::before {
+  background: radial-gradient(circle at 35% 28%, #475569, #1e293b 70%, #0f172a 100%);
 }
 
 .achievement-coin:active {
