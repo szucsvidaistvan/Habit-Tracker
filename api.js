@@ -259,5 +259,97 @@ const API = {
       .from('user_streak_state')
       .update(fields)
       .eq('user_id', userId);
+  },
+
+  // ---------- Tasks ----------
+
+  async fetchTaskCategories(userId) {
+    const result = await supabase
+      .from('task_categories')
+      .select('*')
+      .eq('user_id', userId)
+      .order('position', { ascending: true });
+
+    if (result.error) return result;
+
+    if (!result.data || result.data.length === 0) {
+      return await supabase
+        .from('task_categories')
+        .insert([{ user_id: userId, name: 'General', position: 0 }])
+        .select('*')
+        .order('position', { ascending: true });
+    }
+
+    return result;
+  },
+
+  async createTaskCategory(userId, name, position = 0) {
+    return await supabase
+      .from('task_categories')
+      .insert([{ user_id: userId, name, position }])
+      .select()
+      .single();
+  },
+
+  async updateTaskCategory(categoryId, name) {
+    return await supabase
+      .from('task_categories')
+      .update({ name })
+      .eq('id', categoryId);
+  },
+
+  async deleteTaskCategory(categoryId) {
+    return await supabase
+      .from('task_categories')
+      .delete()
+      .eq('id', categoryId);
+  },
+
+  async fetchTasks(userId) {
+    return await supabase
+      .from('tasks')
+      .select('*')
+      .eq('user_id', userId)
+      .order('position', { ascending: true })
+      .order('id', { ascending: true });
+  },
+
+  async createTask(userId, fields) {
+    return await supabase.from('tasks').insert([{
+      user_id: userId,
+      title: fields.title,
+      category_id: fields.categoryId || null,
+      position: fields.position || 0,
+      recurrence_type: fields.recurrenceType,
+      due_date: fields.recurrenceType === 'once' ? fields.dueDate : null,
+      recurrence_days: fields.recurrenceType === 'weekly' ? fields.recurrenceDays : null
+    }]);
+  },
+
+  async updateTask(taskId, fields) {
+    return await supabase.from('tasks').update({
+      title: fields.title,
+      category_id: fields.categoryId || null,
+      recurrence_type: fields.recurrenceType,
+      due_date: fields.recurrenceType === 'once' ? fields.dueDate : null,
+      recurrence_days: fields.recurrenceType === 'weekly' ? fields.recurrenceDays : null
+    }).eq('id', taskId);
+  },
+
+  async deleteTask(taskId) {
+    return await supabase.from('tasks').delete().eq('id', taskId);
+  },
+
+  // RLS limits this to the current user's own tasks' logs.
+  async fetchTaskLogs() {
+    return await supabase.from('task_logs').select('*');
+  },
+
+  async addTaskLog(taskId, dateStr) {
+    return await supabase.from('task_logs').insert([{
+      task_id: taskId,
+      log_date: dateStr,
+      completed: true
+    }]);
   }
 };
