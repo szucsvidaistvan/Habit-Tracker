@@ -16,6 +16,10 @@ const App = {
   categoriesList: [],
   selectedCategoryId: null,
 
+  tabOrder: ['home', 'stats', 'profile'],
+  activeTabIndex: 0,
+  suppressAchievementClose: false,
+
   async init() {
     console.log('[App.init] Starting application...');
     const today = new Date().toLocaleDateString('en-US');
@@ -552,17 +556,19 @@ const App = {
   },
 
   switchTab(tab) {
+    const index = this.tabOrder.indexOf(tab);
+    if (index === -1) return;
+
     document.querySelectorAll('.tab-item').forEach(btn => btn.classList.remove('active'));
     const tabBtn = document.getElementById(`tab-${tab}`);
     if (tabBtn) tabBtn.classList.add('active');
 
-    const homeView = document.getElementById('view-home');
-    const statsView = document.getElementById('view-stats');
-    const profileView = document.getElementById('view-profile');
-
-    if (homeView) homeView.style.display = tab === 'home' ? 'block' : 'none';
-    if (statsView) statsView.style.display = tab === 'stats' ? 'block' : 'none';
-    if (profileView) profileView.style.display = tab === 'profile' ? 'block' : 'none';
+    this.activeTabIndex = index;
+    const slider = document.getElementById('tabs-slider');
+    if (slider) {
+      slider.classList.remove('no-transition');
+      slider.style.transform = `translateX(-${index * 33.3333}%)`;
+    }
 
     if (tab === 'stats') {
       this.loadStatistics(this.activeStatsTab);
@@ -573,6 +579,86 @@ const App = {
       this.loadAchievements();
       UI.renderFreezeCard(this.streakFreeze);
     }
+  },
+
+  // Lets the user swipe left/right between the Home / Stats / Profile
+  // pages instead of only using the bottom tab bar.
+  setupSwipeNavigation() {
+    const slider = document.getElementById('tabs-slider');
+    if (!slider) return;
+
+    let startX = 0, startY = 0, currentX = 0;
+    let tracking = false;   // a pointer is down and we're watching it
+    let decided = false;    // we've classified this gesture as a horizontal swipe
+    let containerWidth = 0;
+
+    const basePercent = () => -this.activeTabIndex * 33.3333;
+
+    slider.addEventListener('pointerdown', (e) => {
+      // Let habit-card swipe-to-delete and normal form controls keep their own gestures.
+      if (e.target.closest('#habits-container')) return;
+      if (e.target.closest('input, textarea, select')) return;
+
+      startX = e.clientX;
+      startY = e.clientY;
+      currentX = startX;
+      tracking = true;
+      decided = false;
+      containerWidth = slider.parentElement.getBoundingClientRect().width || 1;
+    });
+
+    slider.addEventListener('pointermove', (e) => {
+      if (!tracking) return;
+      currentX = e.clientX;
+      const diffX = currentX - startX;
+      const diffY = e.clientY - startY;
+
+      if (!decided) {
+        if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10) return;
+        if (Math.abs(diffY) > Math.abs(diffX)) {
+          tracking = false; // vertical scroll intent, let the page scroll normally
+          return;
+        }
+        decided = true;
+        slider.classList.add('no-transition');
+        try { slider.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+
+      let clampedDiff = diffX;
+      const atFirstTab = this.activeTabIndex === 0;
+      const atLastTab = this.activeTabIndex === this.tabOrder.length - 1;
+      if (atFirstTab && diffX > 0) clampedDiff = diffX * 0.35;
+      if (atLastTab && diffX < 0) clampedDiff = diffX * 0.35;
+
+      const percentDiff = (clampedDiff / containerWidth) * 33.3333;
+      slider.style.transform = `translateX(${basePercent() + percentDiff}%)`;
+      e.preventDefault();
+    });
+
+    const endDrag = (e) => {
+      if (!tracking) return;
+      tracking = false;
+      slider.classList.remove('no-transition');
+
+      if (!decided) return; // was just a tap, nothing was moved
+
+      try { slider.releasePointerCapture(e.pointerId); } catch (_) {}
+
+      const diffX = currentX - startX;
+      const threshold = containerWidth * 0.18;
+
+      let targetIndex = this.activeTabIndex;
+      if (diffX < -threshold && this.activeTabIndex < this.tabOrder.length - 1) {
+        targetIndex = this.activeTabIndex + 1;
+      } else if (diffX > threshold && this.activeTabIndex > 0) {
+        targetIndex = this.activeTabIndex - 1;
+      }
+
+      this.switchTab(this.tabOrder[targetIndex]);
+    };
+
+    slider.addEventListener('pointerup', endDrag);
+    slider.addEventListener('pointercancel', endDrag);
   },
 
   async loadStreakFreezeState() {
@@ -1184,6 +1270,60 @@ const App = {
     if (modal) modal.style.display = 'none';
   },
 
+  // Lets the opened achievement card be dragged/tilted a little left-right,
+  // like holding a real physical card, then springs back to center on release.
+  setupAchievementCardTilt() {
+    const modal = document.getElementById('achievement-modal');
+    const card = modal ? modal.querySelector('.modal-content') : null;
+    if (!modal || !card) return;
+
+    let startX = 0, startY = 0, dragging = false, moved = false;
+
+    card.addEventListener('pointerdown', (e) => {
+      startX = e.clientX;
+      startY = e.clientY;
+      dragging = true;
+      moved = false;
+      card.style.transition = 'none';
+      try { card.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    card.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const diffX = e.clientX - startX;
+      const diffY = e.clientY - startY;
+
+      if (Math.abs(diffX) > 4 || Math.abs(diffY) > 4) moved = true;
+
+      const clampedX = Math.max(-70, Math.min(70, diffX));
+      const rotateY = clampedX / 6;
+      const rotateX = Math.max(-8, Math.min(8, -diffY / 12));
+      card.style.transform = `translateX(${clampedX * 0.6}px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+    });
+
+    const endDrag = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      try { card.releasePointerCapture(e.pointerId); } catch (_) {}
+
+      card.style.transition = 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)';
+      card.style.transform = '';
+
+      this.suppressAchievementClose = moved;
+    };
+
+    card.addEventListener('pointerup', endDrag);
+    card.addEventListener('pointercancel', endDrag);
+
+    modal.addEventListener('click', () => {
+      if (this.suppressAchievementClose) {
+        this.suppressAchievementClose = false;
+        return;
+      }
+      this.closeAchievementModal();
+    });
+  },
+
   checkPwaBanner() {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
     const isDismissed = sessionStorage.getItem('pwa_banner_dismissed');
@@ -1312,4 +1452,6 @@ const App = {
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
   App.checkPwaBanner();
+  App.setupSwipeNavigation();
+  App.setupAchievementCardTilt();
 });
