@@ -257,6 +257,29 @@ body {
   max-width: 420px;
 }
 
+#app-container {
+  overflow: hidden;
+}
+
+.tabs-slider {
+  display: flex;
+  width: 300%;
+  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  touch-action: pan-y;
+}
+
+.tabs-slider.no-transition {
+  transition: none;
+}
+
+.tabs-slider > .tab-content {
+  flex: 0 0 33.3333%;
+  width: 33.3333%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .btn-primary,
 .btn-secondary,
 .btn-danger {
@@ -1266,6 +1289,12 @@ input:checked + .slider:before {
   text-align: center;
   animation: card-flip-in 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   perspective: 800px;
+  touch-action: none;
+  cursor: grab;
+}
+
+#achievement-modal .modal-content:active {
+  cursor: grabbing;
 }
 
 @keyframes card-flip-in {
