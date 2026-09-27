@@ -19,6 +19,8 @@ const App = {
   tabOrder: ['home', 'stats', 'profile'],
   activeTabIndex: 0,
   suppressAchievementClose: false,
+  achievementCoinRotation: 0,
+  achievementCoinInertiaFrame: null,
 
   async init() {
     console.log('[App.init] Starting application...');
@@ -1281,10 +1283,26 @@ const App = {
     ];
   },
 
+  resetAchievementCoin() {
+    const coin = document.getElementById('achievement-coin');
+    if (this.achievementCoinInertiaFrame) {
+      cancelAnimationFrame(this.achievementCoinInertiaFrame);
+      this.achievementCoinInertiaFrame = null;
+    }
+    this.achievementCoinRotation = 0;
+    if (coin) {
+      coin.style.transition = 'none';
+      coin.style.transform = 'rotateY(0deg)';
+      void coin.offsetWidth; // force reflow so the drop-in animation replays
+      coin.style.transition = '';
+    }
+  },
+
   openAchievementModal(index) {
     const achievement = this.achievementsList ? this.achievementsList[index] : null;
     if (!achievement) return;
     console.log('[App.openAchievementModal] Opening achievement:', achievement.name);
+    this.resetAchievementCoin();
     UI.showAchievementDetail(achievement);
   },
 
@@ -1293,50 +1311,87 @@ const App = {
     if (modal) modal.style.display = 'none';
   },
 
-  // Lets the opened achievement card be dragged/tilted a little left-right,
-  // like holding a real physical card, then springs back to center on release.
+  // Lets the opened achievement coin be dragged to spin around its vertical
+  // axis like a real coin - flips over to a back face, keeps spinning with
+  // inertia after release, then settles flat facing front or back.
   setupAchievementCardTilt() {
     const modal = document.getElementById('achievement-modal');
-    const card = modal ? modal.querySelector('.modal-content') : null;
-    if (!modal || !card) return;
+    const coin = document.getElementById('achievement-coin');
+    if (!modal || !coin) return;
 
-    let startX = 0, startY = 0, dragging = false, moved = false;
+    let startX = 0, lastX = 0, lastT = 0;
+    let dragging = false, moved = false, velocity = 0; // velocity in deg/ms
 
-    card.addEventListener('pointerdown', (e) => {
+    const applyRotation = () => {
+      coin.style.transform = `rotateY(${this.achievementCoinRotation}deg)`;
+    };
+
+    const stopInertia = () => {
+      if (this.achievementCoinInertiaFrame) {
+        cancelAnimationFrame(this.achievementCoinInertiaFrame);
+        this.achievementCoinInertiaFrame = null;
+      }
+    };
+
+    coin.addEventListener('pointerdown', (e) => {
+      stopInertia();
+      coin.style.transition = 'none';
       startX = e.clientX;
-      startY = e.clientY;
+      lastX = startX;
+      lastT = performance.now();
+      velocity = 0;
       dragging = true;
       moved = false;
-      card.style.transition = 'none';
-      try { card.setPointerCapture(e.pointerId); } catch (_) {}
+      try { coin.setPointerCapture(e.pointerId); } catch (_) {}
     });
 
-    card.addEventListener('pointermove', (e) => {
+    coin.addEventListener('pointermove', (e) => {
       if (!dragging) return;
-      const diffX = e.clientX - startX;
-      const diffY = e.clientY - startY;
+      const now = performance.now();
+      const dx = e.clientX - lastX;
+      const dt = Math.max(1, now - lastT);
 
-      if (Math.abs(diffX) > 4 || Math.abs(diffY) > 4) moved = true;
+      if (Math.abs(e.clientX - startX) > 4) moved = true;
 
-      const clampedX = Math.max(-70, Math.min(70, diffX));
-      const rotateY = clampedX / 6;
-      const rotateX = Math.max(-8, Math.min(8, -diffY / 12));
-      card.style.transform = `translateX(${clampedX * 0.6}px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+      const rotationStep = dx * 0.6;
+      this.achievementCoinRotation += rotationStep;
+      velocity = rotationStep / dt;
+      applyRotation();
+
+      lastX = e.clientX;
+      lastT = now;
     });
 
     const endDrag = (e) => {
       if (!dragging) return;
       dragging = false;
-      try { card.releasePointerCapture(e.pointerId); } catch (_) {}
-
-      card.style.transition = 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)';
-      card.style.transform = '';
+      try { coin.releasePointerCapture(e.pointerId); } catch (_) {}
 
       this.suppressAchievementClose = moved;
+
+      const friction = 0.94;
+      const step = () => {
+        velocity *= friction;
+        this.achievementCoinRotation += velocity * 16;
+        applyRotation();
+
+        if (Math.abs(velocity) > 0.01) {
+          this.achievementCoinInertiaFrame = requestAnimationFrame(step);
+        } else {
+          this.achievementCoinInertiaFrame = null;
+          this.settleAchievementCoin();
+        }
+      };
+
+      if (Math.abs(velocity) > 0.02) {
+        this.achievementCoinInertiaFrame = requestAnimationFrame(step);
+      } else {
+        this.settleAchievementCoin();
+      }
     };
 
-    card.addEventListener('pointerup', endDrag);
-    card.addEventListener('pointercancel', endDrag);
+    coin.addEventListener('pointerup', endDrag);
+    coin.addEventListener('pointercancel', endDrag);
 
     modal.addEventListener('click', () => {
       if (this.suppressAchievementClose) {
@@ -1345,6 +1400,17 @@ const App = {
       }
       this.closeAchievementModal();
     });
+  },
+
+  // Snaps the coin flat to whichever face (front/back) it's closest to
+  // after a drag or an inertia spin ends.
+  settleAchievementCoin() {
+    const coin = document.getElementById('achievement-coin');
+    if (!coin) return;
+    const nearest = Math.round(this.achievementCoinRotation / 180) * 180;
+    this.achievementCoinRotation = nearest;
+    coin.style.transition = 'transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)';
+    coin.style.transform = `rotateY(${nearest}deg)`;
   },
 
   checkPwaBanner() {
