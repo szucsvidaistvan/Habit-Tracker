@@ -3,8 +3,11 @@
 // Supabase requests are never cached here - offline.js stores the data instead.
 
 // Bump this whenever you want every device to drop its old cached files.
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `habit-tracker-${CACHE_VERSION}`;
+
+// With a cached copy at hand, a page/file request that hangs this long is answered from the cache.
+const NETWORK_TIMEOUT_MS = 4000;
 
 // Same-origin files, relative to the service worker's own folder.
 const APP_SHELL = [
@@ -19,7 +22,9 @@ const APP_SHELL = [
   'icon-192.png',
   'icon-512.png',
   'favicon-16x16.png',
-  'favicon-32x32.png'
+  'favicon-32x32.png',
+  'favicon.ico',
+  'apple-touch-icon.png'
 ];
 
 // Third-party libraries the page loads with <script src>.
@@ -32,12 +37,29 @@ const CDN_LIBS = [
 // Hosts that serve icon data at runtime (Iconify fetches icons on demand).
 const ICON_HOSTS = ['api.iconify.design', 'api.simplesvg.com', 'api.unisvg.com'];
 
+// Download a file fresh (skipping the browser's HTTP cache) and store it.
+// CDN files fall back to an "opaque" copy, which is fine for <script src>.
+async function precache(cache, url, isCdn) {
+  try {
+    const response = await fetch(new Request(url, { cache: 'reload' }));
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    await cache.put(url, response);
+  } catch (err) {
+    if (!isCdn) throw err;
+    const response = await fetch(url, { mode: 'no-cors' });
+    await cache.put(url, response);
+  }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
       // One missing file must not break the whole install, so add them one by one.
-      await Promise.allSettled([...APP_SHELL, ...CDN_LIBS].map((url) => cache.add(url)));
+      await Promise.allSettled([
+        ...APP_SHELL.map((url) => precache(cache, url, false)),
+        ...CDN_LIBS.map((url) => precache(cache, url, true))
+      ]);
       await self.skipWaiting();
     })()
   );
@@ -58,18 +80,27 @@ self.addEventListener('activate', (event) => {
 });
 
 // Try the network first (so updates show up right away), fall back to the cache.
+// If the network hangs (bad wifi) and a cached copy exists, the cached copy wins after a few seconds.
 async function networkFirst(request, fallbackUrl) {
   const cache = await caches.open(CACHE_NAME);
-  try {
-    const response = await fetch(request);
-    if (response && response.ok) cache.put(request, response.clone());
+
+  const network = fetch(request).then((response) => {
+    if (response && response.ok) cache.put(request, response.clone()).catch(() => {});
     return response;
+  });
+  network.catch(() => {}); // the failure is handled below; this only avoids an "unhandled rejection" log
+
+  const cached =
+    (await cache.match(request, { ignoreSearch: true })) ||
+    (fallbackUrl ? await cache.match(fallbackUrl) : undefined);
+
+  if (!cached) return network; // nothing to fall back on - wait for the network
+
+  const timeout = new Promise((resolve) => setTimeout(() => resolve(cached), NETWORK_TIMEOUT_MS));
+  try {
+    return await Promise.race([network, timeout]);
   } catch (err) {
-    const cached =
-      (await cache.match(request, { ignoreSearch: true })) ||
-      (fallbackUrl ? await cache.match(fallbackUrl) : undefined);
-    if (cached) return cached;
-    throw err;
+    return cached;
   }
 }
 
@@ -81,7 +112,7 @@ async function staleWhileRevalidate(request) {
   const refresh = fetch(request)
     .then((response) => {
       if (response && (response.ok || response.type === 'opaque')) {
-        cache.put(request, response.clone());
+        cache.put(request, response.clone()).catch(() => {});
       }
       return response;
     })
