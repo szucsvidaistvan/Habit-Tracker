@@ -43,15 +43,31 @@ const App = {
     }
 
     try {
-      const { data: { session }, error } = await API.getSession();
-      if (error) console.error('[App.init] Session error:', error);
+      let session = null;
+      let sessionError = null;
+      try {
+        const res = await API.getSession();
+        session = res && res.data ? res.data.session : null;
+        sessionError = res ? res.error : null;
+      } catch (err) {
+        sessionError = err;
+      }
+      if (sessionError) console.error('[App.init] Session error:', sessionError);
 
       if (session) {
         console.log('[App.init] Logged in user:', session.user.email);
         await this.proceedAfterAuth(session.user);
       } else {
-        console.log('[App.init] Showing auth view.');
-        this.showAuth();
+        // No (working) connection: the login token cannot be refreshed right now,
+        // but the person is still logged in - start from the remembered user.
+        const savedUser = typeof Offline !== 'undefined' ? Offline.getUserForOfflineStart(sessionError) : null;
+        if (savedUser) {
+          console.log('[App.init] Offline start with remembered user.');
+          await this.proceedAfterAuth(savedUser);
+        } else {
+          console.log('[App.init] Showing auth view.');
+          this.showAuth();
+        }
       }
     } catch (err) {
       console.error('[App.init] Unexpected error:', err);
@@ -98,7 +114,7 @@ const App = {
   // feature existed) has not yet recorded consent.
   async proceedAfterAuth(user) {
     this.currentUser = user;
-    if (typeof Offline !== 'undefined') Offline.setOwner(user.id);
+    if (typeof Offline !== 'undefined') Offline.setOwner(user.id, user);
     await this.showApp();
 
     const consentAt = user && user.user_metadata ? user.user_metadata.privacy_consent_at : null;
@@ -598,19 +614,27 @@ const App = {
 
     if (!this.currentUser) return;
 
+    let saveError = null;
     if (this.editingHabitId) {
       const isInactive = this.inactiveHabitsList.some(h => String(h.id) === String(this.editingHabitId));
       if (isInactive) {
         console.log('[App.saveHabitModal] Reactivating inactive habit...');
-        await API.reactivateHabit(this.editingHabitId, title, targetNum, targetMins);
+        ({ error: saveError } = await API.reactivateHabit(this.editingHabitId, title, targetNum, targetMins));
       } else {
         console.log('[App.saveHabitModal] Updating active habit...');
-        await API.updateHabit(this.editingHabitId, title, targetNum, targetMins, categoryId);
+        ({ error: saveError } = await API.updateHabit(this.editingHabitId, title, targetNum, targetMins, categoryId));
       }
     } else {
       console.log('[App.saveHabitModal] Creating new habit...');
       const currentCategoryHabits = this.habitsList.filter(h => String(h.category_id || '') === String(categoryId || ''));
-      await API.createHabit(this.currentUser.id, title, targetNum, targetMins, categoryId, currentCategoryHabits.length);
+      ({ error: saveError } = await API.createHabit(this.currentUser.id, title, targetNum, targetMins, categoryId, currentCategoryHabits.length));
+    }
+
+    if (saveError) {
+      console.error('[App.saveHabitModal] Error:', saveError);
+      // Offline the "you are offline" message is already on screen; either way the modal stays open.
+      if (!saveError.offline) alert('Could not save the habit. Please try again.');
+      return;
     }
 
     this.closeModal();
@@ -801,7 +825,7 @@ const App = {
   async loadStreakFreezeState() {
     if (!this.currentUser) return;
     try {
-      let { data: state, error } = await API.fetchStreakState(this.currentUser.id);
+      let { data: state, error, offline: stateOffline } = await API.fetchStreakState(this.currentUser.id);
       if (error) console.error('[App.loadStreakFreezeState] fetch error:', error);
 
       if (!state) {
@@ -834,6 +858,7 @@ const App = {
       const frozenDates = new Set(state.frozen_dates || []);
       const pendingMissedDates = new Set(state.pending_missed_dates || []);
       let lastChecked = state.last_checked_date;
+      let offlineData = false; // true when the logs needed for the missed-day check are not really available
 
       if (lastChecked < yesterdayStr) {
         const [ly, lm, ld] = lastChecked.split('-').map(Number);
@@ -841,36 +866,46 @@ const App = {
         const rangeStartStr = UI.getLocalDateString(rangeStart);
 
         if (rangeStartStr <= yesterdayStr) {
-          const { data: allHabitsHistory } = await API.fetchAllHabitsForStats(this.currentUser.id);
-          const { data: logs } = await API.fetchLogsRange(rangeStartStr);
+          const habitsRes = await API.fetchAllHabitsForStats(this.currentUser.id);
+          const logsRes = await API.fetchLogsRange(rangeStartStr);
 
-          const dateStrings = [];
-          const cursor = new Date(rangeStart);
-          while (cursor <= yesterday) {
-            dateStrings.push(UI.getLocalDateString(cursor));
-            cursor.setDate(cursor.getDate() + 1);
-          }
-
-          const dailyResults = this.computeDailyPercents(allHabitsHistory || [], logs || [], dateStrings);
-
-          dailyResults.forEach(r => {
-            const missed = r.denominator > 0 && r.count === 0;
-            if (missed && !frozenDates.has(r.dateStr)) {
-              pendingMissedDates.add(r.dateStr);
+          if (habitsRes.error || logsRes.error || habitsRes.offline || logsRes.offline) {
+            // Missing or outdated data would wrongly mark days as "missed" - check again once we are online.
+            offlineData = true;
+          } else {
+            const dateStrings = [];
+            const cursor = new Date(rangeStart);
+            while (cursor <= yesterday) {
+              dateStrings.push(UI.getLocalDateString(cursor));
+              cursor.setDate(cursor.getDate() + 1);
             }
-          });
+
+            const dailyResults = this.computeDailyPercents(habitsRes.data || [], logsRes.data || [], dateStrings);
+
+            dailyResults.forEach(r => {
+              const missed = r.denominator > 0 && r.count === 0;
+              if (missed && !frozenDates.has(r.dateStr)) {
+                pendingMissedDates.add(r.dateStr);
+              }
+            });
+          }
         }
-        lastChecked = yesterdayStr;
+        if (!offlineData) lastChecked = yesterdayStr;
       }
 
-      const { error: updateErr } = await API.updateStreakState(this.currentUser.id, {
-        freeze_count: freezeCount,
-        last_freeze_refill_at: lastRefillAt.toISOString(),
-        last_checked_date: lastChecked,
-        frozen_dates: Array.from(frozenDates),
-        pending_missed_dates: Array.from(pendingMissedDates).sort()
-      });
-      if (updateErr) console.error('[App.loadStreakFreezeState] update error:', updateErr);
+      // Offline (or on stored data) nothing is saved and no popup opens; it all happens on reconnect.
+      const offlineMode = Boolean(stateOffline) || offlineData;
+
+      if (!offlineMode) {
+        const { error: updateErr } = await API.updateStreakState(this.currentUser.id, {
+          freeze_count: freezeCount,
+          last_freeze_refill_at: lastRefillAt.toISOString(),
+          last_checked_date: lastChecked,
+          frozen_dates: Array.from(frozenDates),
+          pending_missed_dates: Array.from(pendingMissedDates).sort()
+        });
+        if (updateErr) console.error('[App.loadStreakFreezeState] update error:', updateErr);
+      }
 
       const nextRefillAt = freezeCount >= maxFreeze
         ? null
@@ -891,7 +926,7 @@ const App = {
       UI.renderFreezeBadgeHome(this.streakFreeze);
       this.startFreezeCountdownTimer();
 
-      if (this.streakFreeze.pendingMissedDates.length > 0) {
+      if (!offlineMode && this.streakFreeze.pendingMissedDates.length > 0) {
         console.log('[App.loadStreakFreezeState] pending missed day(s) found, opening popup.');
         UI.openFreezeModal(this.streakFreeze);
       } else {
@@ -917,6 +952,11 @@ const App = {
     if (!this.currentUser) return;
     console.log(`[App.resolvePendingFreeze] date=${dateStr} useFreeze=${useFreeze}`);
 
+    if (typeof Offline !== 'undefined' && !Offline.isOnline()) {
+      Offline.toast('You are offline. This change needs an internet connection.');
+      return;
+    }
+
     const pending = new Set(this.streakFreeze.pendingMissedDates || []);
     if (!pending.has(dateStr)) return;
     pending.delete(dateStr);
@@ -934,7 +974,12 @@ const App = {
       frozen_dates: Array.from(this.frozenDatesSet),
       pending_missed_dates: Array.from(pending).sort()
     });
-    if (error) console.error('[App.resolvePendingFreeze] update error:', error);
+    if (error) {
+      console.error('[App.resolvePendingFreeze] update error:', error);
+      if (useFreeze) this.frozenDatesSet.delete(dateStr);
+      if (typeof Offline !== 'undefined') Offline.toast('Could not save the change. Please try again.');
+      return;
+    }
 
     const msPerDay = 24 * 60 * 60 * 1000;
     const nextRefillAt = freezeCount >= this.streakFreeze.maxFreezeCount
@@ -1871,7 +1916,7 @@ const App = {
 
     if (error) {
       console.error('[App.saveTaskModal] Error:', error);
-      alert('Could not save the task. Did you run all the tasks SQL migrations in Supabase?');
+      if (!error.offline) alert('Could not save the task. Did you run all the tasks SQL migrations in Supabase?');
       return;
     }
 
@@ -2100,6 +2145,10 @@ const App = {
 if (typeof supabase !== 'undefined' && supabase) {
   supabase.auth.onAuthStateChange((event) => {
     if (event === 'PASSWORD_RECOVERY') App.openPasswordResetModal();
+    if (event === 'SIGNED_OUT' && App.currentUser) {
+      App.currentUser = null;
+      App.showAuth();
+    }
   });
 }
 
@@ -2121,12 +2170,23 @@ document.addEventListener('touchmove', e => {
 }, { passive: false });
 window.addEventListener('resize', () => App.adjustSliderHeight());
 
-// Changes made offline just reached the server - refresh what is on screen.
-window.addEventListener('offline-sync-done', () => {
-  if (!App.currentUser) return;
-  App.loadHabits();
-  App.loadTasks();
-});
+// Changes made offline just reached the server, or the connection came back after
+// the screen was filled from stored data - refresh what is on screen.
+let refreshingAfterSync = false;
+async function refreshAfterSync() {
+  if (!App.currentUser || refreshingAfterSync) return;
+  refreshingAfterSync = true;
+  try {
+    await Promise.all([App.loadHabits(), App.loadTasks()]);
+    await App.loadStreakFreezeState();
+  } catch (err) {
+    console.error('[App.refreshAfterSync] Error:', err);
+  } finally {
+    refreshingAfterSync = false;
+  }
+}
+window.addEventListener('offline-sync-done', refreshAfterSync);
+window.addEventListener('offline-reconnected', refreshAfterSync);
 
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
