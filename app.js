@@ -98,6 +98,7 @@ const App = {
   // feature existed) has not yet recorded consent.
   async proceedAfterAuth(user) {
     this.currentUser = user;
+    if (typeof Offline !== 'undefined') Offline.setOwner(user.id);
     await this.showApp();
 
     const consentAt = user && user.user_metadata ? user.user_metadata.privacy_consent_at : null;
@@ -2119,6 +2120,13 @@ document.addEventListener('touchmove', e => {
   if (e.touches && e.touches.length > 1) e.preventDefault();
 }, { passive: false });
 window.addEventListener('resize', () => App.adjustSliderHeight());
+
+// Changes made offline just reached the server - refresh what is on screen.
+window.addEventListener('offline-sync-done', () => {
+  if (!App.currentUser) return;
+  App.loadHabits();
+  App.loadTasks();
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
