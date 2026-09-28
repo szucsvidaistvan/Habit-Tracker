@@ -35,6 +35,8 @@ textarea {
 }
 
 html, body {
+  touch-action: pan-y;
+  -webkit-text-size-adjust: 100%;
   background-color: var(--bg-color) !important;
   color: var(--text-main);
   margin: 0 !important;
@@ -1421,7 +1423,7 @@ input:checked + .slider:before {
 
 .coin-back {
   transform: rotateY(180deg) translateZ(7px);
-  background: radial-gradient(circle at 35% 28%, #fff3cf, #e2b23f 55%, #8a651a 100%);
+  background: radial-gradient(circle at 35% 28%, #d3ffe9, var(--accent-color) 55%, #049150 100%);
 }
 
 .coin-back-mark {
@@ -1992,4 +1994,20 @@ input:checked + .slider:before {
 
 .cal-row .weekday-picker {
   margin: 0;
+}
+
+/* All Tasks: completed rows */
+.all-task-row.done .all-task-name {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.all-task-row.done .habit-time {
+  color: var(--accent-color);
+  font-weight: 700;
+}
+
+.all-task-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
