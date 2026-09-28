@@ -25,6 +25,16 @@ const API = {
     });
   },
 
+  async resetPassword(email) {
+    return await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+  },
+
+  async updatePassword(newPassword) {
+    return await supabase.auth.updateUser({ password: newPassword });
+  },
+
   async updateConsent(consentAtIso) {
     return await supabase.auth.updateUser({
       data: {
