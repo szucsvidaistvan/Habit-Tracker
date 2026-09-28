@@ -406,7 +406,7 @@ const UI = {
     return `<span class="habit-time ${meta.overdue ? 'task-due-overdue' : ''}">${this.escapeHtml(meta.text)}</span>`;
   },
 
-  renderAllTasks(allTasks, categories = []) {
+  renderAllTasks(allTasks, categories = [], doneIds = new Set()) {
     const container = document.getElementById('all-tasks-list');
     if (!container) return;
 
@@ -422,14 +422,17 @@ const UI = {
 
     container.innerHTML = allTasks.map(t => {
       const meta = this.getTaskMeta(t, { includeDate: true });
-      const sub = [categoryName(t.category_id), meta.text].filter(Boolean).join(' • ');
+      const isDone = doneIds.has(String(t.id));
+      const sub = [isDone ? '✓ Done' : '', categoryName(t.category_id), meta.text]
+        .filter(Boolean).join(' • ');
       return `
-        <div class="all-task-row">
+        <div class="all-task-row ${isDone ? 'done' : ''}">
           <div class="all-task-info">
             <span class="all-task-name">${this.escapeHtml(t.title)}</span>
             <span class="habit-time ${meta.overdue ? 'task-due-overdue' : ''}">${this.escapeHtml(sub)}</span>
           </div>
           <div class="all-task-actions">
+            ${isDone ? `<button class="btn-primary btn-sm" onclick="App.restoreTask('${t.id}')">Undo</button>` : ''}
             <button class="btn-secondary btn-sm" onclick="App.editFromAllTasks('${t.id}')">Edit</button>
             <button class="btn-danger btn-sm" onclick="App.handleDeleteTask('${t.id}')">Delete</button>
           </div>
