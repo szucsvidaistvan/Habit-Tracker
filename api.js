@@ -314,26 +314,31 @@ const API = {
       .order('id', { ascending: true });
   },
 
+  buildTaskRow(fields) {
+    const repeating = fields.recurrenceType !== 'once';
+    return {
+      title: fields.title,
+      category_id: fields.categoryId || null,
+      recurrence_type: fields.recurrenceType,
+      // for one-time tasks this is the due date, for repeating ones the start date
+      due_date: fields.dueDate || null,
+      recurrence_days: fields.recurrenceType === 'weekly' ? fields.recurrenceDays : null,
+      recurrence_month_day: fields.recurrenceType === 'monthly' ? fields.monthDay : null,
+      start_time: fields.startTime || null,
+      end_time: fields.endTime || null
+    };
+  },
+
   async createTask(userId, fields) {
     return await supabase.from('tasks').insert([{
       user_id: userId,
-      title: fields.title,
-      category_id: fields.categoryId || null,
       position: fields.position || 0,
-      recurrence_type: fields.recurrenceType,
-      due_date: fields.recurrenceType === 'once' ? fields.dueDate : null,
-      recurrence_days: fields.recurrenceType === 'weekly' ? fields.recurrenceDays : null
+      ...this.buildTaskRow(fields)
     }]);
   },
 
   async updateTask(taskId, fields) {
-    return await supabase.from('tasks').update({
-      title: fields.title,
-      category_id: fields.categoryId || null,
-      recurrence_type: fields.recurrenceType,
-      due_date: fields.recurrenceType === 'once' ? fields.dueDate : null,
-      recurrence_days: fields.recurrenceType === 'weekly' ? fields.recurrenceDays : null
-    }).eq('id', taskId);
+    return await supabase.from('tasks').update(this.buildTaskRow(fields)).eq('id', taskId);
   },
 
   async deleteTask(taskId) {
