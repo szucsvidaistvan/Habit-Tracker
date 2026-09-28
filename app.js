@@ -609,7 +609,11 @@ const App = {
     if (!activePanel) return;
 
     requestAnimationFrame(() => {
-      slider.style.height = activePanel.offsetHeight + 'px';
+      // Never shorter than the visible screen, otherwise the empty area under
+      // a short page isn't part of the slider and swipes there do nothing.
+      const top = slider.getBoundingClientRect().top + window.scrollY;
+      const minHeight = Math.max(0, window.innerHeight - top - 100);
+      slider.style.height = Math.max(activePanel.offsetHeight, minHeight) + 'px';
     });
   },
 
@@ -1523,6 +1527,16 @@ const App = {
       (logDatesByTask[log.task_id] = logDatesByTask[log.task_id] || []).push(log.log_date);
     });
 
+    // which tasks count as completed right now (for the All Tasks list)
+    this.doneTaskIds = new Set();
+    this.allTasks.forEach(task => {
+      const doneDates = logDatesByTask[task.id] || [];
+      const isDone = task.recurrence_type === 'once'
+        ? doneDates.length > 0
+        : doneDates.includes(todayStr);
+      if (isDone) this.doneTaskIds.add(String(task.id));
+    });
+
     const now = new Date();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
@@ -1551,14 +1565,30 @@ const App = {
 
     UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
     UI.renderTasks(this.tasksList, this.taskCategoriesList);
-    UI.renderAllTasks(this.getSortedAllTasks(), this.taskCategoriesList);
+    UI.renderAllTasks(this.getSortedAllTasks(), this.taskCategoriesList, this.doneTaskIds);
     this.adjustSliderHeight();
   },
 
   getSortedAllTasks() {
+    const done = this.doneTaskIds || new Set();
     return [...(this.allTasks || [])].sort((a, b) =>
-      (a.due_date || '9999').localeCompare(b.due_date || '9999') || a.title.localeCompare(b.title)
+      (done.has(String(a.id)) - done.has(String(b.id))) || // unfinished first
+      (a.due_date || '9999').localeCompare(b.due_date || '9999') ||
+      a.title.localeCompare(b.title)
     );
+  },
+
+  // Puts a completed task back among the open ones.
+  async restoreTask(taskId) {
+    const task = (this.allTasks || []).find(t => String(t.id) === String(taskId));
+    if (!task) return;
+
+    const { error } = task.recurrence_type === 'once'
+      ? await API.removeTaskLogs(taskId)
+      : await API.removeTaskLogs(taskId, UI.getLocalDateString());
+
+    if (error) console.error('[App.restoreTask] Error:', error);
+    await this.loadTasks();
   },
 
   async handleToggleTask(taskId) {
@@ -1772,7 +1802,7 @@ const App = {
   },
 
   openAllTasksModal() {
-    UI.renderAllTasks(this.getSortedAllTasks(), this.taskCategoriesList);
+    UI.renderAllTasks(this.getSortedAllTasks(), this.taskCategoriesList, this.doneTaskIds);
     const modal = document.getElementById('all-tasks-modal');
     if (modal) modal.style.display = 'flex';
   },
@@ -1986,6 +2016,15 @@ const App = {
     UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId || this.categoriesList[0]?.id || null);
   }
 };
+
+// iOS Safari ignores user-scalable=no, so block pinch gestures explicitly.
+['gesturestart', 'gesturechange', 'gestureend'].forEach(evt =>
+  document.addEventListener(evt, e => e.preventDefault())
+);
+document.addEventListener('touchmove', e => {
+  if (e.touches && e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+window.addEventListener('resize', () => App.adjustSliderHeight());
 
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
