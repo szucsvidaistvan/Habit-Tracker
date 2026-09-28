@@ -1354,6 +1354,14 @@ const App = {
     const coin = document.getElementById('achievement-coin');
     if (!modal || !coin) return;
 
+    // Build the coin's side wall: a stack of thin discs between the two faces.
+    for (let z = -6; z <= 6; z++) {
+      const layer = document.createElement('div');
+      layer.className = 'coin-edge-layer';
+      layer.style.transform = `translateZ(${z}px)`;
+      coin.insertBefore(layer, coin.firstChild);
+    }
+
     let startX = 0, lastX = 0, lastT = 0;
     let dragging = false, moved = false, velocity = 0; // velocity in deg/ms
 
@@ -1493,7 +1501,7 @@ const App = {
     const todayWeekday = new Date().getDay(); // 0 = Sunday ... 6 = Saturday
 
     const dateElem = document.getElementById('tasks-date');
-    if (dateElem) dateElem.innerText = `Today: ${new Date().toLocaleDateString()}`;
+    if (dateElem) dateElem.innerText = `Today: ${new Date().toLocaleDateString('en-US')}`;
 
     const [categoryRes, tasksRes, logsRes] = await Promise.all([
       API.fetchTaskCategories(this.currentUser.id),
@@ -1515,21 +1523,42 @@ const App = {
       (logDatesByTask[log.task_id] = logDatesByTask[log.task_id] || []).push(log.log_date);
     });
 
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
     this.tasksList = this.allTasks.filter(task => {
       const doneDates = logDatesByTask[task.id] || [];
+      const started = !task.due_date || task.due_date <= todayStr;
 
       if (task.recurrence_type === 'weekly') {
         const days = Array.isArray(task.recurrence_days) ? task.recurrence_days : [];
-        return days.includes(todayWeekday) && !doneDates.includes(todayStr);
+        return started && days.includes(todayWeekday) && !doneDates.includes(todayStr);
+      }
+
+      if (task.recurrence_type === 'monthly') {
+        // a "31st" task lands on the last day of shorter months
+        const day = Math.min(task.recurrence_month_day || 1, daysInMonth);
+        return started && now.getDate() === day && !doneDates.includes(todayStr);
       }
 
       // one-time: shown from its due date on (overdue stays visible) until checked off
       return doneDates.length === 0 && !!task.due_date && task.due_date <= todayStr;
     });
 
+    this.tasksList.sort((a, b) =>
+      (a.start_time || a.end_time || '99:99').localeCompare(b.start_time || b.end_time || '99:99')
+    );
+
     UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
     UI.renderTasks(this.tasksList, this.taskCategoriesList);
+    UI.renderAllTasks(this.getSortedAllTasks(), this.taskCategoriesList);
     this.adjustSliderHeight();
+  },
+
+  getSortedAllTasks() {
+    return [...(this.allTasks || [])].sort((a, b) =>
+      (a.due_date || '9999').localeCompare(b.due_date || '9999') || a.title.localeCompare(b.title)
+    );
   },
 
   async handleToggleTask(taskId) {
@@ -1552,15 +1581,15 @@ const App = {
   setTaskRecurrenceType(type) {
     this.taskRecurrenceType = type;
 
-    const onceBtn = document.getElementById('task-recurrence-once');
-    const weeklyBtn = document.getElementById('task-recurrence-weekly');
-    const dueWrapper = document.getElementById('task-due-date-wrapper');
+    const select = document.getElementById('task-repeat-select');
     const daysWrapper = document.getElementById('task-weekdays-wrapper');
+    const monthWrapper = document.getElementById('task-monthday-wrapper');
+    const dateLabel = document.getElementById('task-date-label');
 
-    if (onceBtn) onceBtn.classList.toggle('active', type === 'once');
-    if (weeklyBtn) weeklyBtn.classList.toggle('active', type === 'weekly');
-    if (dueWrapper) dueWrapper.style.display = type === 'once' ? 'block' : 'none';
+    if (select) select.value = type;
     if (daysWrapper) daysWrapper.style.display = type === 'weekly' ? 'block' : 'none';
+    if (monthWrapper) monthWrapper.style.display = type === 'monthly' ? 'block' : 'none';
+    if (dateLabel) dateLabel.innerText = type === 'once' ? 'Date' : 'Starts on';
   },
 
   toggleRecurrenceDay(dayIndex) {
@@ -1569,6 +1598,16 @@ const App = {
     else this.selectedRecurrenceDays.splice(i, 1);
 
     UI.renderWeekdayPicker(this.selectedRecurrenceDays);
+  },
+
+  fillTaskExtraFields(task) {
+    const monthInput = document.getElementById('task-monthday-input');
+    const fromInput = document.getElementById('task-start-time-input');
+    const untilInput = document.getElementById('task-end-time-input');
+
+    if (monthInput) monthInput.value = task.recurrence_month_day || '';
+    if (fromInput) fromInput.value = task.start_time ? String(task.start_time).slice(0, 5) : '';
+    if (untilInput) untilInput.value = task.end_time ? String(task.end_time).slice(0, 5) : '';
   },
 
   openAddTaskModal() {
@@ -1583,6 +1622,7 @@ const App = {
     if (titleElem) titleElem.innerText = 'Add New Task';
     if (nameInput) nameInput.value = '';
     if (dueInput) dueInput.value = UI.getLocalDateString();
+    this.fillTaskExtraFields({});
 
     UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
     UI.renderWeekdayPicker(this.selectedRecurrenceDays);
@@ -1607,10 +1647,11 @@ const App = {
     if (titleElem) titleElem.innerText = 'Edit Task';
     if (nameInput) nameInput.value = task.title;
     if (dueInput) dueInput.value = task.due_date || UI.getLocalDateString();
+    this.fillTaskExtraFields(task);
 
     UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
     UI.renderWeekdayPicker(this.selectedRecurrenceDays);
-    this.setTaskRecurrenceType(task.recurrence_type === 'weekly' ? 'weekly' : 'once');
+    this.setTaskRecurrenceType(['weekly', 'monthly'].includes(task.recurrence_type) ? task.recurrence_type : 'once');
 
     const modal = document.getElementById('task-modal');
     if (modal) modal.style.display = 'flex';
@@ -1639,8 +1680,22 @@ const App = {
       alert('Please enter a task name.');
       return;
     }
-    if (recurrenceType === 'once' && !dueDate) {
-      alert('Please choose a due date.');
+    if (!dueDate) {
+      alert(recurrenceType === 'once' ? 'Please choose a date.' : 'Please choose a start date.');
+      return;
+    }
+    const monthInput = document.getElementById('task-monthday-input');
+    const monthDay = monthInput ? parseInt(monthInput.value, 10) : NaN;
+    if (recurrenceType === 'monthly' && !(monthDay >= 1 && monthDay <= 31)) {
+      alert('Please enter a day of the month (1-31).');
+      return;
+    }
+    const fromInput = document.getElementById('task-start-time-input');
+    const untilInput = document.getElementById('task-end-time-input');
+    const startTime = fromInput ? fromInput.value : '';
+    const endTime = untilInput ? untilInput.value : '';
+    if (startTime && endTime && endTime < startTime) {
+      alert('"Until" must be later than "From".');
       return;
     }
     if (recurrenceType === 'weekly' && recurrenceDays.length === 0) {
@@ -1648,7 +1703,7 @@ const App = {
       return;
     }
 
-    const fields = { title, categoryId, recurrenceType, dueDate, recurrenceDays };
+    const fields = { title, categoryId, recurrenceType, dueDate, recurrenceDays, monthDay, startTime, endTime };
 
     let error;
     if (this.editingTaskId) {
@@ -1662,12 +1717,27 @@ const App = {
 
     if (error) {
       console.error('[App.saveTaskModal] Error:', error);
-      alert('Could not save the task. Did you run the tasks SQL migration in Supabase?');
+      alert('Could not save the task. Did you run both tasks SQL migrations in Supabase?');
       return;
     }
 
     this.closeTaskModal();
     await this.loadTasks();
+  },
+
+  openAllTasksModal() {
+    UI.renderAllTasks(this.getSortedAllTasks(), this.taskCategoriesList);
+    const modal = document.getElementById('all-tasks-modal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  closeAllTasksModal() {
+    const modal = document.getElementById('all-tasks-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  editFromAllTasks(taskId) {
+    this.openEditTaskModal(taskId);
   },
 
   handleDeleteTask(taskId) {
