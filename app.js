@@ -142,7 +142,76 @@ const App = {
     if (modal) modal.style.display = 'none';
   },
 
+  setAuthMessage(text, isSuccess = false) {
+    const errElem = document.getElementById('auth-error');
+    if (!errElem) return;
+    errElem.innerText = text;
+    errElem.classList.toggle('auth-success', isSuccess);
+  },
+
+  async handleForgotPassword() {
+    const emailElem = document.getElementById('auth-email');
+    const email = emailElem ? emailElem.value.trim() : '';
+
+    if (!email) {
+      this.setAuthMessage('Enter your email address above first, then tap "Forgot password?".');
+      return;
+    }
+
+    const { error } = await API.resetPassword(email);
+    if (error) {
+      console.error('[App.handleForgotPassword] Error:', error);
+      this.setAuthMessage(error.message || 'Could not send the reset email. Try again later.');
+      return;
+    }
+
+    // Same message whether or not the address has an account (no account probing).
+    this.setAuthMessage('If this email has an account, a reset link is on its way. Check your inbox.', true);
+  },
+
+  openPasswordResetModal() {
+    const modal = document.getElementById('password-reset-modal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  async submitNewPassword() {
+    const pw = document.getElementById('new-password-input');
+    const confirmPw = document.getElementById('new-password-confirm');
+    const errElem = document.getElementById('password-reset-error');
+    const setError = msg => { if (errElem) errElem.innerText = msg; };
+
+    const password = pw ? pw.value : '';
+    if (password.length < 6) {
+      setError('The password must be at least 6 characters long.');
+      return;
+    }
+    if (password !== (confirmPw ? confirmPw.value : '')) {
+      setError('The two passwords do not match.');
+      return;
+    }
+
+    const { error } = await API.updatePassword(password);
+    if (error) {
+      console.error('[App.submitNewPassword] Error:', error);
+      setError(error.message || 'Could not change the password.');
+      return;
+    }
+
+    setError('');
+    if (pw) pw.value = '';
+    if (confirmPw) confirmPw.value = '';
+    const modal = document.getElementById('password-reset-modal');
+    if (modal) modal.style.display = 'none';
+
+    // drop the recovery tokens from the address bar
+    history.replaceState(null, '', window.location.pathname);
+    alert('Password updated. You are now logged in.');
+  },
+
   async handleLogin() {
+    const staleMsg = document.getElementById('auth-error');
+    if (staleMsg) staleMsg.classList.remove('auth-success');
+
     const emailElem = document.getElementById('auth-email');
     const passElem = document.getElementById('auth-password');
     const errElem = document.getElementById('auth-error');
@@ -167,6 +236,9 @@ const App = {
   },
 
   async handleSignUp() {
+    const staleMsg = document.getElementById('auth-error');
+    if (staleMsg) staleMsg.classList.remove('auth-success');
+
     const emailElem = document.getElementById('auth-email');
     const passElem = document.getElementById('auth-password');
     const errElem = document.getElementById('auth-error');
@@ -207,6 +279,9 @@ const App = {
   },
 
   toggleAuthMode() {
+    const staleMsg = document.getElementById('auth-error');
+    if (staleMsg) staleMsg.classList.remove('auth-success');
+
     this.authMode = this.authMode === 'login' ? 'signup' : 'login';
 
     const titleElem = document.getElementById('auth-title');
@@ -215,6 +290,8 @@ const App = {
     const toggleBtn = document.getElementById('auth-toggle-btn');
     const errElem = document.getElementById('auth-error');
     const consentRow = document.getElementById('auth-consent-row');
+    const forgotRow = document.getElementById('auth-forgot-row');
+    if (forgotRow) forgotRow.style.display = this.authMode === 'signup' ? 'none' : 'block';
 
     if (this.authMode === 'signup') {
       if (titleElem) titleElem.innerText = 'Sign Up';
@@ -2016,6 +2093,23 @@ const App = {
     UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId || this.categoriesList[0]?.id || null);
   }
 };
+
+// Password recovery: the e-mail link signs the user in with a recovery session
+// and Supabase fires PASSWORD_RECOVERY - ask for the new password right away.
+if (typeof supabase !== 'undefined' && supabase) {
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') App.openPasswordResetModal();
+  });
+}
+
+// Offline support: cache the app files so it can start without a connection.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err =>
+      console.error('[ServiceWorker] Registration failed:', err)
+    );
+  });
+}
 
 // iOS Safari ignores user-scalable=no, so block pinch gestures explicitly.
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(evt =>
