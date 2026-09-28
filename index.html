@@ -521,86 +521,103 @@
     </div>
   </div>
 
-  <!-- Task Add/Edit Modal -->
+  <!-- Task Add/Edit Modal (calendar-style) -->
   <div id="task-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
+    <div class="modal-content cal-modal-content">
       <div class="modal-header">
+        <button class="cal-cancel-btn" onclick="App.closeTaskModal()" aria-label="Cancel">&times;</button>
         <h3 id="task-modal-title">New Task</h3>
-        <button class="close-btn" onclick="App.closeTaskModal()">&times;</button>
+        <button class="cal-save-btn" onclick="App.saveTaskModal()" aria-label="Save">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </button>
       </div>
 
-      <div class="modal-body">
-        <label for="task-name-input">Task name</label>
-        <input
-          type="text"
-          id="task-name-input"
-          placeholder="e.g. Take out the trash"
-          style="width: 100%; margin-bottom: 10px; padding: 10px;">
-
-        <label for="task-category-input">Category</label>
-        <select
-          id="task-category-input"
-          style="width: 100%; margin-bottom: 8px; padding: 10px;">
-        </select>
-
-        <button
-          type="button"
-          class="category-link"
-          onclick="App.openTaskCategoriesModal()">
-          Manage Categories
-        </button>
-
-        <label for="task-repeat-select">Repeat</label>
-        <select
-          id="task-repeat-select"
-          onchange="App.setTaskRecurrenceType(this.value)"
-          style="width: 100%; margin-bottom: 12px; padding: 10px;">
-          <option value="once">Does not repeat</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-        </select>
-
-        <div id="task-weekdays-wrapper" style="display: none;">
-          <label>On these days</label>
-          <div id="task-weekday-picker" class="weekday-picker"></div>
-        </div>
-
-        <div id="task-monthday-wrapper" style="display: none;">
-          <label for="task-monthday-input">Day of the month</label>
+      <div class="cal-modal-body">
+        <div class="cal-group">
           <input
-            type="number"
-            id="task-monthday-input"
-            min="1"
-            max="31"
-            placeholder="e.g. 20"
-            style="width: 100%; margin-bottom: 12px; padding: 10px;">
+            type="text"
+            id="task-name-input"
+            class="cal-title-input"
+            placeholder="Title"
+            maxlength="120">
         </div>
 
-        <label for="task-due-date-input" id="task-date-label">Date</label>
-        <input
-          type="date"
-          id="task-due-date-input"
-          style="width: 100%; margin-bottom: 12px; padding: 10px;">
-
-        <div class="task-time-row">
-          <div>
-            <label for="task-start-time-input">From (optional)</label>
-            <input type="time" id="task-start-time-input" style="width: 100%; padding: 10px;">
+        <div class="cal-group">
+          <div class="cal-row">
+            <span class="cal-label">All-day</span>
+            <label class="switch">
+              <input type="checkbox" id="task-allday-toggle" onchange="App.setTaskAllDay(this.checked)">
+              <span class="slider"></span>
+            </label>
           </div>
-          <div>
-            <label for="task-end-time-input">Until (optional)</label>
-            <input type="time" id="task-end-time-input" style="width: 100%; padding: 10px;">
+
+          <div class="cal-row">
+            <span class="cal-label">Starts</span>
+            <div class="cal-pills">
+              <input
+                type="date"
+                id="task-due-date-input"
+                class="cal-pill"
+                onchange="App.onTaskStartDateChange()">
+              <input type="time" id="task-start-time-input" class="cal-pill cal-pill-time">
+            </div>
+          </div>
+
+          <div class="cal-row">
+            <span class="cal-label">Ends</span>
+            <div class="cal-pills">
+              <input type="date" id="task-end-date-input" class="cal-pill">
+              <input type="time" id="task-end-time-input" class="cal-pill cal-pill-time">
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="modal-footer">
-        <button
-          class="btn-primary"
-          onclick="App.saveTaskModal()"
-          style="width: 100%;">
-          Save
-        </button>
+        <div class="cal-group">
+          <div class="cal-row">
+            <span class="cal-label">Repeat</span>
+            <select
+              id="task-repeat-select"
+              class="cal-select"
+              onchange="App.setTaskRecurrenceType(this.value)">
+              <option value="once">Never</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+
+          <div id="task-weekdays-wrapper" class="cal-row cal-row-block" style="display: none;">
+            <div id="task-weekday-picker" class="weekday-picker"></div>
+          </div>
+
+          <div id="task-monthday-wrapper" class="cal-row" style="display: none;">
+            <span class="cal-label">Day of month</span>
+            <input
+              type="number"
+              id="task-monthday-input"
+              class="cal-pill cal-pill-num"
+              min="1"
+              max="31"
+              placeholder="20">
+          </div>
+        </div>
+
+        <div class="cal-group">
+          <div class="cal-row">
+            <span class="cal-label">Category</span>
+            <select id="task-category-input" class="cal-select"></select>
+          </div>
+
+          <div class="cal-row">
+            <button
+              type="button"
+              class="category-link cal-link"
+              onclick="App.openTaskCategoriesModal()">
+              Manage Categories
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
