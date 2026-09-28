@@ -1843,3 +1843,153 @@ input:checked + .slider:before {
   gap: 6px;
   flex-shrink: 0;
 }
+
+/* ---------- Calendar-style task editor ---------- */
+.cal-modal-content {
+  max-width: 400px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.cal-modal-content .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.cal-modal-content .modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.cal-cancel-btn,
+.cal-save-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cal-save-btn {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #04160c;
+}
+
+.cal-save-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.cal-modal-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cal-group {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.cal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.cal-row + .cal-row {
+  border-top: 1px solid var(--border-color);
+}
+
+.cal-row-block {
+  display: block;
+}
+
+.cal-label {
+  font-size: 15px;
+  color: var(--text-main);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.cal-title-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-size: 17px;
+  font-weight: 600;
+  padding: 15px 14px;
+}
+
+.cal-pills {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.cal-pill,
+.cal-select {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  background: var(--card-bg);
+  border: none;
+  border-radius: 10px;
+  color: var(--text-main);
+  font-size: 15px;
+  padding: 8px 10px;
+  text-align: center;
+  font-family: inherit;
+}
+
+.cal-pill {
+  flex: 1 1 110px;
+  width: auto;
+}
+
+.cal-pill-time {
+  flex: 0 1 80px;
+}
+
+.cal-pill-num {
+  width: 82px;
+}
+
+.cal-select {
+  text-align: right;
+  max-width: 60%;
+  color: var(--text-sub);
+}
+
+.cal-link {
+  padding: 0;
+}
+
+.cal-row .weekday-picker {
+  margin: 0;
+}
