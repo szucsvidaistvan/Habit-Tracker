@@ -324,6 +324,7 @@ const API = {
       due_date: fields.dueDate || null,
       recurrence_days: fields.recurrenceType === 'weekly' ? fields.recurrenceDays : null,
       recurrence_month_day: fields.recurrenceType === 'monthly' ? fields.monthDay : null,
+      end_date: fields.recurrenceType === 'once' ? (fields.endDate || null) : null,
       start_time: fields.startTime || null,
       end_time: fields.endTime || null
     };
