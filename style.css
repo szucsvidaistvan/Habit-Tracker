@@ -2024,3 +2024,34 @@ input:checked + .slider:before {
 .auth-error.auth-success {
   color: var(--accent-color);
 }
+
+.auth-brand {
+  margin-bottom: 20px;
+}
+
+.auth-brand h1 {
+  font-size: 30px;
+}
+
+.sync-badge {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  left: 50%;
+  transform: translate(-50%, -140%);
+  z-index: 950;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--border-color);
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.sync-badge.visible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
