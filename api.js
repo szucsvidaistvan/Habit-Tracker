@@ -351,6 +351,14 @@ const API = {
     return await supabase.from('task_logs').select('*');
   },
 
+  // Undo a completion. Pass a date to undo just that day (repeating tasks),
+  // or omit it to clear every completion (one-time tasks).
+  async removeTaskLogs(taskId, dateStr = null) {
+    let query = supabase.from('task_logs').delete().eq('task_id', taskId);
+    if (dateStr) query = query.eq('log_date', dateStr);
+    return await query;
+  },
+
   async addTaskLog(taskId, dateStr) {
     return await supabase.from('task_logs').insert([{
       task_id: taskId,
