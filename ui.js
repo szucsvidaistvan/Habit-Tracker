@@ -374,18 +374,28 @@ const UI = {
     let overdue = false;
 
     if (t.recurrence_type === 'once') {
-      if (t.due_date && t.due_date < todayStr) {
+      const deadline = t.end_date || t.due_date;
+      if (deadline && deadline < todayStr) {
         overdue = true;
-        parts.push(`Overdue • ${t.due_date}`);
+        parts.push(`Overdue • ${deadline}`);
       } else if (t.due_date && (includeDate || t.due_date !== todayStr)) {
         parts.push(t.due_date === todayStr ? 'Today' : t.due_date);
       }
+
+      const from = this.formatTime(t.start_time);
+      const until = this.formatTime(t.end_time);
+      if (t.end_date && t.end_date !== t.due_date) {
+        // spans several days: "09:00 → 2026-10-02 17:00"
+        parts.push(`${from ? from + ' ' : ''}→ ${t.end_date}${until ? ' ' + until : ''}`);
+      } else {
+        const time = this.formatTaskTimeText(t);
+        if (time) parts.push(time);
+      }
     } else {
       parts.push(this.formatTaskRepeatText(t));
+      const time = this.formatTaskTimeText(t);
+      if (time) parts.push(time);
     }
-
-    const time = this.formatTaskTimeText(t);
-    if (time) parts.push(time);
 
     return { text: parts.filter(Boolean).join(' • '), overdue };
   },
