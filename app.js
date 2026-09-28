@@ -1584,12 +1584,43 @@ const App = {
     const select = document.getElementById('task-repeat-select');
     const daysWrapper = document.getElementById('task-weekdays-wrapper');
     const monthWrapper = document.getElementById('task-monthday-wrapper');
-    const dateLabel = document.getElementById('task-date-label');
+    const endDate = document.getElementById('task-end-date-input');
 
     if (select) select.value = type;
     if (daysWrapper) daysWrapper.style.display = type === 'weekly' ? 'block' : 'none';
-    if (monthWrapper) monthWrapper.style.display = type === 'monthly' ? 'block' : 'none';
-    if (dateLabel) dateLabel.innerText = type === 'once' ? 'Date' : 'Starts on';
+    if (monthWrapper) monthWrapper.style.display = type === 'monthly' ? 'flex' : 'none';
+    // a repeating task has no single end date, only the time of day
+    if (endDate) endDate.style.display = type === 'once' ? '' : 'none';
+  },
+
+  // All-day on = no times. Turning it off pre-fills the next full hour, like a calendar.
+  setTaskAllDay(allDay) {
+    const toggle = document.getElementById('task-allday-toggle');
+    const fromInput = document.getElementById('task-start-time-input');
+    const untilInput = document.getElementById('task-end-time-input');
+
+    if (toggle) toggle.checked = allDay;
+    if (fromInput) fromInput.style.display = allDay ? 'none' : '';
+    if (untilInput) untilInput.style.display = allDay ? 'none' : '';
+
+    if (!allDay && fromInput && untilInput && !fromInput.value) {
+      const now = new Date();
+      const startH = Math.min(now.getHours() + 1, 22);
+      const pad = n => String(n).padStart(2, '0');
+      fromInput.value = `${pad(startH)}:00`;
+      untilInput.value = `${pad(startH + 1)}:00`;
+    }
+    if (allDay) {
+      if (fromInput) fromInput.value = '';
+      if (untilInput) untilInput.value = '';
+    }
+  },
+
+  // Like a calendar: pushing the start date past the end date drags the end date along.
+  onTaskStartDateChange() {
+    const start = document.getElementById('task-due-date-input');
+    const end = document.getElementById('task-end-date-input');
+    if (start && end && (!end.value || end.value < start.value)) end.value = start.value;
   },
 
   toggleRecurrenceDay(dayIndex) {
@@ -1604,10 +1635,15 @@ const App = {
     const monthInput = document.getElementById('task-monthday-input');
     const fromInput = document.getElementById('task-start-time-input');
     const untilInput = document.getElementById('task-end-time-input');
+    const endDate = document.getElementById('task-end-date-input');
+    const startDate = document.getElementById('task-due-date-input');
 
     if (monthInput) monthInput.value = task.recurrence_month_day || '';
     if (fromInput) fromInput.value = task.start_time ? String(task.start_time).slice(0, 5) : '';
     if (untilInput) untilInput.value = task.end_time ? String(task.end_time).slice(0, 5) : '';
+    if (endDate) endDate.value = task.end_date || (startDate ? startDate.value : '');
+
+    this.setTaskAllDay(!(task.start_time || task.end_time));
   },
 
   openAddTaskModal() {
@@ -1692,10 +1728,20 @@ const App = {
     }
     const fromInput = document.getElementById('task-start-time-input');
     const untilInput = document.getElementById('task-end-time-input');
-    const startTime = fromInput ? fromInput.value : '';
-    const endTime = untilInput ? untilInput.value : '';
-    if (startTime && endTime && endTime < startTime) {
-      alert('"Until" must be later than "From".');
+    const allDayToggle = document.getElementById('task-allday-toggle');
+    const allDay = allDayToggle ? allDayToggle.checked : true;
+    const startTime = allDay || !fromInput ? '' : fromInput.value;
+    const endTime = allDay || !untilInput ? '' : untilInput.value;
+    const endDateInput = document.getElementById('task-end-date-input');
+    const endDate = recurrenceType === 'once' && endDateInput ? (endDateInput.value || dueDate) : '';
+
+    if (endDate && endDate < dueDate) {
+      alert('The end date can\'t be before the start date.');
+      return;
+    }
+    const sameDay = !endDate || endDate === dueDate;
+    if (sameDay && startTime && endTime && endTime < startTime) {
+      alert('The end time can\'t be before the start time.');
       return;
     }
     if (recurrenceType === 'weekly' && recurrenceDays.length === 0) {
@@ -1703,7 +1749,7 @@ const App = {
       return;
     }
 
-    const fields = { title, categoryId, recurrenceType, dueDate, recurrenceDays, monthDay, startTime, endTime };
+    const fields = { title, categoryId, recurrenceType, dueDate, endDate, recurrenceDays, monthDay, startTime, endTime };
 
     let error;
     if (this.editingTaskId) {
@@ -1717,7 +1763,7 @@ const App = {
 
     if (error) {
       console.error('[App.saveTaskModal] Error:', error);
-      alert('Could not save the task. Did you run both tasks SQL migrations in Supabase?');
+      alert('Could not save the task. Did you run all the tasks SQL migrations in Supabase?');
       return;
     }
 
