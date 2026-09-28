@@ -338,7 +338,20 @@ const UI = {
     `).join('');
   },
 
-  formatTaskSubInfo(t) {
+  formatTime(timeStr) {
+    return timeStr ? String(timeStr).slice(0, 5) : '';
+  },
+
+  formatTaskTimeText(t) {
+    const from = this.formatTime(t.start_time);
+    const until = this.formatTime(t.end_time);
+    if (from && until) return `${from}–${until}`;
+    if (until) return `until ${until}`;
+    if (from) return `from ${from}`;
+    return '';
+  },
+
+  formatTaskRepeatText(t) {
     if (t.recurrence_type === 'weekly') {
       const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const days = (t.recurrence_days || [])
@@ -346,16 +359,73 @@ const UI = {
         .sort((a, b) => a - b)
         .map(d => names[d])
         .join(', ');
-      return `<span class="habit-time">Repeats: ${days || '—'}</span>`;
+      return `Every ${days || '—'}`;
     }
+    if (t.recurrence_type === 'monthly') {
+      return `Monthly on the ${t.recurrence_month_day}.`;
+    }
+    return '';
+  },
 
-    if (!t.due_date) return '';
-
+  // Plain-text description used in the lists (escaped by the caller).
+  getTaskMeta(t, { includeDate = false } = {}) {
     const todayStr = this.getLocalDateString();
-    if (t.due_date < todayStr) {
-      return `<span class="habit-time task-due-overdue">Overdue • ${t.due_date}</span>`;
+    const parts = [];
+    let overdue = false;
+
+    if (t.recurrence_type === 'once') {
+      if (t.due_date && t.due_date < todayStr) {
+        overdue = true;
+        parts.push(`Overdue • ${t.due_date}`);
+      } else if (t.due_date && (includeDate || t.due_date !== todayStr)) {
+        parts.push(t.due_date === todayStr ? 'Today' : t.due_date);
+      }
+    } else {
+      parts.push(this.formatTaskRepeatText(t));
     }
-    return `<span class="habit-time">Due today</span>`;
+
+    const time = this.formatTaskTimeText(t);
+    if (time) parts.push(time);
+
+    return { text: parts.filter(Boolean).join(' • '), overdue };
+  },
+
+  formatTaskSubInfo(t) {
+    const meta = this.getTaskMeta(t);
+    if (!meta.text) return '';
+    return `<span class="habit-time ${meta.overdue ? 'task-due-overdue' : ''}">${this.escapeHtml(meta.text)}</span>`;
+  },
+
+  renderAllTasks(allTasks, categories = []) {
+    const container = document.getElementById('all-tasks-list');
+    if (!container) return;
+
+    if (!allTasks || allTasks.length === 0) {
+      container.innerHTML = '<div class="loader">No tasks yet.</div>';
+      return;
+    }
+
+    const categoryName = id => {
+      const c = (categories || []).find(cat => String(cat.id) === String(id));
+      return c ? c.name : 'Other';
+    };
+
+    container.innerHTML = allTasks.map(t => {
+      const meta = this.getTaskMeta(t, { includeDate: true });
+      const sub = [categoryName(t.category_id), meta.text].filter(Boolean).join(' • ');
+      return `
+        <div class="all-task-row">
+          <div class="all-task-info">
+            <span class="all-task-name">${this.escapeHtml(t.title)}</span>
+            <span class="habit-time ${meta.overdue ? 'task-due-overdue' : ''}">${this.escapeHtml(sub)}</span>
+          </div>
+          <div class="all-task-actions">
+            <button class="btn-secondary btn-sm" onclick="App.editFromAllTasks('${t.id}')">Edit</button>
+            <button class="btn-danger btn-sm" onclick="App.handleDeleteTask('${t.id}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
   },
 
   renderTasks(tasksList, categories = []) {
