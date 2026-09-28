@@ -1,9 +1,9 @@
 // Habit Tracker service worker
-// Step 1: make the app itself load offline (app shell + CDN libraries + icons).
-// Data (Supabase) is deliberately NOT cached here - that comes in the next step.
+// Makes the app itself load offline (app shell + CDN libraries + icons).
+// Supabase requests are never cached here - offline.js stores the data instead.
 
 // Bump this whenever you want every device to drop its old cached files.
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = `habit-tracker-${CACHE_VERSION}`;
 
 // Same-origin files, relative to the service worker's own folder.
@@ -12,6 +12,7 @@ const APP_SHELL = [
   'index.html',
   'style.css',
   'api.js',
+  'offline.js',
   'ui.js',
   'app.js',
   'manifest.json',
