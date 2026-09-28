@@ -1377,20 +1377,6 @@ input:checked + .slider:before {
   animation: coin-drop-in 0.65s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.achievement-coin::before {
-  content: '';
-  position: absolute;
-  inset: -7px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 28%, #0a7a45, #02502c 70%, #012717 100%);
-  z-index: -1;
-  transform: translateZ(-6px);
-}
-
-.achievement-coin.locked::before {
-  background: radial-gradient(circle at 35% 28%, #475569, #1e293b 70%, #0f172a 100%);
-}
-
 .achievement-coin:active {
   cursor: grabbing;
 }
@@ -1408,6 +1394,7 @@ input:checked + .slider:before {
   align-items: center;
   justify-content: center;
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   border: 3px solid rgba(255, 255, 255, 0.3);
   box-shadow:
     0 10px 22px rgba(0, 0, 0, 0.5),
@@ -1416,11 +1403,24 @@ input:checked + .slider:before {
 }
 
 .coin-front {
+  transform: translateZ(7px);
   background: radial-gradient(circle at 35% 28%, #d3ffe9, var(--accent-color) 55%, #049150 100%);
 }
 
+/* stacked discs that form the coin's side wall (its thickness) */
+.coin-edge-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #12a35d, #06663a);
+}
+
+.achievement-coin.locked .coin-edge-layer {
+  background: linear-gradient(135deg, #64748b, #334155);
+}
+
 .coin-back {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(7px);
   background: radial-gradient(circle at 35% 28%, #fff3cf, #e2b23f 55%, #8a651a 100%);
 }
 
@@ -1803,4 +1803,43 @@ input:checked + .slider:before {
   border-radius: 8px;
   background: var(--card-bg);
   color: var(--text-main);
+}
+
+.task-time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.all-task-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.all-task-row:last-child {
+  border-bottom: none;
+}
+
+.all-task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.all-task-name {
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.all-task-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
