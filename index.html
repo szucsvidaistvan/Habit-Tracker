@@ -106,7 +106,27 @@
         <div id="tasks-date" class="date-display"></div>
       </header>
 
-      <div id="tasks-container" class="habits-list"></div>
+      <div class="task-subtabs">
+        <button id="task-subtab-today" class="task-subtab active" onclick="App.switchTaskSubTab('today')">
+          Today<span id="task-subtab-today-count" class="task-subtab-count"></span>
+        </button>
+        <button id="task-subtab-upcoming" class="task-subtab" onclick="App.switchTaskSubTab('upcoming')">
+          Upcoming<span id="task-subtab-upcoming-count" class="task-subtab-count"></span>
+        </button>
+        <button id="task-subtab-completed" class="task-subtab" onclick="App.switchTaskSubTab('completed')">
+          Completed<span id="task-subtab-completed-count" class="task-subtab-count"></span>
+        </button>
+      </div>
+
+      <div id="tasks-panel-today">
+        <div id="tasks-container" class="habits-list"></div>
+      </div>
+      <div id="tasks-panel-upcoming" style="display: none;">
+        <div id="tasks-upcoming-container" class="all-task-list-standalone"></div>
+      </div>
+      <div id="tasks-panel-completed" style="display: none;">
+        <div id="tasks-completed-container" class="all-task-list-standalone"></div>
+      </div>
 
       <div class="habit-actions">
         <button
@@ -288,6 +308,15 @@
         </div>
 
         <div id="freeze-card-body"></div>
+      </div>
+
+      <div class="card" style="margin-top: 16px;">
+        <button id="notifications-toggle-btn" class="data-export-row" onclick="App.toggleNotifications()">
+          <span class="data-export-icon">🔔</span>
+          <span id="notifications-toggle-label" class="data-export-label">Enable Reminders</span>
+          <span class="data-export-chevron">›</span>
+        </button>
+        <p id="notifications-hint" class="notifications-hint"></p>
       </div>
 
       <div class="card" style="margin-top: 16px;">
@@ -476,6 +505,14 @@
           placeholder="0"
           min="0"
           style="width: 100%; margin-bottom: 15px; padding: 10px;">
+
+        <label for="habit-reminder-input">
+          Daily reminder (optional)
+        </label>
+        <input
+          type="time"
+          id="habit-reminder-input"
+          style="width: 100%; margin-bottom: 10px; padding: 10px;">
       </div>
 
       <div class="modal-footer">
@@ -581,6 +618,14 @@
               <input type="date" id="task-end-date-input" class="cal-pill">
               <input type="time" id="task-end-time-input" class="cal-pill cal-pill-time">
             </div>
+          </div>
+
+          <div class="cal-row">
+            <span class="cal-label">Remind me</span>
+            <label class="switch">
+              <input type="checkbox" id="task-reminder-toggle" checked>
+              <span class="slider"></span>
+            </label>
           </div>
         </div>
 
