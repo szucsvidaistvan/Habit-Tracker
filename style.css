@@ -1816,10 +1816,10 @@ input:checked + .slider:before {
 
 .all-task-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -1838,12 +1838,77 @@ input:checked + .slider:before {
   color: var(--text-main);
   font-weight: 700;
   font-size: 14px;
+  word-break: break-word;
 }
 
 .all-task-actions {
   display: flex;
   gap: 6px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.all-task-list-standalone {
+  padding: 4px 2px 8px;
+}
+
+/* Sub-navigation on the Tasks tab: Today / Upcoming / Completed */
+.task-subtabs {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+
+.task-subtab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-sub);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.task-subtab.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #06210f;
+}
+
+.task-subtab-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.task-subtab.active .task-subtab-count {
+  background: rgba(6, 33, 15, 0.25);
+}
+
+.notifications-hint {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+/* A habit/task created or edited offline, still waiting to sync. */
+.pending-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f5b942;
+  box-shadow: 0 0 0 3px rgba(245, 185, 66, 0.2);
+  vertical-align: middle;
 }
 
 /* ---------- Calendar-style task editor ---------- */
@@ -2005,11 +2070,6 @@ input:checked + .slider:before {
 .all-task-row.done .habit-time {
   color: var(--accent-color);
   font-weight: 700;
-}
-
-.all-task-actions {
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .auth-forgot-row {
