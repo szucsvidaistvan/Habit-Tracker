@@ -44,6 +44,11 @@ const API = {
     });
   },
 
+  // Lets the reminders Edge Function know which local time of day to use for this person.
+  async updateTimezone(timezone) {
+    return await supabase.auth.updateUser({ data: { timezone } });
+  },
+
   async loginWithGoogle() {
     return await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -168,7 +173,7 @@ const API = {
       .eq('log_date', dateStr);
   },
 
-  async createHabit(userId, title, weeklyTarget, targetMinutes = 0, categoryId = null, position = 0) {
+  async createHabit(userId, title, weeklyTarget, targetMinutes = 0, categoryId = null, position = 0, reminderTime = null) {
     return await supabase.from('habits').insert([{
       user_id: userId,
       title: title,
@@ -176,16 +181,20 @@ const API = {
       target_minutes: targetMinutes,
       category_id: categoryId || null,
       position,
-      is_active: true
-    }]);
+      is_active: true,
+      reminder_time: reminderTime || null,
+      reminder_enabled: !!reminderTime
+    }]).select().single();
   },
 
-  async updateHabit(habitId, title, weeklyTarget, targetMinutes = 0, categoryId = null) {
+  async updateHabit(habitId, title, weeklyTarget, targetMinutes = 0, categoryId = null, reminderTime = null) {
     return await supabase.from('habits').update({
       title: title,
       weekly_target: weeklyTarget,
       target_minutes: targetMinutes,
-      category_id: categoryId || null
+      category_id: categoryId || null,
+      reminder_time: reminderTime || null,
+      reminder_enabled: !!reminderTime
     }).eq('id', habitId);
   },
 
@@ -336,7 +345,8 @@ const API = {
       recurrence_month_day: fields.recurrenceType === 'monthly' ? fields.monthDay : null,
       end_date: fields.recurrenceType === 'once' ? (fields.endDate || null) : null,
       start_time: fields.startTime || null,
-      end_time: fields.endTime || null
+      end_time: fields.endTime || null,
+      reminder_enabled: fields.reminderEnabled !== false
     };
   },
 
@@ -345,7 +355,7 @@ const API = {
       user_id: userId,
       position: fields.position || 0,
       ...this.buildTaskRow(fields)
-    }]);
+    }]).select().single();
   },
 
   async updateTask(taskId, fields) {
@@ -367,6 +377,21 @@ const API = {
     let query = supabase.from('task_logs').delete().eq('task_id', taskId);
     if (dateStr) query = query.eq('log_date', dateStr);
     return await query;
+  },
+
+  // ---------- Push notifications ----------
+
+  async savePushSubscription(userId, subscription) {
+    return await supabase.from('push_subscriptions').upsert([{
+      user_id: userId,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth
+    }], { onConflict: 'endpoint' });
+  },
+
+  async deletePushSubscription(endpoint) {
+    return await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
   },
 
   async addTaskLog(taskId, dateStr) {
