@@ -148,7 +148,7 @@ const UI = {
 
         <div class="habit-item ${fulfilled ? 'habit-fulfilled' : ''}" id="swipe-content-${h.id}">
           <div class="habit-info">
-            <span class="habit-name">${this.escapeHtml(h.title)}</span>
+            <span class="habit-name">${this.escapeHtml(h.title)}${h._pending ? ' <span class="pending-dot" title="Will sync when back online"></span>' : ''}</span>
             <span class="habit-time">${subInfo}</span>
             ${fulfilledBadge}
           </div>
@@ -406,6 +406,26 @@ const UI = {
     return `<span class="habit-time ${meta.overdue ? 'task-due-overdue' : ''}">${this.escapeHtml(meta.text)}</span>`;
   },
 
+  taskCategoryName(categoryId, categories = []) {
+    const c = (categories || []).find(cat => String(cat.id) === String(categoryId));
+    return c ? c.name : 'Other';
+  },
+
+  // One row shared by the All Tasks modal and the Upcoming / Completed tabs, so they all
+  // get the same (fixed) layout: name + one meta line on top, actions on their own row below.
+  taskRow(t, { subLines = [], overdue = false, done = false, actions = '' } = {}) {
+    const sub = subLines.filter(Boolean).join(' • ');
+    return `
+      <div class="all-task-row ${done ? 'done' : ''} ${t._pending ? 'is-pending' : ''}">
+        <div class="all-task-info">
+          <span class="all-task-name">${this.escapeHtml(t.title)}${t._pending ? ' <span class="pending-dot" title="Will sync when back online"></span>' : ''}</span>
+          ${sub ? `<span class="habit-time ${overdue ? 'task-due-overdue' : ''}">${this.escapeHtml(sub)}</span>` : ''}
+        </div>
+        <div class="all-task-actions">${actions}</div>
+      </div>
+    `;
+  },
+
   renderAllTasks(allTasks, categories = [], doneIds = new Set()) {
     const container = document.getElementById('all-tasks-list');
     if (!container) return;
@@ -415,30 +435,95 @@ const UI = {
       return;
     }
 
-    const categoryName = id => {
-      const c = (categories || []).find(cat => String(cat.id) === String(id));
-      return c ? c.name : 'Other';
-    };
-
     container.innerHTML = allTasks.map(t => {
       const meta = this.getTaskMeta(t, { includeDate: true });
       const isDone = doneIds.has(String(t.id));
-      const sub = [isDone ? '✓ Done' : '', categoryName(t.category_id), meta.text]
-        .filter(Boolean).join(' • ');
-      return `
-        <div class="all-task-row ${isDone ? 'done' : ''}">
-          <div class="all-task-info">
-            <span class="all-task-name">${this.escapeHtml(t.title)}</span>
-            <span class="habit-time ${meta.overdue ? 'task-due-overdue' : ''}">${this.escapeHtml(sub)}</span>
-          </div>
-          <div class="all-task-actions">
-            ${isDone ? `<button class="btn-primary btn-sm" onclick="App.restoreTask('${t.id}')">Undo</button>` : ''}
-            <button class="btn-secondary btn-sm" onclick="App.editFromAllTasks('${t.id}')">Edit</button>
-            <button class="btn-danger btn-sm" onclick="App.handleDeleteTask('${t.id}')">Delete</button>
-          </div>
-        </div>
+      const actions = `
+        ${isDone ? `<button class="btn-primary btn-sm" onclick="App.restoreTask('${t.id}')">Undo</button>` : ''}
+        <button class="btn-secondary btn-sm" onclick="App.editFromAllTasks('${t.id}')">Edit</button>
+        <button class="btn-danger btn-sm" onclick="App.handleDeleteTask('${t.id}')">Delete</button>
       `;
+      return this.taskRow(t, {
+        subLines: [isDone ? '✓ Done' : '', this.taskCategoryName(t.category_id, categories), meta.text],
+        overdue: meta.overdue,
+        done: isDone,
+        actions
+      });
     }).join('');
+  },
+
+  // Tasks due on a later day - so they are not only visible once their day arrives.
+  renderUpcomingTasks(upcomingTasks, categories = []) {
+    const container = document.getElementById('tasks-upcoming-container');
+    if (!container) return;
+
+    if (!upcomingTasks || upcomingTasks.length === 0) {
+      container.innerHTML = '<div class="loader">Nothing scheduled for later.</div>';
+      return;
+    }
+
+    container.innerHTML = upcomingTasks.map(t => {
+      const meta = this.getTaskMeta(t, { includeDate: true });
+      const actions = `
+        <button class="btn-secondary btn-sm" onclick="App.editFromAllTasks('${t.id}')">Edit</button>
+        <button class="btn-danger btn-sm" onclick="App.handleDeleteTask('${t.id}')">Delete</button>
+      `;
+      return this.taskRow(t, {
+        subLines: [this.taskCategoryName(t.category_id, categories), meta.text],
+        overdue: meta.overdue,
+        actions
+      });
+    }).join('');
+  },
+
+  // Tasks checked off recently. Each one shows how much longer it stays here.
+  renderCompletedTasks(completedTasks, categories = [], retentionDays = 3) {
+    const container = document.getElementById('tasks-completed-container');
+    if (!container) return;
+
+    if (!completedTasks || completedTasks.length === 0) {
+      container.innerHTML = '<div class="loader">Nothing completed yet.</div>';
+      return;
+    }
+
+    const todayStr = this.getLocalDateString();
+    container.innerHTML = completedTasks.map(t => {
+      const ageDays = Math.max(0, Math.round((new Date(todayStr) - new Date(t.completedOn)) / 86400000));
+      const daysLeft = Math.max(1, retentionDays - ageDays);
+      const when = t.completedOn === todayStr ? 'Today' : t.completedOn;
+      const removalNote = t.recurrence_type === 'once'
+        ? `removed in ${daysLeft}d`
+        : `mark clears in ${daysLeft}d`;
+      const actions = `
+        <button class="btn-primary btn-sm" onclick="App.restoreTask('${t.id}')">Undo</button>
+        <button class="btn-secondary btn-sm" onclick="App.editFromAllTasks('${t.id}')">Edit</button>
+        <button class="btn-danger btn-sm" onclick="App.handleDeleteTask('${t.id}')">Delete</button>
+      `;
+      return this.taskRow(t, {
+        subLines: ['✓ Done', `Completed ${when}`, this.taskCategoryName(t.category_id, categories), removalNote],
+        done: true,
+        actions
+      });
+    }).join('');
+  },
+
+  showTaskSubTab(view) {
+    ['today', 'upcoming', 'completed'].forEach(name => {
+      const panel = document.getElementById(`tasks-panel-${name}`);
+      if (panel) panel.style.display = name === view ? '' : 'none';
+      const btn = document.getElementById(`task-subtab-${name}`);
+      if (btn) btn.classList.toggle('active', name === view);
+    });
+  },
+
+  setTaskSubTabCounts({ today = 0, upcoming = 0, completed = 0 } = {}) {
+    const set = (id, n) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = n > 0 ? String(n) : '';
+    };
+    set('task-subtab-today-count', today);
+    set('task-subtab-upcoming-count', upcoming);
+    set('task-subtab-completed-count', completed);
   },
 
   renderTasks(tasksList, categories = []) {
@@ -508,7 +593,7 @@ const UI = {
 
         <div class="habit-item" id="task-swipe-content-${t.id}">
           <div class="habit-info">
-            <span class="habit-name">${this.escapeHtml(t.title)}</span>
+            <span class="habit-name">${this.escapeHtml(t.title)}${t._pending ? ' <span class="pending-dot" title="Will sync when back online"></span>' : ''}</span>
             ${this.formatTaskSubInfo(t)}
           </div>
 
