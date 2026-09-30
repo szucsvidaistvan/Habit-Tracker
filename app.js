@@ -2457,4 +2457,5 @@ document.addEventListener('DOMContentLoaded', () => {
   if (bugDetails) {
     bugDetails.addEventListener('toggle', () => App.adjustSliderHeight());
   }
+  
 });
