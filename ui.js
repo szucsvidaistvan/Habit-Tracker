@@ -48,25 +48,51 @@ const UI = {
     select.innerHTML = options;
   },
 
-  renderCategories(categories) {
+  renderCategories(categories, items = []) {
     const container = document.getElementById('categories-list');
     if (!container) return;
 
-    container.innerHTML = (categories || []).map(category => `
-      <div class="category-management-row">
-        <span>${this.escapeHtml(category.name)}</span>
+    const arrows = (id, canUp, canDown) => `
+      <span class="reorder-btns">
+        <button type="button" class="reorder-btn" ${canUp ? '' : 'disabled'}
+          onclick="App.moveHabit('${id}', -1)" aria-label="Move up">▲</button>
+        <button type="button" class="reorder-btn" ${canDown ? '' : 'disabled'}
+          onclick="App.moveHabit('${id}', 1)" aria-label="Move down">▼</button>
+      </span>`;
 
-        <div class="category-management-actions">
-          <button class="btn-secondary btn-sm" onclick="App.renameCategory('${category.id}')">
-            Rename
-          </button>
+    const groups = App._buildOrderGroups(categories || [], items || []);
+    const lastGroup = groups.length - 1;
 
-          <button class="btn-danger btn-sm" onclick="App.removeCategory('${category.id}')">
-            Delete
-          </button>
-        </div>
-      </div>
-    `).join('');
+    container.innerHTML = groups.map((group, gi) => {
+      const category = group.category;
+      const rows = group.items.map((item, ii) => {
+        const canUp = !(gi === 0 && ii === 0);
+        const canDown = !(gi === lastGroup && ii === group.items.length - 1);
+        return `
+          <div class="reorder-item-row">
+            <span class="reorder-item-title">${this.escapeHtml(item.title || '')}</span>
+            ${arrows(item.id, canUp, canDown)}
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="category-block">
+          <div class="category-management-row">
+            <span class="category-management-name">${this.escapeHtml(category.name)}</span>
+
+            <div class="category-management-actions">
+              <button class="btn-secondary btn-sm" onclick="App.renameCategory('${category.id}')">
+                Rename
+              </button>
+
+              <button class="btn-danger btn-sm" onclick="App.removeCategory('${category.id}')">
+                Delete
+              </button>
+            </div>
+          </div>
+          ${rows || '<div class="reorder-empty">No items</div>'}
+        </div>`;
+    }).join('');
   },
 
   renderHabits(habitsList, categories = []) {
@@ -302,25 +328,51 @@ const UI = {
     `).join('');
   },
 
-  renderTaskCategories(categories) {
+  renderTaskCategories(categories, items = []) {
     const container = document.getElementById('task-categories-list');
     if (!container) return;
 
-    container.innerHTML = (categories || []).map(category => `
-      <div class="category-management-row">
-        <span>${this.escapeHtml(category.name)}</span>
+    const arrows = (id, canUp, canDown) => `
+      <span class="reorder-btns">
+        <button type="button" class="reorder-btn" ${canUp ? '' : 'disabled'}
+          onclick="App.moveTask('${id}', -1)" aria-label="Move up">▲</button>
+        <button type="button" class="reorder-btn" ${canDown ? '' : 'disabled'}
+          onclick="App.moveTask('${id}', 1)" aria-label="Move down">▼</button>
+      </span>`;
 
-        <div class="category-management-actions">
-          <button class="btn-secondary btn-sm" onclick="App.renameTaskCategory('${category.id}')">
-            Rename
-          </button>
+    const groups = App._buildOrderGroups(categories || [], items || []);
+    const lastGroup = groups.length - 1;
 
-          <button class="btn-danger btn-sm" onclick="App.removeTaskCategory('${category.id}')">
-            Delete
-          </button>
-        </div>
-      </div>
-    `).join('');
+    container.innerHTML = groups.map((group, gi) => {
+      const category = group.category;
+      const rows = group.items.map((item, ii) => {
+        const canUp = !(gi === 0 && ii === 0);
+        const canDown = !(gi === lastGroup && ii === group.items.length - 1);
+        return `
+          <div class="reorder-item-row">
+            <span class="reorder-item-title">${this.escapeHtml(item.title || '')}</span>
+            ${arrows(item.id, canUp, canDown)}
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="category-block">
+          <div class="category-management-row">
+            <span class="category-management-name">${this.escapeHtml(category.name)}</span>
+
+            <div class="category-management-actions">
+              <button class="btn-secondary btn-sm" onclick="App.renameTaskCategory('${category.id}')">
+                Rename
+              </button>
+
+              <button class="btn-danger btn-sm" onclick="App.removeTaskCategory('${category.id}')">
+                Delete
+              </button>
+            </div>
+          </div>
+          ${rows || '<div class="reorder-empty">No items</div>'}
+        </div>`;
+    }).join('');
   },
 
   renderWeekdayPicker(selectedDays = []) {
@@ -516,15 +568,8 @@ const UI = {
     });
   },
 
-  setTaskSubTabCounts({ today = 0, upcoming = 0, completed = 0 } = {}) {
-    const set = (id, n) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = n > 0 ? String(n) : '';
-    };
-    set('task-subtab-today-count', today);
-    set('task-subtab-upcoming-count', upcoming);
-    set('task-subtab-completed-count', completed);
-  },
+  // The sub-tabs no longer show counts; kept as a no-op so existing calls still work.
+  setTaskSubTabCounts() {},
 
   renderTasks(tasksList, categories = []) {
     const container = document.getElementById('tasks-container');
