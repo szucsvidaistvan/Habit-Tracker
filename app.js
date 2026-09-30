@@ -835,7 +835,8 @@ const App = {
       // a short page isn't part of the slider and swipes there do nothing.
       const top = slider.getBoundingClientRect().top + window.scrollY;
       const minHeight = Math.max(0, window.innerHeight - top - 100);
-      slider.style.height = Math.max(activePanel.offsetHeight, minHeight) + 'px';
+      // + room for the fixed bottom tab bar, so the last card is never covered
+      slider.style.height = Math.max(activePanel.offsetHeight + 24, minHeight) + 'px';
     });
   },
 
@@ -2137,7 +2138,7 @@ const App = {
   },
 
   openTaskCategoriesModal() {
-    UI.renderTaskCategories(this.taskCategoriesList);
+    UI.renderTaskCategories(this.taskCategoriesList, this.allTasks);
     const modal = document.getElementById('task-categories-modal');
     if (modal) modal.style.display = 'flex';
   },
@@ -2150,7 +2151,7 @@ const App = {
   async refreshTaskCategories() {
     const { data } = await API.fetchTaskCategories(this.currentUser.id);
     this.taskCategoriesList = data || [];
-    UI.renderTaskCategories(this.taskCategoriesList);
+    UI.renderTaskCategories(this.taskCategoriesList, this.allTasks);
     UI.renderTaskCategorySelect(
       this.taskCategoriesList,
       this.selectedTaskCategoryId || this.taskCategoriesList[0]?.id || null
@@ -2226,7 +2227,7 @@ const App = {
   },
 
   openCategoriesModal() {
-    UI.renderCategories(this.categoriesList);
+    UI.renderCategories(this.categoriesList, this.habitsList);
     const modal = document.getElementById('categories-modal');
     if (modal) modal.style.display = 'flex';
   },
@@ -2263,7 +2264,7 @@ const App = {
 
     const { data } = await API.fetchCategories(this.currentUser.id);
     this.categoriesList = data || [];
-    UI.renderCategories(this.categoriesList);
+    UI.renderCategories(this.categoriesList, this.habitsList);
     UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId || this.categoriesList[0]?.id || null);
   },
 
@@ -2282,7 +2283,7 @@ const App = {
 
     const { data } = await API.fetchCategories(this.currentUser.id);
     this.categoriesList = data || [];
-    UI.renderCategories(this.categoriesList);
+    UI.renderCategories(this.categoriesList, this.habitsList);
     UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId || this.categoriesList[0]?.id || null);
   },
 
@@ -2309,9 +2310,93 @@ const App = {
 
     const { data } = await API.fetchCategories(this.currentUser.id);
     this.categoriesList = data || [];
-    UI.renderCategories(this.categoriesList);
+    UI.renderCategories(this.categoriesList, this.habitsList);
     UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId || this.categoriesList[0]?.id || null);
-  }
+  },
+
+  // ---------- Reorder habits / tasks inside Manage Categories ----------
+
+  // Builds [{category, items:[...]}] in display order.
+  _buildOrderGroups(categories, items) {
+    const known = new Set((categories || []).map(c => String(c.id)));
+    const groups = (categories || []).map(c => ({
+      category: c,
+      items: (items || [])
+        .filter(i => String(i.category_id || '') === String(c.id))
+        .sort((a, b) => (a.position || 0) - (b.position || 0))
+    }));
+    const orphans = (items || []).filter(i => !known.has(String(i.category_id || '')));
+    if (orphans.length && groups.length) {
+      // items without a valid category are shown in the first category
+      groups[0].items = [...orphans, ...groups[0].items];
+    }
+    return groups;
+  },
+
+  // Moves one item up/down. At the edge of a category it hops into the neighbouring one.
+  _moveInGroups(groups, itemId, dir) {
+    let gi = -1, ii = -1;
+    groups.forEach((g, a) => g.items.forEach((it, b) => {
+      if (String(it.id) === String(itemId)) { gi = a; ii = b; }
+    }));
+    if (gi < 0) return false;
+
+    const g = groups[gi];
+    const [item] = g.items.splice(ii, 1);
+
+    if (dir < 0) {
+      if (ii > 0) g.items.splice(ii - 1, 0, item);
+      else if (gi > 0) groups[gi - 1].items.push(item);
+      else { g.items.splice(0, 0, item); return false; }
+    } else {
+      if (ii < g.items.length) g.items.splice(ii + 1, 0, item);
+      else if (gi < groups.length - 1) groups[gi + 1].items.unshift(item);
+      else { g.items.push(item); return false; }
+    }
+    return true;
+  },
+
+  _flattenGroups(groups) {
+    const out = [];
+    groups.forEach(g => g.items.forEach((it, idx) => {
+      out.push({ id: it.id, category_id: g.category.id, position: idx });
+    }));
+    return out;
+  },
+
+  async moveHabit(habitId, dir) {
+    const groups = this._buildOrderGroups(this.categoriesList, this.habitsList);
+    if (!this._moveInGroups(groups, habitId, dir)) return;
+    const rows = this._flattenGroups(groups);
+
+    rows.forEach(r => {
+      const h = this.habitsList.find(x => String(x.id) === String(r.id));
+      if (h) { h.category_id = r.category_id; h.position = r.position; }
+    });
+    UI.renderCategories(this.categoriesList, this.habitsList);
+    UI.renderHabits(this.habitsList, this.categoriesList);
+
+    const results = await API.updateHabitPositions(rows);
+    if ((results || []).some(r => r && r.error)) console.error('[App.moveHabit]', results);
+    this.adjustSliderHeight();
+  },
+
+  async moveTask(taskId, dir) {
+    const groups = this._buildOrderGroups(this.taskCategoriesList, this.allTasks);
+    if (!this._moveInGroups(groups, taskId, dir)) return;
+    const rows = this._flattenGroups(groups);
+
+    rows.forEach(r => {
+      const t = this.allTasks.find(x => String(x.id) === String(r.id));
+      if (t) { t.category_id = r.category_id; t.position = r.position; }
+    });
+    UI.renderTaskCategories(this.taskCategoriesList, this.allTasks);
+
+    const results = await API.updateTaskPositions(rows);
+    if ((results || []).some(r => r && r.error)) console.error('[App.moveTask]', results);
+    await this.loadTasks();
+    UI.renderTaskCategories(this.taskCategoriesList, this.allTasks);
+  },
 };
 
 // Password recovery: the e-mail link signs the user in with a recovery session
