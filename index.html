@@ -106,16 +106,10 @@
         <div id="tasks-date" class="date-display"></div>
       </header>
 
-      <div class="task-subtabs">
-        <button id="task-subtab-today" class="task-subtab active" onclick="App.switchTaskSubTab('today')">
-          Today<span id="task-subtab-today-count" class="task-subtab-count"></span>
-        </button>
-        <button id="task-subtab-upcoming" class="task-subtab" onclick="App.switchTaskSubTab('upcoming')">
-          Upcoming<span id="task-subtab-upcoming-count" class="task-subtab-count"></span>
-        </button>
-        <button id="task-subtab-completed" class="task-subtab" onclick="App.switchTaskSubTab('completed')">
-          Completed<span id="task-subtab-completed-count" class="task-subtab-count"></span>
-        </button>
+      <div class="stats-toggle task-subtabs">
+        <button id="task-subtab-today" class="toggle-btn active" onclick="App.switchTaskSubTab('today')">Today</button>
+        <button id="task-subtab-upcoming" class="toggle-btn" onclick="App.switchTaskSubTab('upcoming')">Upcoming</button>
+        <button id="task-subtab-completed" class="toggle-btn" onclick="App.switchTaskSubTab('completed')">Completed</button>
       </div>
 
       <div id="tasks-panel-today">
