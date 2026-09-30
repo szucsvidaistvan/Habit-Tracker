@@ -26,6 +26,9 @@ const Offline = (() => {
 
   const OFFLINE_WRITE_MESSAGE = 'You are offline. This change needs an internet connection.';
 
+  // Category management, password/consent changes and bug reports still need a live connection.
+  // Habits and tasks (create / edit / delete) are queued instead - see ENTITY_WRITES below.
+
   // The untouched API methods, used for the real network calls.
   const RAW = {};
 
@@ -64,6 +67,7 @@ const Offline = (() => {
 
   const getQueue = () => read(QUEUE_KEY) || [];
   const isOnline = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false);
+  const isTempId = (id) => typeof id === 'string' && id.startsWith('local_');
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   // Rejects when the promise takes longer than `ms` (0 = wait as long as it takes).
@@ -200,6 +204,54 @@ const Offline = (() => {
     return out;
   }
 
+  // ---------- pending habit/task creates, edits and deletes shown on top of stored data ----------
+  function overlayHabits(rows, userId) {
+    let out = (rows || []).slice();
+
+    getQueue().forEach((op) => {
+      if (op.name === 'createHabit' && op.tempId && String(op.args[0]) === String(userId)) {
+        const [, title, weeklyTarget, targetMinutes, categoryId, position, reminderTime] = op.args;
+        out.push({
+          id: op.tempId, user_id: userId, title,
+          weekly_target: weeklyTarget, target_minutes: targetMinutes || 0,
+          category_id: categoryId || null, position: position || 0,
+          is_active: true, reminder_time: reminderTime || null, reminder_enabled: !!reminderTime, _pending: true
+        });
+      } else if (op.name === 'updateHabit') {
+        const [id, title, weeklyTarget, targetMinutes, categoryId, reminderTime] = op.args;
+        out = out.map((h) => (String(h.id) === String(id)
+          ? { ...h, title, weekly_target: weeklyTarget, target_minutes: targetMinutes || 0,
+              category_id: categoryId || null, reminder_time: reminderTime || null, reminder_enabled: !!reminderTime }
+          : h));
+      } else if (op.name === 'softDeleteHabit') {
+        out = out.filter((h) => String(h.id) !== String(op.args[0]));
+      }
+    });
+
+    return out;
+  }
+
+  function overlayTasks(rows, userId) {
+    let out = (rows || []).slice();
+
+    getQueue().forEach((op) => {
+      if (op.name === 'createTask' && op.tempId && String(op.args[0]) === String(userId)) {
+        const fields = op.args[1] || {};
+        out.push({
+          id: op.tempId, user_id: userId, position: fields.position || 0,
+          ...API.buildTaskRow(fields), _pending: true
+        });
+      } else if (op.name === 'updateTask') {
+        const [id, fields] = op.args;
+        out = out.map((t) => (String(t.id) === String(id) ? { ...t, ...API.buildTaskRow(fields) } : t));
+      } else if (op.name === 'deleteTask') {
+        out = out.filter((t) => String(t.id) !== String(op.args[0]));
+      }
+    });
+
+    return out;
+  }
+
   // ---------- log ranges: the start date changes, so find the best stored copy ----------
   const RANGE_PREFIX = CACHE_PREFIX + 'logs_range:';
 
@@ -269,10 +321,22 @@ const Offline = (() => {
 
           if (kind !== 'duplicate') {
             console.warn('[Offline] Dropping change that the server rejected:', op, result.error);
+            toast(`Could not sync "${op.title || 'a change'}" - it was discarded.`);
           }
         }
 
-        write(QUEUE_KEY, getQueue().slice(1));
+        // A "create" that just succeeded got a real id - swap the temporary id for it
+        // everywhere it still appears in the rest of the queue (edits, deletes, check-ins).
+        const row = result && !result.error && result.data
+          ? (Array.isArray(result.data) ? result.data[0] : result.data)
+          : null;
+        const realId = op.tempId && row && row.id != null ? row.id : null;
+
+        const rest = getQueue().slice(1);
+        write(QUEUE_KEY, realId == null ? rest : rest.map((o) => ({
+          ...o,
+          args: o.args.map((a) => (a === op.tempId ? realId : a))
+        })));
         synced++;
       }
 
@@ -287,9 +351,39 @@ const Offline = (() => {
     return flushing;
   }
 
-  function enqueue(name, args) {
-    write(QUEUE_KEY, [...getQueue(), { name, args, at: Date.now() }]);
+  function enqueue(name, args, extra) {
+    write(QUEUE_KEY, [...getQueue(), { name, args, at: Date.now(), ...(extra || {}) }]);
     updateBadge();
+  }
+
+  // A habit/task created offline is cancelled entirely (never sent to the server) if it is
+  // deleted again before it ever synced. Any check-ins or edits made against it go with it.
+  function cancelTempCreate(tempId) {
+    write(QUEUE_KEY, getQueue().filter((op) => op.tempId !== tempId && op.args[0] !== tempId));
+    updateBadge();
+  }
+
+  // A habit/task created offline is then edited, still offline, before it ever synced:
+  // fold the edit straight into the still-queued "create" instead of queueing a second op.
+  function foldIntoTempCreate(entity, targetId, updateArgs) {
+    const queue = getQueue();
+    const createOp = queue.find((op) => op.tempId === targetId);
+    if (!createOp) return false;
+
+    if (entity === 'habit') {
+      const [, title, weeklyTarget, targetMinutes, categoryId, reminderTime] = updateArgs;
+      createOp.args[1] = title;
+      createOp.args[2] = weeklyTarget;
+      createOp.args[3] = targetMinutes;
+      createOp.args[4] = categoryId;
+      createOp.args[6] = reminderTime;
+    } else if (entity === 'task') {
+      createOp.args[1] = updateArgs[1];
+    }
+
+    write(QUEUE_KEY, queue);
+    updateBadge();
+    return true;
   }
 
   // Upload what is waiting, then tell the app when it should reload its data.
@@ -304,14 +398,14 @@ const Offline = (() => {
 
   // ---------- wrapping the API ----------
   const READS = {
-    fetchActiveHabits: { key: (u) => `active_habits:${u}` },
+    fetchActiveHabits: { key: (u) => `active_habits:${u}`, overlay: (rows, u) => overlayHabits(rows, u), fallback: [] },
     fetchInactiveHabits: { key: (u) => `inactive_habits:${u}` },
     fetchCategories: { key: (u) => `categories:${u}` },
     fetchAllHabitsForStats: { key: (u) => `all_habits:${u}` },
     fetchUserAchievements: { key: (u) => `achievements:${u}` },
     fetchStreakState: { key: (u) => `streak_state:${u}` },
     fetchTaskCategories: { key: (u) => `task_categories:${u}` },
-    fetchTasks: { key: (u) => `tasks:${u}` },
+    fetchTasks: { key: (u) => `tasks:${u}`, overlay: (rows, u) => overlayTasks(rows, u), fallback: [] },
     fetchLogsByDate: {
       key: (d) => `logs_date:${d}`,
       overlay: (rows, d) => overlayHabitLogs(rows, { date: d }),
@@ -334,15 +428,26 @@ const Offline = (() => {
   // Check-ins: queued when there is no connection.
   const QUEUED_WRITES = ['addLog', 'removeLog', 'addTaskLog', 'removeTaskLogs'];
 
-  // Changes the person makes on purpose - they need a connection and say so.
+  // Habits and tasks: create / edit / delete all work offline, queued with a temporary local
+  // id until they can be created for real. idArg is which argument carries the target's id.
+  const ENTITY_WRITES = {
+    createHabit: { kind: 'create', entity: 'habit' },
+    updateHabit: { kind: 'update', entity: 'habit', idArg: 0 },
+    softDeleteHabit: { kind: 'delete', entity: 'habit', idArg: 0 },
+    createTask: { kind: 'create', entity: 'task' },
+    updateTask: { kind: 'update', entity: 'task', idArg: 0 },
+    deleteTask: { kind: 'delete', entity: 'task', idArg: 0 }
+  };
+
+  // Changes the person makes on purpose that stay online-only (rare, or awkward to queue safely).
   const ONLINE_ONLY_WRITES = [
-    'createHabit', 'updateHabit', 'softDeleteHabit', 'reactivateHabit',
+    'reactivateHabit',
     'createCategory', 'updateCategory', 'deleteCategory',
     'updateCategoryPositions', 'updateHabitCategory', 'updateHabitPositions',
     'sendBugReport',
     'createTaskCategory', 'updateTaskCategory', 'deleteTaskCategory',
-    'createTask', 'updateTask', 'deleteTask',
-    'updateConsent', 'updatePassword', 'resetPassword'
+    'updateConsent', 'updatePassword', 'resetPassword', 'updateTimezone',
+    'savePushSubscription', 'deletePushSubscription'
   ];
 
   // Housekeeping the app does on its own - fail quietly when offline (it is redone later).
@@ -419,6 +524,73 @@ const Offline = (() => {
           result = { data: null, error: err };
         }
 
+        if (result && result.error) {
+          const kind = classifyError(result.error, result.status);
+          if (kind === 'network' || kind === 'auth') {
+            enqueue(name, args);
+            return { data: null, error: null, queued: true };
+          }
+        }
+        return result;
+      };
+    });
+
+    Object.keys(ENTITY_WRITES).forEach((name) => {
+      if (typeof api[name] !== 'function') return;
+      RAW[name] = api[name];
+      const spec = ENTITY_WRITES[name];
+
+      api[name] = async (...args) => {
+        if (spec.kind === 'create') {
+          const tempId = `local_${spec.entity}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          const title = spec.entity === 'habit' ? args[1] : (args[1] && args[1].title);
+
+          if (!isOnline() || getQueue().length > 0 || flushing) {
+            enqueue(name, args, { tempId, entity: spec.entity, title });
+            return { data: { id: tempId, _pending: true }, error: null, queued: true, tempId };
+          }
+
+          let result;
+          try {
+            result = await withTimeout(RAW[name].apply(api, args), WRITE_TIMEOUT_MS);
+          } catch (err) {
+            result = { data: null, error: err };
+          }
+          if (result && result.error) {
+            const kind = classifyError(result.error, result.status);
+            if (kind === 'network' || kind === 'auth') {
+              enqueue(name, args, { tempId, entity: spec.entity, title });
+              return { data: { id: tempId, _pending: true }, error: null, queued: true, tempId };
+            }
+          }
+          return result;
+        }
+
+        // update / delete: a target that is itself still an unsynced local id never
+        // needs to touch the network - fold the edit in, or cancel the pending create.
+        const targetId = args[spec.idArg];
+        if (isTempId(targetId)) {
+          if (spec.kind === 'delete') {
+            cancelTempCreate(targetId);
+            return { data: null, error: null, queued: true };
+          }
+          if (foldIntoTempCreate(spec.entity, targetId, args)) {
+            return { data: null, error: null, queued: true };
+          }
+          // the create finished syncing between the read that showed this id and now - fall through
+        }
+
+        if (!isOnline() || getQueue().length > 0 || flushing) {
+          enqueue(name, args);
+          return { data: null, error: null, queued: true };
+        }
+
+        let result;
+        try {
+          result = await withTimeout(RAW[name].apply(api, args), WRITE_TIMEOUT_MS);
+        } catch (err) {
+          result = { data: null, error: err };
+        }
         if (result && result.error) {
           const kind = classifyError(result.error, result.status);
           if (kind === 'network' || kind === 'auth') {
