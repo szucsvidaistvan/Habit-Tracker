@@ -152,3 +152,44 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(staleWhileRevalidate(request));
   }
 });
+
+// ---------- push notifications (habit / task reminders) ----------
+// The payload comes from the Supabase "send-reminders" Edge Function, sent as JSON:
+// { title, body, tag, url }
+
+self.addEventListener('push', (event) => {
+  let payload = { title: 'Habit Tracker', body: 'You have a reminder.' };
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch (_) {
+    if (event.data) payload.body = event.data.text();
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      tag: payload.tag,
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      data: { url: payload.url || './' }
+    })
+  );
+});
+
+// Tapping the notification focuses an already-open tab if there is one, otherwise opens a new one.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || './', self.registration.scope).href;
+
+  event.waitUntil(
+    (async () => {
+      const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const existing = clientsList.find((c) => c.url === targetUrl) || clientsList[0];
+      if (existing) {
+        await existing.focus();
+      } else {
+        await self.clients.openWindow(targetUrl);
+      }
+    })()
+  );
+});
