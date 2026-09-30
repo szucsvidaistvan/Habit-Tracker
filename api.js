@@ -362,6 +362,16 @@ const API = {
     return await supabase.from('tasks').update(this.buildTaskRow(fields)).eq('id', taskId);
   },
 
+  async updateTaskPositions(tasks) {
+    const operations = tasks.map(task =>
+      supabase
+        .from('tasks')
+        .update({ category_id: task.category_id || null, position: task.position })
+        .eq('id', task.id)
+    );
+    return await Promise.all(operations);
+  },
+
   async deleteTask(taskId) {
     return await supabase.from('tasks').delete().eq('id', taskId);
   },
