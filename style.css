@@ -2115,3 +2115,59 @@ input:checked + .slider:before {
   transform: translate(-50%, 0);
   opacity: 1;
 }
+
+
+/* Task sub-tabs reuse the Weekly / Monthly toggle look */
+.task-subtabs { margin: 4px 0 14px; }
+
+/* Reordering inside Manage Categories */
+.category-block { padding: 6px 0 8px; border-bottom: 1px solid var(--border-color); }
+.category-block:last-child { border-bottom: 0; }
+.category-block .category-management-row { border-bottom: 0; padding: 8px 0; }
+.category-management-name { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+
+.reorder-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 6px 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+}
+.reorder-item-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reorder-empty { margin: 0 0 6px 10px; font-size: 12px; color: var(--text-sub); }
+.reorder-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.reorder-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--accent-color);
+  font-size: 13px;
+  cursor: pointer;
+}
+.reorder-btn:disabled { opacity: 0.25; cursor: default; }
+.reorder-btn:active:not(:disabled) { transform: scale(0.92); }
+
+/* Long category lists scroll inside the modal */
+#categories-modal .modal-content,
+#task-categories-modal .modal-content {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* Keep the last card clear of the fixed bottom tab bar (+ iPhone home indicator) */
+.tabs-slider > .tab-content {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
