@@ -445,7 +445,7 @@ const Offline = (() => {
     'createCategory', 'updateCategory', 'deleteCategory',
     'updateCategoryPositions', 'updateHabitCategory', 'updateHabitPositions',
     'sendBugReport',
-    'createTaskCategory', 'updateTaskCategory', 'deleteTaskCategory',
+    'createTaskCategory', 'updateTaskCategory', 'deleteTaskCategory', 'updateTaskPositions',
     'updateConsent', 'updatePassword', 'resetPassword', 'updateTimezone',
     'savePushSubscription', 'deletePushSubscription'
   ];
