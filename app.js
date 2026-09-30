@@ -21,6 +21,9 @@ const App = {
 
   // Tasks
   tasksList: [],
+  upcomingTasksList: [],
+  completedTasksList: [],
+  taskSubTab: 'today',
   taskCategoriesList: [],
   selectedTaskCategoryId: null,
   editingTaskId: null,
@@ -28,6 +31,10 @@ const App = {
   taskRecurrenceType: 'once',
   selectedRecurrenceDays: [],
   suppressAchievementClose: false,
+
+  // a completed task drops off the Completed tab (and, for one-time tasks, is deleted
+  // outright) this many days after the day it was checked off
+  COMPLETED_TASK_RETENTION_DAYS: 3,
   achievementCoinRotation: 0,
   achievementCoinInertiaFrame: null,
 
@@ -120,6 +127,109 @@ const App = {
     const consentAt = user && user.user_metadata ? user.user_metadata.privacy_consent_at : null;
     if (!consentAt) {
       this.openPrivacyModal(true);
+    }
+
+    this.syncTimezone(user);
+    this.refreshNotificationButtonState();
+  },
+
+  // Tells the reminders Edge Function which local time of day this person is in.
+  // Runs quietly in the background; offline it just joins the sync queue.
+  syncTimezone(user) {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const known = user && user.user_metadata ? user.user_metadata.timezone : null;
+      if (tz && tz !== known) API.updateTimezone(tz);
+    } catch (err) {
+      console.warn('[App.syncTimezone] Could not detect time zone:', err);
+    }
+  },
+
+  // ---------- Push notifications ----------
+
+  // The public half of the VAPID key pair - safe to ship in the frontend.
+  // Generated once for this app; the matching private key lives only in the Supabase
+  // Edge Function's secrets (see supabase/functions/send-reminders).
+  VAPID_PUBLIC_KEY: 'BK5bLihUy11d_32igYfETWF0Dv6KmEJOLcTq_HW1HgDOdlhRoOm2DZ2HnmLDs1pUBZHIZ7anC15093cMdUlUsSY',
+
+  urlBase64ToUint8Array(base64Url) {
+    const padding = '='.repeat((4 - (base64Url.length % 4)) % 4);
+    const base64 = (base64Url + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  },
+
+  notificationsSupported() {
+    return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  },
+
+  async refreshNotificationButtonState() {
+    const label = document.getElementById('notifications-toggle-label');
+    const hint = document.getElementById('notifications-hint');
+    if (!label) return;
+
+    if (!this.notificationsSupported()) {
+      label.textContent = 'Reminders not supported on this device';
+      if (hint) hint.textContent = '';
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      label.textContent = 'Reminders blocked';
+      if (hint) hint.textContent = 'Allow notifications for this app in your browser/OS settings, then try again.';
+      return;
+    }
+
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      label.textContent = sub ? 'Reminders Enabled' : 'Enable Reminders';
+      if (hint) hint.textContent = sub
+        ? 'You will get a push notification for any habit or task that has a reminder time set.'
+        : 'Turn this on, then set a reminder time on a habit or task to get notified - even with the app closed.';
+    } catch (err) {
+      console.warn('[App.refreshNotificationButtonState] Error:', err);
+    }
+  },
+
+  async toggleNotifications() {
+    if (!this.notificationsSupported()) {
+      alert('Push notifications are not supported on this browser/device.');
+      return;
+    }
+    if (!this.currentUser) return;
+
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+
+      if (existing) {
+        await API.deletePushSubscription(existing.endpoint);
+        await existing.unsubscribe();
+        await this.refreshNotificationButtonState();
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        await this.refreshNotificationButtonState();
+        return;
+      }
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: this.urlBase64ToUint8Array(this.VAPID_PUBLIC_KEY)
+      });
+
+      const { error } = await API.savePushSubscription(this.currentUser.id, sub.toJSON());
+      if (error) {
+        console.error('[App.toggleNotifications] Could not save subscription:', error);
+        if (!error.offline) alert('Could not enable reminders. Please try again.');
+        await sub.unsubscribe();
+      }
+      await this.refreshNotificationButtonState();
+    } catch (err) {
+      console.error('[App.toggleNotifications] Error:', err);
+      alert('Could not enable reminders on this device.');
     }
   },
 
@@ -508,10 +618,13 @@ const App = {
     const inactiveWrapper = document.getElementById('inactive-habits-wrapper');
     const inactiveSelect = document.getElementById('inactive-habits-select');
 
+    const reminderInput = document.getElementById('habit-reminder-input');
+
     if (modalTitle) modalTitle.innerText = 'Add New Habit';
     if (nameInput) nameInput.value = '';
     if (freqInput) freqInput.value = '7';
     if (timeInput) timeInput.value = '0';
+    if (reminderInput) reminderInput.value = '';
 
     UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId);
 
@@ -553,6 +666,8 @@ const App = {
       if (freqInput) freqInput.value = selected.weekly_target || 7;
       if (timeInput) timeInput.value = selected.target_minutes || 0;
       if (categoryInput) categoryInput.value = selected.category_id || this.categoriesList[0]?.id || '';
+      const reminderInput = document.getElementById('habit-reminder-input');
+      if (reminderInput) reminderInput.value = selected.reminder_time ? String(selected.reminder_time).slice(0, 5) : '';
     }
   },
 
@@ -578,11 +693,14 @@ const App = {
     const modalTitle = document.getElementById('modal-title');
     const modal = document.getElementById('habit-modal');
 
+    const reminderInput = document.getElementById('habit-reminder-input');
+
     if (modalTitle) modalTitle.innerText = 'Edit Habit';
     if (nameInput) nameInput.value = habit.title;
     if (freqInput) freqInput.value = habit.weekly_target || 7;
     if (timeInput) timeInput.value = habit.target_minutes || 0;
     if (categoryInput) categoryInput.value = habit.category_id || '';
+    if (reminderInput) reminderInput.value = habit.reminder_time ? String(habit.reminder_time).slice(0, 5) : '';
 
     UI.renderCategorySelect(this.categoriesList, this.selectedCategoryId);
 
@@ -601,11 +719,13 @@ const App = {
     const freqElem = document.getElementById('habit-freq-input');
     const timeElem = document.getElementById('habit-time-input');
     const categoryElem = document.getElementById('habit-category-input');
+    const reminderElem = document.getElementById('habit-reminder-input');
 
     const title = titleElem ? titleElem.value.trim() : '';
     const targetNum = freqElem ? (parseInt(freqElem.value.trim()) || 7) : 7;
     const targetMins = timeElem ? (parseInt(timeElem.value.trim()) || 0) : 0;
     const categoryId = categoryElem ? categoryElem.value || null : null;
+    const reminderTime = reminderElem && reminderElem.value ? reminderElem.value : null;
 
     if (!title) {
       alert('Please enter a habit name.');
@@ -622,12 +742,12 @@ const App = {
         ({ error: saveError } = await API.reactivateHabit(this.editingHabitId, title, targetNum, targetMins));
       } else {
         console.log('[App.saveHabitModal] Updating active habit...');
-        ({ error: saveError } = await API.updateHabit(this.editingHabitId, title, targetNum, targetMins, categoryId));
+        ({ error: saveError } = await API.updateHabit(this.editingHabitId, title, targetNum, targetMins, categoryId, reminderTime));
       }
     } else {
       console.log('[App.saveHabitModal] Creating new habit...');
       const currentCategoryHabits = this.habitsList.filter(h => String(h.category_id || '') === String(categoryId || ''));
-      ({ error: saveError } = await API.createHabit(this.currentUser.id, title, targetNum, targetMins, categoryId, currentCategoryHabits.length));
+      ({ error: saveError } = await API.createHabit(this.currentUser.id, title, targetNum, targetMins, categoryId, currentCategoryHabits.length, reminderTime));
     }
 
     if (saveError) {
@@ -1686,9 +1806,58 @@ const App = {
       (a.start_time || a.end_time || '99:99').localeCompare(b.start_time || b.end_time || '99:99')
     );
 
+    // Not due today: a one-time task waiting for a future date. (A repeating task simply
+    // shows up on its own day, so it does not need a separate "upcoming" entry.)
+    this.upcomingTasksList = this.allTasks
+      .filter(task => task.recurrence_type === 'once' && task.due_date && task.due_date > todayStr
+        && (logDatesByTask[task.id] || []).length === 0)
+      .sort((a, b) => a.due_date.localeCompare(b.due_date) || (a.start_time || '').localeCompare(b.start_time || ''));
+
+    // Completed within the retention window - most recent completion per task.
+    const retentionCutoff = UI.getLocalDateString(new Date(now.getTime() - this.COMPLETED_TASK_RETENTION_DAYS * 86400000));
+    const staleCleanups = [];
+    this.completedTasksList = [];
+
+    this.allTasks.forEach(task => {
+      const doneDates = (logDatesByTask[task.id] || []).slice().sort();
+      if (doneDates.length === 0) return;
+      const lastDone = doneDates[doneDates.length - 1];
+
+      if (lastDone < retentionCutoff) {
+        // Aged out: a one-time task is fully retired, a repeating one just loses its old mark.
+        if (task.recurrence_type === 'once') staleCleanups.push(API.deleteTask(task.id));
+        else doneDates.filter(d => d < retentionCutoff).forEach(d => staleCleanups.push(API.removeTaskLogs(task.id, d)));
+        return;
+      }
+
+      if (task.recurrence_type === 'once' || lastDone === todayStr) {
+        this.completedTasksList.push({ ...task, completedOn: lastDone });
+      }
+    });
+
+    this.completedTasksList.sort((a, b) => b.completedOn.localeCompare(a.completedOn));
+
+    if (staleCleanups.length > 0) {
+      // Runs in the background - offline it just joins the sync queue, no need to block on it.
+      Promise.all(staleCleanups).catch(err => console.error('[App.loadTasks] cleanup error:', err));
+    }
+
     UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
     UI.renderTasks(this.tasksList, this.taskCategoriesList);
+    UI.renderUpcomingTasks(this.upcomingTasksList, this.taskCategoriesList);
+    UI.renderCompletedTasks(this.completedTasksList, this.taskCategoriesList, this.COMPLETED_TASK_RETENTION_DAYS);
     UI.renderAllTasks(this.getSortedAllTasks(), this.taskCategoriesList, this.doneTaskIds);
+    UI.setTaskSubTabCounts({
+      today: this.tasksList.length,
+      upcoming: this.upcomingTasksList.length,
+      completed: this.completedTasksList.length
+    });
+    this.adjustSliderHeight();
+  },
+
+  switchTaskSubTab(view) {
+    this.taskSubTab = view;
+    UI.showTaskSubTab(view);
     this.adjustSliderHeight();
   },
 
@@ -1796,6 +1965,9 @@ const App = {
     if (untilInput) untilInput.value = task.end_time ? String(task.end_time).slice(0, 5) : '';
     if (endDate) endDate.value = task.end_date || (startDate ? startDate.value : '');
 
+    const reminderToggle = document.getElementById('task-reminder-toggle');
+    if (reminderToggle) reminderToggle.checked = task.reminder_enabled !== false;
+
     this.setTaskAllDay(!(task.start_time || task.end_time));
   },
 
@@ -1885,6 +2057,8 @@ const App = {
     const allDay = allDayToggle ? allDayToggle.checked : true;
     const startTime = allDay || !fromInput ? '' : fromInput.value;
     const endTime = allDay || !untilInput ? '' : untilInput.value;
+    const reminderToggle = document.getElementById('task-reminder-toggle');
+    const reminderEnabled = !allDay && !!startTime && (reminderToggle ? reminderToggle.checked : true);
     const endDateInput = document.getElementById('task-end-date-input');
     const endDate = recurrenceType === 'once' && endDateInput ? (endDateInput.value || dueDate) : '';
 
@@ -1902,7 +2076,7 @@ const App = {
       return;
     }
 
-    const fields = { title, categoryId, recurrenceType, dueDate, endDate, recurrenceDays, monthDay, startTime, endTime };
+    const fields = { title, categoryId, recurrenceType, dueDate, endDate, recurrenceDays, monthDay, startTime, endTime, reminderEnabled };
 
     let error;
     if (this.editingTaskId) {
