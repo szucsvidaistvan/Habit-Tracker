@@ -2364,3 +2364,32 @@ input:checked + .slider:before {
   gap: 12px;
 }
 .task-card .subtask-list { margin-top: 12px; }
+
+
+/* ---- Task modal: scroll inside the modal, never the page behind it ---- */
+.modal-overlay {
+  height: 100vh;
+  height: 100dvh;
+  overscroll-behavior: contain;
+}
+.cal-modal-content {
+  max-height: 90vh;
+  max-height: calc(100dvh - 40px);
+  overflow: hidden;
+}
+.cal-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+/* without this the groups get squashed to fit instead of letting the body scroll */
+.cal-modal-body > * { flex-shrink: 0; }
+
+/* freeze the page while any modal is open */
+html:has(.modal-overlay[style*="display: flex"]),
+body:has(.modal-overlay[style*="display: flex"]) {
+  overflow: hidden;
+}
