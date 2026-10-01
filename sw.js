@@ -3,7 +3,7 @@
 // Supabase requests are never cached here - offline.js stores the data instead.
 
 // Bump this whenever you want every device to drop its old cached files.
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const CACHE_NAME = `habit-tracker-${CACHE_VERSION}`;
 
 // With a cached copy at hand, a page/file request that hangs this long is answered from the cache.
