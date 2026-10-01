@@ -260,7 +260,7 @@ const UI = {
       let startX = 0, currentX = 0, isOpen = false, isDragging = false;
 
       card.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.switch') || e.target.closest('.subtask-list')) return;
+        if (e.target.closest('.switch')) return;
 
         startX = e.clientX;
         currentX = startX;
@@ -694,14 +694,13 @@ const UI = {
           </button>
         </div>
 
-        <div class="habit-item" id="task-swipe-content-${t.id}">
-          <div class="habit-info">
-            <span class="habit-name">${this.escapeHtml(t.title)}${t._pending ? ' <span class="pending-dot" title="Will sync when back online"></span>' : ''}</span>
-            ${this.formatTaskSubInfo(t)}
-            ${this.renderSubtasks(t)}
-          </div>
+        <div class="habit-item task-card" id="task-swipe-content-${t.id}">
+          <div class="task-card-head">
+            <div class="habit-info">
+              <span class="habit-name">${this.escapeHtml(t.title)}${t._pending ? ' <span class="pending-dot" title="Will sync when back online"></span>' : ''}</span>
+              ${this.formatTaskSubInfo(t)}
+            </div>
 
-          <div>
             <label class="switch">
               <input
                 type="checkbox"
@@ -709,6 +708,8 @@ const UI = {
               <span class="slider"></span>
             </label>
           </div>
+
+          ${this.renderSubtasks(t)}
         </div>
       </div>
     `;
@@ -805,7 +806,7 @@ const UI = {
       let startX = 0, currentX = 0, isOpen = false, isDragging = false;
 
       card.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.switch')) return;
+        if (e.target.closest('.switch') || e.target.closest('.subtask-list')) return;
 
         startX = e.clientX;
         currentX = startX;
