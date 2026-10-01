@@ -2062,12 +2062,12 @@ input:checked + .slider:before {
 }
 
 /* All Tasks: completed rows */
-.all-task-row.done .all-task-name {
+.task-list-card.done .all-task-name {
   text-decoration: line-through;
   opacity: 0.55;
 }
 
-.all-task-row.done .habit-time {
+.task-list-card.done .habit-time {
   color: var(--accent-color);
   font-weight: 700;
 }
@@ -2171,3 +2171,50 @@ input:checked + .slider:before {
 .tabs-slider > .tab-content {
   padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
+
+
+/* Task lists (All Tasks / Upcoming / Completed): separate cards instead of one dense list */
+#all-tasks-list,
+#tasks-upcoming-container,
+#tasks-completed-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#all-tasks-list .loader,
+#tasks-upcoming-container .loader,
+#tasks-completed-container .loader { width: 100%; }
+
+.task-list-card .habit-item {
+  min-height: 56px;
+  padding: 12px 14px;
+}
+.task-list-card.done .habit-item { border-left: 3px solid var(--accent-color); }
+.task-list-card.done .all-task-name { text-decoration: line-through; opacity: 0.55; }
+
+/* inside the All Tasks modal the card needs its own shade, otherwise it blends with the modal */
+#all-tasks-list .habit-card-wrapper { background: transparent; }
+#all-tasks-list .habit-item { background: var(--bg-color); }
+
+/* ---- Notifications switch row (Profile) ---- */
+.notif-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.notif-row .data-export-label { flex: 1; font-size: 14px; font-weight: 600; }
+.notif-row .switch input:disabled + .slider { opacity: 0.4; cursor: not-allowed; }
+
+/* ---- Share button on the achievement modal ---- */
+.achievement-share-btn {
+  margin-top: 18px;
+  padding: 11px 22px;
+  border: 1px solid var(--accent-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--accent-color);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.achievement-share-btn:active { transform: scale(0.96); }
