@@ -346,7 +346,9 @@ const API = {
       end_date: fields.recurrenceType === 'once' ? (fields.endDate || null) : null,
       start_time: fields.startTime || null,
       end_time: fields.endTime || null,
-      reminder_enabled: fields.reminderEnabled !== false
+      reminder_enabled: fields.reminderEnabled !== false,
+      // only sent when set, so the app keeps working until the checklist SQL has been run
+      ...(Array.isArray(fields.checklist) ? { checklist: fields.checklist } : {})
     };
   },
 
