@@ -164,25 +164,28 @@ const App = {
   },
 
   async refreshNotificationButtonState() {
-    const label = document.getElementById('notifications-toggle-label');
+    const toggle = document.getElementById('notifications-toggle');
     const hint = document.getElementById('notifications-hint');
-    if (!label) return;
+    if (!toggle) return;
 
     if (!this.notificationsSupported()) {
-      label.textContent = 'Reminders not supported on this device';
-      if (hint) hint.textContent = '';
+      toggle.checked = false;
+      toggle.disabled = true;
+      if (hint) hint.textContent = 'Notifications are not supported on this device.';
       return;
     }
     if (Notification.permission === 'denied') {
-      label.textContent = 'Reminders blocked';
+      toggle.checked = false;
+      toggle.disabled = true;
       if (hint) hint.textContent = 'Allow notifications for this app in your browser/OS settings, then try again.';
       return;
     }
 
+    toggle.disabled = false;
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
-      label.textContent = sub ? 'Reminders Enabled' : 'Enable Reminders';
+      toggle.checked = !!sub;
       if (hint) hint.textContent = sub
         ? 'You will get a push notification for any habit or task that has a reminder time set.'
         : 'Turn this on, then set a reminder time on a habit or task to get notified - even with the app closed.';
@@ -1584,9 +1587,125 @@ const App = {
   openAchievementModal(index) {
     const achievement = this.achievementsList ? this.achievementsList[index] : null;
     if (!achievement) return;
+    this.currentAchievementIndex = index;
     console.log('[App.openAchievementModal] Opening achievement:', achievement.name);
     this.resetAchievementCoin();
     UI.showAchievementDetail(achievement);
+  },
+
+  // Renders the opened achievement as an image card and hands it to the native share
+  // sheet (Instagram, WhatsApp, ...). Falls back to downloading the PNG.
+  async shareAchievement() {
+    const index = this.currentAchievementIndex;
+    const a = (typeof index === 'number' && this.achievementsList) ? this.achievementsList[index] : null;
+    if (!a || !a.unlocked) return;
+
+    try {
+      const W = 1080, H = 1350;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#0f172a');
+      bg.addColorStop(1, '#020617');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // glow + coin
+      const cx = W / 2, cy = 500, r = 230;
+      const glow = ctx.createRadialGradient(cx, cy, r * 0.4, cx, cy, r * 2);
+      glow.addColorStop(0, 'rgba(0,230,118,0.35)');
+      glow.addColorStop(1, 'rgba(0,230,118,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = '#1e293b';
+      ctx.fill();
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = '#00e676';
+      ctx.stroke();
+
+      // icon: take the SVG Iconify already rendered in the modal
+      const svgEl = document.querySelector('#achievement-modal-icon svg');
+      if (svgEl) {
+        try {
+          const clone = svgEl.cloneNode(true);
+          clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+          clone.setAttribute('width', '260');
+          clone.setAttribute('height', '260');
+          clone.style.color = '#00e676';
+          const xml = new XMLSerializer().serializeToString(clone).replace(/currentColor/g, '#00e676');
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = resolve; img.onerror = reject;
+            img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+          });
+          ctx.drawImage(img, cx - 130, cy - 130, 260, 260);
+        } catch (e) {
+          console.warn('[App.shareAchievement] icon draw failed', e);
+        }
+      }
+
+      const wrap = (text, maxWidth) => {
+        const words = String(text || '').split(' ');
+        const lines = []; let line = '';
+        words.forEach(w => {
+          const test = line ? line + ' ' + w : w;
+          if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
+          else line = test;
+        });
+        if (line) lines.push(line);
+        return lines;
+      };
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#00e676';
+      ctx.font = '700 40px system-ui, -apple-system, sans-serif';
+      ctx.fillText('ACHIEVEMENT UNLOCKED', cx, 850);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '800 80px system-ui, -apple-system, sans-serif';
+      let y = 950;
+      wrap(a.name, 900).forEach(l => { ctx.fillText(l, cx, y); y += 92; });
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '500 38px system-ui, -apple-system, sans-serif';
+      y += 10;
+      wrap(a.description, 860).slice(0, 3).forEach(l => { ctx.fillText(l, cx, y); y += 52; });
+
+      if (a.unlockedAt) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '600 32px system-ui, -apple-system, sans-serif';
+        ctx.fillText(new Date(a.unlockedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }), cx, H - 120);
+      }
+
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      if (!blob) throw new Error('Could not create image');
+      const file = new File([blob], 'achievement.png', { type: 'image/png' });
+      const text = `I just unlocked "${a.name}" in Habit Tracker! 🏆`;
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], text });
+        } catch (e) {
+          if (e && e.name !== 'AbortError') throw e; // closing the share sheet is not an error
+        }
+        return;
+      }
+
+      // Desktop / unsupported browsers: save the image
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = 'achievement.png';
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (err) {
+      console.error('[App.shareAchievement] Error:', err);
+      alert('Could not share this achievement.');
+    }
   },
 
   closeAchievementModal() {
@@ -2457,5 +2576,4 @@ document.addEventListener('DOMContentLoaded', () => {
   if (bugDetails) {
     bugDetails.addEventListener('toggle', () => App.adjustSliderHeight());
   }
-  
 });
