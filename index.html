@@ -305,11 +305,14 @@
       </div>
 
       <div class="card" style="margin-top: 16px;">
-        <button id="notifications-toggle-btn" class="data-export-row" onclick="App.toggleNotifications()">
+        <div class="notif-row">
           <span class="data-export-icon">🔔</span>
-          <span id="notifications-toggle-label" class="data-export-label">Enable Reminders</span>
-          <span class="data-export-chevron">›</span>
-        </button>
+          <span id="notifications-toggle-label" class="data-export-label">Notifications</span>
+          <label class="switch">
+            <input type="checkbox" id="notifications-toggle" onchange="App.toggleNotifications()">
+            <span class="slider"></span>
+          </label>
+        </div>
         <p id="notifications-hint" class="notifications-hint"></p>
       </div>
 
@@ -786,6 +789,9 @@
         <div class="achievement-modal-desc" id="achievement-modal-desc"></div>
         <div class="achievement-modal-status" id="achievement-modal-status"></div>
       </div>
+
+      <button id="achievement-share-btn" class="achievement-share-btn" style="display:none;"
+        onclick="event.stopPropagation(); App.shareAchievement()">Share</button>
     </div>
   </div>
 
