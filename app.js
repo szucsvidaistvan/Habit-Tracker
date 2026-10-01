@@ -1919,7 +1919,8 @@ const App = {
       }
 
       // one-time: shown from its due date on (overdue stays visible) until checked off
-      return doneDates.length === 0 && !!task.due_date && task.due_date <= todayStr;
+      // (a task without a date has no deadline: it simply stays here until it is checked off)
+      return doneDates.length === 0 && (!task.due_date || task.due_date <= todayStr);
     });
 
     this.tasksList.sort((a, b) =>
@@ -1985,7 +1986,7 @@ const App = {
     const done = this.doneTaskIds || new Set();
     return [...(this.allTasks || [])].sort((a, b) =>
       (done.has(String(a.id)) - done.has(String(b.id))) || // unfinished first
-      (a.due_date || '9999').localeCompare(b.due_date || '9999') ||
+      (a.due_date || '0000').localeCompare(b.due_date || '0000') || // undated tasks are active now, so first
       a.title.localeCompare(b.title)
     );
   },
@@ -2033,6 +2034,26 @@ const App = {
     if (monthWrapper) monthWrapper.style.display = type === 'monthly' ? 'flex' : 'none';
     // a repeating task has no single end date, only the time of day
     if (endDate) endDate.style.display = type === 'once' ? '' : 'none';
+  },
+
+  // Date & time off (the default) = the task has no date: it sits in Today until it is checked off.
+  setTaskScheduled(on) {
+    const toggle = document.getElementById('task-schedule-toggle');
+    if (toggle) toggle.checked = on;
+
+    document.querySelectorAll('.task-sched-row').forEach(row => { row.style.display = on ? '' : 'none'; });
+    const repeatGroup = document.getElementById('task-repeat-group');
+    if (repeatGroup) repeatGroup.style.display = on ? '' : 'none';
+    const hint = document.getElementById('task-nodate-hint');
+    if (hint) hint.style.display = on ? 'none' : '';
+
+    if (on) {
+      const start = document.getElementById('task-due-date-input');
+      if (start && !start.value) start.value = UI.getLocalDateString();
+      this.onTaskStartDateChange();
+    } else {
+      this.setTaskRecurrenceType('once');
+    }
   },
 
   // All-day on = no times. Turning it off pre-fills the next full hour, like a calendar.
@@ -2204,6 +2225,7 @@ const App = {
     UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
     UI.renderWeekdayPicker(this.selectedRecurrenceDays);
     this.setTaskRecurrenceType('once');
+    this.setTaskScheduled(false); // default: no date, stays until checked off
 
     const modal = document.getElementById('task-modal');
     if (modal) modal.style.display = 'flex';
@@ -2233,6 +2255,7 @@ const App = {
     UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
     UI.renderWeekdayPicker(this.selectedRecurrenceDays);
     this.setTaskRecurrenceType(['weekly', 'monthly'].includes(task.recurrence_type) ? task.recurrence_type : 'once');
+    this.setTaskScheduled(!!task.due_date);
 
     const modal = document.getElementById('task-modal');
     if (modal) modal.style.display = 'flex';
@@ -2253,15 +2276,17 @@ const App = {
 
     const title = nameInput ? nameInput.value.trim() : '';
     const categoryId = categoryInput ? categoryInput.value || null : null;
-    const dueDate = dueInput ? dueInput.value : '';
-    const recurrenceType = this.taskRecurrenceType;
+    const scheduleToggle = document.getElementById('task-schedule-toggle');
+    const scheduled = scheduleToggle ? scheduleToggle.checked : true;
+    const dueDate = scheduled && dueInput ? dueInput.value : '';
+    const recurrenceType = scheduled ? this.taskRecurrenceType : 'once';
     const recurrenceDays = [...this.selectedRecurrenceDays].sort((a, b) => a - b);
 
     if (!title) {
       alert('Please enter a task name.');
       return;
     }
-    if (!dueDate) {
+    if (scheduled && !dueDate) {
       alert(recurrenceType === 'once' ? 'Please choose a date.' : 'Please choose a start date.');
       return;
     }
@@ -2274,13 +2299,13 @@ const App = {
     const fromInput = document.getElementById('task-start-time-input');
     const untilInput = document.getElementById('task-end-time-input');
     const allDayToggle = document.getElementById('task-allday-toggle');
-    const allDay = allDayToggle ? allDayToggle.checked : true;
+    const allDay = !scheduled || (allDayToggle ? allDayToggle.checked : true);
     const startTime = allDay || !fromInput ? '' : fromInput.value;
     const endTime = allDay || !untilInput ? '' : untilInput.value;
     const reminderToggle = document.getElementById('task-reminder-toggle');
     const reminderEnabled = !allDay && !!startTime && (reminderToggle ? reminderToggle.checked : true);
     const endDateInput = document.getElementById('task-end-date-input');
-    const endDate = recurrenceType === 'once' && endDateInput ? (endDateInput.value || dueDate) : '';
+    const endDate = scheduled && recurrenceType === 'once' && endDateInput ? (endDateInput.value || dueDate) : '';
 
     if (endDate && endDate < dueDate) {
       alert('The end date can\'t be before the start date.');
