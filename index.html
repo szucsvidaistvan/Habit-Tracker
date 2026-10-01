@@ -608,6 +608,16 @@
 
         <div class="cal-group">
           <div class="cal-row">
+            <span class="cal-label">Date &amp; time</span>
+            <label class="switch">
+              <input type="checkbox" id="task-schedule-toggle" onchange="App.setTaskScheduled(this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div id="task-nodate-hint" class="cal-hint">No date: stays in Today until you check it off.</div>
+
+          <div class="cal-row task-sched-row">
             <span class="cal-label">All-day</span>
             <label class="switch">
               <input type="checkbox" id="task-allday-toggle" onchange="App.setTaskAllDay(this.checked)">
@@ -615,7 +625,7 @@
             </label>
           </div>
 
-          <div class="cal-row">
+          <div class="cal-row task-sched-row">
             <span class="cal-label">Starts</span>
             <div class="cal-pills">
               <input
@@ -627,7 +637,7 @@
             </div>
           </div>
 
-          <div class="cal-row">
+          <div class="cal-row task-sched-row">
             <span class="cal-label">Ends</span>
             <div class="cal-pills">
               <input type="date" id="task-end-date-input" class="cal-pill">
@@ -635,7 +645,7 @@
             </div>
           </div>
 
-          <div class="cal-row">
+          <div class="cal-row task-sched-row">
             <span class="cal-label">Remind me</span>
             <label class="switch">
               <input type="checkbox" id="task-reminder-toggle" checked>
@@ -644,7 +654,7 @@
           </div>
         </div>
 
-        <div class="cal-group">
+        <div class="cal-group" id="task-repeat-group">
           <div class="cal-row">
             <span class="cal-label">Repeat</span>
             <select
