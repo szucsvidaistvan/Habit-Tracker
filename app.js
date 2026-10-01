@@ -2091,6 +2091,98 @@ const App = {
     this.setTaskAllDay(!(task.start_time || task.end_time));
   },
 
+  // ---------- Task checklist (sub-items) ----------
+
+  newChecklistId() {
+    return Math.random().toString(36).slice(2, 9);
+  },
+
+  renderChecklistDraft() {
+    const box = document.getElementById('task-checklist-editor');
+    if (!box) return;
+    const items = this.taskChecklistDraft || [];
+    box.innerHTML = items.map(item => `
+      <div class="checklist-edit-row">
+        <input type="text" class="checklist-input" maxlength="80"
+          value="${UI.escapeHtml(item.text)}"
+          oninput="App.updateChecklistDraftItem('${item.id}', this.value)">
+        <button type="button" class="checklist-remove-btn" onclick="App.removeChecklistDraftItem('${item.id}')" aria-label="Remove">&times;</button>
+      </div>
+    `).join('');
+  },
+
+  addChecklistDraftItem() {
+    const input = document.getElementById('task-checklist-input');
+    const text = input ? input.value.trim() : '';
+    if (!text) return;
+    this.taskChecklistDraft = this.taskChecklistDraft || [];
+    this.taskChecklistDraft.push({ id: this.newChecklistId(), text, done: false });
+    input.value = '';
+    this.renderChecklistDraft();
+    input.focus();
+  },
+
+  updateChecklistDraftItem(id, text) {
+    const item = (this.taskChecklistDraft || []).find(i => i.id === id);
+    if (item) item.text = text;
+  },
+
+  removeChecklistDraftItem(id) {
+    this.taskChecklistDraft = (this.taskChecklistDraft || []).filter(i => i.id !== id);
+    this.renderChecklistDraft();
+  },
+
+  // Rebuilds the form fields of a saved task, so one part (the checklist) can be saved on its own.
+  taskToFields(task) {
+    return {
+      title: task.title,
+      categoryId: task.category_id,
+      recurrenceType: task.recurrence_type,
+      dueDate: task.due_date,
+      endDate: task.end_date,
+      recurrenceDays: task.recurrence_days,
+      monthDay: task.recurrence_month_day,
+      startTime: task.start_time,
+      endTime: task.end_time,
+      reminderEnabled: task.reminder_enabled
+    };
+  },
+
+  async saveTaskChecklist(taskId, checklist) {
+    const task = (this.allTasks || []).find(t => String(t.id) === String(taskId));
+    if (!task) return;
+
+    // show the change right away, then save it
+    const apply = (list) => list.forEach(t => { if (String(t.id) === String(taskId)) t.checklist = checklist; });
+    apply(this.allTasks || []);
+    apply(this.tasksList || []);
+    apply(this.upcomingTasksList || []);
+    apply(this.completedTasksList || []);
+    UI.renderTasks(this.tasksList, this.taskCategoriesList);
+    this.adjustSliderHeight();
+
+    const { error } = await API.updateTask(taskId, { ...this.taskToFields(task), checklist });
+    if (error) {
+      console.error('[App.saveTaskChecklist] Error:', error);
+      if (!error.offline) alert('Could not save the checklist. Did you run supabase/tasks_checklist.sql?');
+      await this.loadTasks();
+    }
+  },
+
+  async toggleSubtask(taskId, itemId) {
+    const task = (this.allTasks || []).find(t => String(t.id) === String(taskId));
+    if (!task || !Array.isArray(task.checklist)) return;
+    const checklist = task.checklist.map(i => i.id === itemId ? { ...i, done: !i.done } : i);
+    await this.saveTaskChecklist(taskId, checklist);
+  },
+
+  async deleteSubtask(taskId, itemId) {
+    const task = (this.allTasks || []).find(t => String(t.id) === String(taskId));
+    if (!task || !Array.isArray(task.checklist)) return;
+    const checklist = task.checklist.filter(i => i.id !== itemId);
+    await this.saveTaskChecklist(taskId, checklist);
+  },
+
   openAddTaskModal() {
     this.editingTaskId = null;
     this.selectedTaskCategoryId = this.taskCategoriesList[0]?.id || null;
@@ -2099,6 +2191,10 @@ const App = {
     const titleElem = document.getElementById('task-modal-title');
     const nameInput = document.getElementById('task-name-input');
     const dueInput = document.getElementById('task-due-date-input');
+
+    this.taskChecklistDraft = [];
+    this.taskHadChecklist = false;
+    this.renderChecklistDraft();
 
     if (titleElem) titleElem.innerText = 'Add New Task';
     if (nameInput) nameInput.value = '';
@@ -2124,6 +2220,10 @@ const App = {
     const titleElem = document.getElementById('task-modal-title');
     const nameInput = document.getElementById('task-name-input');
     const dueInput = document.getElementById('task-due-date-input');
+
+    this.taskChecklistDraft = Array.isArray(task.checklist) ? task.checklist.map(i => ({ ...i })) : [];
+    this.taskHadChecklist = this.taskChecklistDraft.length > 0;
+    this.renderChecklistDraft();
 
     if (titleElem) titleElem.innerText = 'Edit Task';
     if (nameInput) nameInput.value = task.title;
@@ -2196,7 +2296,13 @@ const App = {
       return;
     }
 
+    // Pick up an item that was typed but not added with the + button yet
+    this.addChecklistDraftItem();
+    const checklist = (this.taskChecklistDraft || []).filter(i => i.text.trim());
+
     const fields = { title, categoryId, recurrenceType, dueDate, endDate, recurrenceDays, monthDay, startTime, endTime, reminderEnabled };
+    // Only touch the checklist column when it is (or used to be) in use.
+    if (checklist.length > 0 || this.taskHadChecklist) fields.checklist = checklist;
 
     let error;
     if (this.editingTaskId) {
