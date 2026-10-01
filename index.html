@@ -304,15 +304,16 @@
         <div id="freeze-card-body"></div>
       </div>
 
-      <div class="card" style="margin-top: 16px;">
+      <div class="card notif-card" style="margin-top: 16px;">
         <div class="notif-row">
-          <span class="data-export-icon">🔔</span>
-          <span id="notifications-toggle-label" class="data-export-label">Notifications</span>
+          <span class="notif-icon"><span class="iconify" data-icon="ion:notifications"></span></span>
+          <span id="notifications-toggle-label" class="notif-title">Notifications</span>
           <label class="switch">
             <input type="checkbox" id="notifications-toggle" onchange="App.toggleNotifications()">
             <span class="slider"></span>
           </label>
         </div>
+        <div class="notif-divider"></div>
         <p id="notifications-hint" class="notifications-hint"></p>
       </div>
 
@@ -586,6 +587,23 @@
             class="cal-title-input"
             placeholder="Title"
             maxlength="120">
+        </div>
+
+        <div class="cal-group">
+          <div class="cal-row cal-row-block checklist-editor">
+            <span class="cal-label">Checklist</span>
+            <div id="task-checklist-editor"></div>
+            <div class="checklist-add-row">
+              <input
+                type="text"
+                id="task-checklist-input"
+                class="checklist-input"
+                placeholder="Add an item (e.g. milk)"
+                maxlength="80"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();App.addChecklistDraftItem();}">
+              <button type="button" class="checklist-add-btn" onclick="App.addChecklistDraftItem()" aria-label="Add item">+</button>
+            </div>
+          </div>
         </div>
 
         <div class="cal-group">
