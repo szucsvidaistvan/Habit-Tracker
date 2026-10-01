@@ -2349,3 +2349,18 @@ input:checked + .slider:before {
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
+
+
+/* Task card: the switch stays on the title row, the checklist sits full-width below it */
+.habit-item.task-card {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.task-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.task-card .subtask-list { margin-top: 12px; }
