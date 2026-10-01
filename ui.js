@@ -260,7 +260,7 @@ const UI = {
       let startX = 0, currentX = 0, isOpen = false, isDragging = false;
 
       card.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.switch')) return;
+        if (e.target.closest('.switch') || e.target.closest('.subtask-list')) return;
 
         startX = e.clientX;
         currentX = startX;
@@ -479,7 +479,7 @@ const UI = {
   // habit cards: the action buttons stay hidden until the card is swiped to the left.
   // `buttons` is a list of swipeBtn() strings.
   taskRow(t, { subLines = [], overdue = false, done = false, buttons = [] } = {}) {
-    const sub = subLines.filter(Boolean).join(' • ');
+    const sub = [...subLines, this.checklistSummary(t)].filter(Boolean).join(' • ');
     const reveal = buttons.length * 56 + 16;
     return `
       <div class="habit-card-wrapper task-list-card ${done ? 'done' : ''} ${t._pending ? 'is-pending' : ''}">
@@ -668,6 +668,7 @@ const UI = {
       `).join('');
 
     this.initTaskSwipeEvents(tasksList);
+    this.initSubtaskSwipe(container);
   },
 
   renderTaskCard(t) {
@@ -697,6 +698,7 @@ const UI = {
           <div class="habit-info">
             <span class="habit-name">${this.escapeHtml(t.title)}${t._pending ? ' <span class="pending-dot" title="Will sync when back online"></span>' : ''}</span>
             ${this.formatTaskSubInfo(t)}
+            ${this.renderSubtasks(t)}
           </div>
 
           <div>
@@ -710,6 +712,73 @@ const UI = {
         </div>
       </div>
     `;
+  },
+
+  // Checklist under a task: tick an item to mark it done, swipe it left to delete it.
+  renderSubtasks(t) {
+    const items = Array.isArray(t.checklist) ? t.checklist : [];
+    if (items.length === 0) return '';
+    return `
+      <div class="subtask-list">
+        ${items.map(i => `
+          <div class="subtask-wrap">
+            <button type="button" class="subtask-delete" onclick="App.deleteSubtask('${t.id}', '${i.id}')" aria-label="Delete item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+            <div class="subtask-item ${i.done ? 'done' : ''}">
+              <label class="subtask-check">
+                <input type="checkbox" ${i.done ? 'checked' : ''} onchange="App.toggleSubtask('${t.id}', '${i.id}')">
+                <span class="subtask-box"></span>
+              </label>
+              <span class="subtask-text">${this.escapeHtml(i.text)}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+  },
+
+  // "2/5" style summary for the list cards that have no room for the whole checklist
+  checklistSummary(t) {
+    const items = Array.isArray(t.checklist) ? t.checklist : [];
+    if (items.length === 0) return '';
+    return `☑ ${items.filter(i => i.done).length}/${items.length}`;
+  },
+
+  initSubtaskSwipe(container) {
+    if (!container) return;
+    const reveal = 56;
+    container.querySelectorAll('.subtask-item').forEach(row => {
+      let startX = 0, currentX = 0, isOpen = false, dragging = false, moved = false;
+
+      row.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.subtask-check')) return;
+        startX = e.clientX; currentX = startX; dragging = true; moved = false;
+        try { row.setPointerCapture(e.pointerId); } catch (_) {}
+        row.style.transition = 'none';
+      });
+      row.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        currentX = e.clientX;
+        if (Math.abs(currentX - startX) > 4) moved = true;
+        const x = Math.max(-reveal, Math.min(0, (isOpen ? -reveal : 0) + (currentX - startX)));
+        row.style.transform = `translateX(${x}px)`;
+      });
+      const end = (e) => {
+        if (!dragging) return;
+        dragging = false;
+        try { row.releasePointerCapture(e.pointerId); } catch (_) {}
+        const diff = currentX - startX;
+        row.style.transition = 'transform 0.2s ease-out';
+        if (!isOpen && diff < -24) isOpen = true;
+        else if (isOpen && diff > 16) isOpen = false;
+        row.style.transform = isOpen ? `translateX(-${reveal}px)` : 'translateX(0px)';
+      };
+      row.addEventListener('pointerup', end);
+      row.addEventListener('pointercancel', end);
+    });
   },
 
   // Collapses and fades out a completed task's card, then calls onDone.
