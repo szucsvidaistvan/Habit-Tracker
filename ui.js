@@ -463,19 +463,73 @@ const UI = {
     return c ? c.name : 'Other';
   },
 
-  // One row shared by the All Tasks modal and the Upcoming / Completed tabs, so they all
-  // get the same (fixed) layout: name + one meta line on top, actions on their own row below.
-  taskRow(t, { subLines = [], overdue = false, done = false, actions = '' } = {}) {
+  // Swipe-action button used by the task lists (same look as the habit / Today cards).
+  swipeBtn(kind, onclick) {
+    const icons = {
+      edit: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>',
+      delete: '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>',
+      undo: '<polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>'
+    };
+    return `<button class="swipe-btn ${kind}" onclick="${onclick}" aria-label="${kind}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons[kind]}</svg>
+    </button>`;
+  },
+
+  // One card shared by the All Tasks modal and the Upcoming / Completed tabs. Same as the
+  // habit cards: the action buttons stay hidden until the card is swiped to the left.
+  // `buttons` is a list of swipeBtn() strings.
+  taskRow(t, { subLines = [], overdue = false, done = false, buttons = [] } = {}) {
     const sub = subLines.filter(Boolean).join(' • ');
+    const reveal = buttons.length * 56 + 16;
     return `
-      <div class="all-task-row ${done ? 'done' : ''} ${t._pending ? 'is-pending' : ''}">
-        <div class="all-task-info">
-          <span class="all-task-name">${this.escapeHtml(t.title)}${t._pending ? ' <span class="pending-dot" title="Will sync when back online"></span>' : ''}</span>
-          ${sub ? `<span class="habit-time ${overdue ? 'task-due-overdue' : ''}">${this.escapeHtml(sub)}</span>` : ''}
+      <div class="habit-card-wrapper task-list-card ${done ? 'done' : ''} ${t._pending ? 'is-pending' : ''}">
+        <div class="swipe-actions">${buttons.join('')}</div>
+        <div class="habit-item swipe-row" data-reveal="${reveal}">
+          <div class="habit-info all-task-info">
+            <span class="habit-name all-task-name">${this.escapeHtml(t.title)}${t._pending ? ' <span class="pending-dot" title="Will sync when back online"></span>' : ''}</span>
+            ${sub ? `<span class="habit-time ${overdue ? 'task-due-overdue' : ''}">${this.escapeHtml(sub)}</span>` : ''}
+          </div>
         </div>
-        <div class="all-task-actions">${actions}</div>
       </div>
     `;
+  },
+
+  // Swipe-to-reveal for every .swipe-row inside a container (re-run after each render).
+  initSwipeRows(container) {
+    if (!container) return;
+    container.querySelectorAll('.swipe-row').forEach(card => {
+      const reveal = parseInt(card.dataset.reveal, 10) || 128;
+      let startX = 0, currentX = 0, isOpen = false, isDragging = false;
+
+      card.addEventListener('pointerdown', (e) => {
+        startX = e.clientX; currentX = startX;
+        isDragging = true;
+        try { card.setPointerCapture(e.pointerId); } catch (_) {}
+        card.style.transition = 'none';
+      });
+
+      card.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        currentX = e.clientX;
+        const diffX = currentX - startX;
+        let x = (isOpen ? -reveal : 0) + diffX;
+        x = Math.max(-reveal - 12, Math.min(0, x));
+        card.style.transform = `translateX(${x}px)`;
+      });
+
+      const end = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        try { card.releasePointerCapture(e.pointerId); } catch (_) {}
+        const diffX = currentX - startX;
+        card.style.transition = 'transform 0.2s ease-out';
+        if (!isOpen && diffX < -40) isOpen = true;
+        else if (isOpen && diffX > 30) isOpen = false;
+        card.style.transform = isOpen ? `translateX(-${reveal}px)` : 'translateX(0px)';
+      };
+      card.addEventListener('pointerup', end);
+      card.addEventListener('pointercancel', end);
+    });
   },
 
   renderAllTasks(allTasks, categories = [], doneIds = new Set()) {
@@ -490,18 +544,19 @@ const UI = {
     container.innerHTML = allTasks.map(t => {
       const meta = this.getTaskMeta(t, { includeDate: true });
       const isDone = doneIds.has(String(t.id));
-      const actions = `
-        ${isDone ? `<button class="btn-primary btn-sm" onclick="App.restoreTask('${t.id}')">Undo</button>` : ''}
-        <button class="btn-secondary btn-sm" onclick="App.editFromAllTasks('${t.id}')">Edit</button>
-        <button class="btn-danger btn-sm" onclick="App.handleDeleteTask('${t.id}')">Delete</button>
-      `;
+      const buttons = [
+        ...(isDone ? [this.swipeBtn('undo', `App.restoreTask('${t.id}')`)] : []),
+        this.swipeBtn('edit', `App.editFromAllTasks('${t.id}')`),
+        this.swipeBtn('delete', `App.handleDeleteTask('${t.id}')`)
+      ];
       return this.taskRow(t, {
         subLines: [isDone ? '✓ Done' : '', this.taskCategoryName(t.category_id, categories), meta.text],
         overdue: meta.overdue,
         done: isDone,
-        actions
+        buttons
       });
     }).join('');
+    this.initSwipeRows(container);
   },
 
   // Tasks due on a later day - so they are not only visible once their day arrives.
@@ -516,16 +571,17 @@ const UI = {
 
     container.innerHTML = upcomingTasks.map(t => {
       const meta = this.getTaskMeta(t, { includeDate: true });
-      const actions = `
-        <button class="btn-secondary btn-sm" onclick="App.editFromAllTasks('${t.id}')">Edit</button>
-        <button class="btn-danger btn-sm" onclick="App.handleDeleteTask('${t.id}')">Delete</button>
-      `;
+      const buttons = [
+        this.swipeBtn('edit', `App.editFromAllTasks('${t.id}')`),
+        this.swipeBtn('delete', `App.handleDeleteTask('${t.id}')`)
+      ];
       return this.taskRow(t, {
         subLines: [this.taskCategoryName(t.category_id, categories), meta.text],
         overdue: meta.overdue,
-        actions
+        buttons
       });
     }).join('');
+    this.initSwipeRows(container);
   },
 
   // Tasks checked off recently. Each one shows how much longer it stays here.
@@ -546,17 +602,18 @@ const UI = {
       const removalNote = t.recurrence_type === 'once'
         ? `removed in ${daysLeft}d`
         : `mark clears in ${daysLeft}d`;
-      const actions = `
-        <button class="btn-primary btn-sm" onclick="App.restoreTask('${t.id}')">Undo</button>
-        <button class="btn-secondary btn-sm" onclick="App.editFromAllTasks('${t.id}')">Edit</button>
-        <button class="btn-danger btn-sm" onclick="App.handleDeleteTask('${t.id}')">Delete</button>
-      `;
+      const buttons = [
+        this.swipeBtn('undo', `App.restoreTask('${t.id}')`),
+        this.swipeBtn('edit', `App.editFromAllTasks('${t.id}')`),
+        this.swipeBtn('delete', `App.handleDeleteTask('${t.id}')`)
+      ];
       return this.taskRow(t, {
         subLines: ['✓ Done', `Completed ${when}`, this.taskCategoryName(t.category_id, categories), removalNote],
         done: true,
-        actions
+        buttons
       });
     }).join('');
+    this.initSwipeRows(container);
   },
 
   showTaskSubTab(view) {
@@ -1081,6 +1138,9 @@ const UI = {
         statusElem.className = 'achievement-modal-status locked';
       }
     }
+
+    const shareBtn = document.getElementById('achievement-share-btn');
+    if (shareBtn) shareBtn.style.display = achievement.unlocked ? '' : 'none';
 
     if (modal) modal.style.display = 'flex';
   }
