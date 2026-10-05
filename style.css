@@ -2487,3 +2487,8 @@ body:has(.modal-overlay[style*="display: flex"]) {
   color: var(--text-main);
   font-size: 15px;
 }
+
+
+/* a bit of air between the quick-add bar and the buttons below it */
+.task-quick-add { margin-bottom: 22px; }
+#task-nd-remind-row { border-top: 1px solid var(--border-color); }

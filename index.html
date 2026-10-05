@@ -132,7 +132,7 @@
         <button
           class="btn-primary add-habit-btn"
           onclick="App.openAddTaskModal()">
-          + Add New Task
+          + Detailed Task
         </button>
 
         <button
@@ -622,6 +622,17 @@
           </div>
 
           <div id="task-nodate-hint" class="cal-hint">No date: stays in Today until you check it off.</div>
+
+          <div class="cal-row" id="task-nd-remind-row">
+            <span class="cal-label">Remind me daily</span>
+            <div class="cal-pills">
+              <input type="time" id="task-nd-remind-time" class="cal-pill cal-pill-time" style="display:none;">
+              <label class="switch">
+                <input type="checkbox" id="task-nd-remind-toggle" onchange="App.setNoDateReminder(this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
 
           <div class="cal-row task-sched-row">
             <span class="cal-label">All-day</span>

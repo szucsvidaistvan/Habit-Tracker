@@ -2036,6 +2036,18 @@ const App = {
     if (endDate) endDate.style.display = type === 'once' ? '' : 'none';
   },
 
+  // Reminder for a task without a date: a daily notification at this time until it is checked off.
+  setNoDateReminder(on, time) {
+    const toggle = document.getElementById('task-nd-remind-toggle');
+    const input = document.getElementById('task-nd-remind-time');
+    if (toggle) toggle.checked = on;
+    if (input) {
+      input.style.display = on ? '' : 'none';
+      if (on && !input.value) input.value = time || '09:00';
+      if (!on) input.value = '';
+    }
+  },
+
   // Date & time off (the default) = the task has no date: it sits in Today until it is checked off.
   setTaskScheduled(on) {
     const toggle = document.getElementById('task-schedule-toggle');
@@ -2046,6 +2058,8 @@ const App = {
     if (repeatGroup) repeatGroup.style.display = on ? '' : 'none';
     const hint = document.getElementById('task-nodate-hint');
     if (hint) hint.style.display = on ? 'none' : '';
+    const ndRow = document.getElementById('task-nd-remind-row');
+    if (ndRow) ndRow.style.display = on ? 'none' : '';
 
     if (on) {
       const start = document.getElementById('task-due-date-input');
@@ -2260,6 +2274,7 @@ const App = {
     UI.renderWeekdayPicker(this.selectedRecurrenceDays);
     this.setTaskRecurrenceType('once');
     this.setTaskScheduled(false); // default: no date, stays until checked off
+    this.setNoDateReminder(false);
 
     const modal = document.getElementById('task-modal');
     if (modal) modal.style.display = 'flex';
@@ -2290,6 +2305,8 @@ const App = {
     UI.renderWeekdayPicker(this.selectedRecurrenceDays);
     this.setTaskRecurrenceType(['weekly', 'monthly'].includes(task.recurrence_type) ? task.recurrence_type : 'once');
     this.setTaskScheduled(!!task.due_date);
+    if (task.due_date) this.setNoDateReminder(false);
+    else this.setNoDateReminder(!!(task.reminder_enabled && task.start_time), task.start_time ? String(task.start_time).slice(0, 5) : '');
 
     const modal = document.getElementById('task-modal');
     if (modal) modal.style.display = 'flex';
@@ -2334,10 +2351,17 @@ const App = {
     const untilInput = document.getElementById('task-end-time-input');
     const allDayToggle = document.getElementById('task-allday-toggle');
     const allDay = !scheduled || (allDayToggle ? allDayToggle.checked : true);
-    const startTime = allDay || !fromInput ? '' : fromInput.value;
+    const ndToggle = document.getElementById('task-nd-remind-toggle');
+    const ndTime = document.getElementById('task-nd-remind-time');
+    const ndRemind = !scheduled && !!ndToggle && ndToggle.checked;
+    if (ndRemind && !(ndTime && ndTime.value)) {
+      alert('Please choose a reminder time.');
+      return;
+    }
+    const startTime = ndRemind ? ndTime.value : (allDay || !fromInput ? '' : fromInput.value);
     const endTime = allDay || !untilInput ? '' : untilInput.value;
     const reminderToggle = document.getElementById('task-reminder-toggle');
-    const reminderEnabled = !allDay && !!startTime && (reminderToggle ? reminderToggle.checked : true);
+    const reminderEnabled = ndRemind || (!allDay && !!startTime && (reminderToggle ? reminderToggle.checked : true));
     const endDateInput = document.getElementById('task-end-date-input');
     const endDate = scheduled && recurrenceType === 'once' && endDateInput ? (endDateInput.value || dueDate) : '';
 

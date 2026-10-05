@@ -439,6 +439,9 @@ const UI = {
       if (t.end_date && t.end_date !== t.due_date) {
         // spans several days: "09:00 → 2026-10-02 17:00"
         parts.push(`${from ? from + ' ' : ''}→ ${t.end_date}${until ? ' ' + until : ''}`);
+      } else if (!t.due_date) {
+        // no date: the time is a daily reminder
+        if (from && t.reminder_enabled !== false) parts.push(`🔔 ${from}`);
       } else {
         const time = this.formatTaskTimeText(t);
         if (time) parts.push(time);
