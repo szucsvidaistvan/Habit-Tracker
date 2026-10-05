@@ -625,13 +625,15 @@
 
           <div class="cal-row" id="task-nd-remind-row">
             <span class="cal-label">Remind me daily</span>
-            <div class="cal-pills">
-              <input type="time" id="task-nd-remind-time" class="cal-pill cal-pill-time" style="display:none;">
-              <label class="switch">
-                <input type="checkbox" id="task-nd-remind-toggle" onchange="App.setNoDateReminder(this.checked)">
-                <span class="slider"></span>
-              </label>
-            </div>
+            <label class="switch">
+              <input type="checkbox" id="task-nd-remind-toggle" onchange="App.setNoDateReminder(this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="cal-row" id="task-nd-time-row" style="display:none;">
+            <span class="cal-label">Reminder time</span>
+            <input type="time" id="task-nd-remind-time" class="cal-pill nd-time-pill">
           </div>
 
           <div class="cal-row task-sched-row">

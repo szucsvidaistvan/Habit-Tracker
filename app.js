@@ -2041,8 +2041,9 @@ const App = {
     const toggle = document.getElementById('task-nd-remind-toggle');
     const input = document.getElementById('task-nd-remind-time');
     if (toggle) toggle.checked = on;
+    const timeRow = document.getElementById('task-nd-time-row');
+    if (timeRow) timeRow.style.display = on ? '' : 'none';
     if (input) {
-      input.style.display = on ? '' : 'none';
       if (on && !input.value) input.value = time || '09:00';
       if (!on) input.value = '';
     }
@@ -2060,6 +2061,11 @@ const App = {
     if (hint) hint.style.display = on ? 'none' : '';
     const ndRow = document.getElementById('task-nd-remind-row');
     if (ndRow) ndRow.style.display = on ? 'none' : '';
+    const ndTimeRow = document.getElementById('task-nd-time-row');
+    if (ndTimeRow) {
+      const ndOn = document.getElementById('task-nd-remind-toggle');
+      ndTimeRow.style.display = !on && ndOn && ndOn.checked ? '' : 'none';
+    }
 
     if (on) {
       const start = document.getElementById('task-due-date-input');
