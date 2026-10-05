@@ -2112,6 +2112,40 @@ const App = {
     this.setTaskAllDay(!(task.start_time || task.end_time));
   },
 
+  // ---------- Quick add + category filter (Tasks > Today) ----------
+
+  setTaskFilter(categoryId) {
+    this.taskFilterCategoryId = categoryId || '';
+    UI.renderTasks(this.tasksList, this.taskCategoriesList);
+    this.adjustSliderHeight();
+  },
+
+  // Type + Enter: creates a task without a date, in the selected (or first) category.
+  async quickAddTask() {
+    const input = document.getElementById('task-quick-input');
+    const title = input ? input.value.trim() : '';
+    if (!title || !this.currentUser) return;
+
+    const categoryId = this.taskFilterCategoryId || this.taskCategoriesList?.[0]?.id || null;
+    const position = (this.allTasks || []).filter(
+      t => String(t.category_id || '') === String(categoryId || '')
+    ).length;
+
+    input.value = '';
+    const { error } = await API.createTask(this.currentUser.id, {
+      title, categoryId, recurrenceType: 'once', dueDate: '', endDate: '',
+      recurrenceDays: [], monthDay: null, startTime: '', endTime: '',
+      reminderEnabled: false, position
+    });
+    if (error) {
+      console.error('[App.quickAddTask] Error:', error);
+      if (!error.offline) alert('Could not save the task.');
+      return;
+    }
+    await this.loadTasks();
+    input.focus();
+  },
+
   // ---------- Task checklist (sub-items) ----------
 
   newChecklistId() {

@@ -113,7 +113,13 @@
       </div>
 
       <div id="tasks-panel-today">
+        <div id="task-filter-chips" class="task-chips"></div>
         <div id="tasks-container" class="habits-list"></div>
+        <div class="task-quick-add">
+          <span class="task-quick-plus">+</span>
+          <input type="text" id="task-quick-input" placeholder="Add a task" maxlength="120"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();App.quickAddTask();}">
+        </div>
       </div>
       <div id="tasks-panel-upcoming" style="display: none;">
         <div id="tasks-upcoming-container" class="all-task-list-standalone"></div>

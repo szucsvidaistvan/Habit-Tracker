@@ -2402,3 +2402,88 @@ body:has(.modal-overlay[style*="display: flex"]) {
   line-height: 1.4;
   color: var(--text-sub);
 }
+
+
+/* ---- Tasks page, To Do / Trello style ---- */
+.task-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 12px;
+  scrollbar-width: none;
+}
+.task-chips::-webkit-scrollbar { display: none; }
+.task-chips:empty { display: none; }
+.task-chip {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-sub);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.task-chip.active {
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+  background: rgba(0, 230, 118, 0.12);
+}
+
+/* round check on the left of a task */
+.task-card-head { justify-content: flex-start; }
+.task-card-head .habit-info { flex: 1; min-width: 0; }
+.task-check { display: flex; flex-shrink: 0; cursor: pointer; }
+.task-check input { position: absolute; opacity: 0; width: 0; height: 0; }
+.task-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--text-sub);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.task-check:active .task-circle { border-color: var(--accent-color); }
+.task-check input:checked + .task-circle {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+.task-check input:checked + .task-circle::after {
+  content: "";
+  width: 6px;
+  height: 11px;
+  margin-top: -2px;
+  border: solid #04160c;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+.task-card .subtask-list { margin-left: 38px; }
+
+/* "+ Add a task" bar */
+.task-quick-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 4px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px dashed var(--border-color);
+  background: var(--card-bg);
+}
+.task-quick-add:focus-within { border-style: solid; border-color: var(--accent-color); }
+.task-quick-plus { font-size: 22px; line-height: 1; color: var(--accent-color); }
+.task-quick-input,
+#task-quick-input {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 15px;
+}

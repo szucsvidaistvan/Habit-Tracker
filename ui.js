@@ -628,9 +628,26 @@ const UI = {
   // The sub-tabs no longer show counts; kept as a no-op so existing calls still work.
   setTaskSubTabCounts() {},
 
-  renderTasks(tasksList, categories = []) {
+  renderTaskChips(categories = []) {
+    const box = document.getElementById('task-filter-chips');
+    if (!box) return;
+    const active = App.taskFilterCategoryId || '';
+    const chip = (id, name) =>
+      `<button type="button" class="task-chip ${String(active) === String(id) ? 'active' : ''}" onclick="App.setTaskFilter('${id}')">${this.escapeHtml(name)}</button>`;
+    box.innerHTML = (categories || []).length > 1
+      ? chip('', 'All') + categories.map(c => chip(c.id, c.name)).join('')
+      : '';
+  },
+
+  renderTasks(allToday, categories = []) {
     const container = document.getElementById('tasks-container');
     if (!container) return;
+
+    this.renderTaskChips(categories);
+    const filter = App.taskFilterCategoryId || '';
+    const tasksList = filter
+      ? (allToday || []).filter(t => String(t.category_id || '') === String(filter))
+      : allToday;
 
     if (!tasksList || tasksList.length === 0) {
       container.innerHTML = '<div class="loader">Nothing to do today 🎉</div>';
@@ -696,17 +713,14 @@ const UI = {
 
         <div class="habit-item task-card" id="task-swipe-content-${t.id}">
           <div class="task-card-head">
+            <label class="task-check">
+              <input type="checkbox" onchange="App.handleToggleTask('${t.id}')">
+              <span class="task-circle"></span>
+            </label>
             <div class="habit-info">
               <span class="habit-name">${this.escapeHtml(t.title)}${t._pending ? ' <span class="pending-dot" title="Will sync when back online"></span>' : ''}</span>
               ${this.formatTaskSubInfo(t)}
             </div>
-
-            <label class="switch">
-              <input
-                type="checkbox"
-                onchange="App.handleToggleTask('${t.id}')">
-              <span class="slider"></span>
-            </label>
           </div>
 
           ${this.renderSubtasks(t)}
@@ -806,7 +820,7 @@ const UI = {
       let startX = 0, currentX = 0, isOpen = false, isDragging = false;
 
       card.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.switch') || e.target.closest('.subtask-list')) return;
+        if (e.target.closest('.switch') || e.target.closest('.task-check') || e.target.closest('.subtask-list')) return;
 
         startX = e.clientX;
         currentX = startX;
