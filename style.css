@@ -2558,3 +2558,67 @@ body:has(.modal-overlay[style*="display: flex"]) {
 }
 .cal-event-ics svg { width: 18px; height: 18px; }
 .cal-export-btn { width: 100%; margin-bottom: 14px; }
+
+/* ---------- Calendar: days timeline (iOS Calendar style) ---------- */
+.cal-mode-switch { margin: 0 0 12px; }
+.cal-card-flush { padding: 12px 0 0; overflow: hidden; }
+.cal-card-flush .cal-nav { padding: 0 12px; }
+.cal-wk-strip { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 8px 10px; }
+.cal-wk-day {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0;
+  background: none; border: none; color: var(--text-main); cursor: pointer;
+}
+.cal-wk-day small { font-size: 11px; font-weight: 700; color: var(--text-sub); }
+.cal-wk-day span {
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-size: 17px; font-weight: 600;
+}
+.cal-wk-day.is-today span { color: var(--accent-color); }
+.cal-wk-day.is-next span { background: rgba(148, 163, 184, 0.22); color: var(--text-sub); }
+.cal-wk-day.is-selected span { background: #fff; color: #000; font-weight: 800; }
+.cal-col-head, .cal-allday-row { display: flex; border-top: 1px solid var(--border-color); }
+.cal-col-head > div:not(.cal-hours-gap) { flex: 1; text-align: center; padding: 8px 0; font-size: 13px; font-weight: 700; color: var(--text-sub); }
+.cal-hours-gap { width: 46px; flex: none; }
+.cal-allday-col { flex: 1; min-width: 0; padding: 4px 3px; display: flex; flex-direction: column; gap: 3px; border-left: 1px solid var(--border-color); }
+.cal-allday-chip {
+  padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;
+  color: var(--c); background: color-mix(in srgb, var(--c) 22%, transparent);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cal-timeline-scroll { height: 58vh; overflow-y: auto; border-top: 1px solid var(--border-color); overscroll-behavior: contain; }
+.cal-timeline { position: relative; }
+.cal-hours { position: absolute; left: 0; top: 0; width: 46px; }
+.cal-hour-label { position: absolute; width: 40px; text-align: right; transform: translateY(-50%); font-size: 11px; color: var(--text-sub); }
+.cal-lines { position: absolute; left: 46px; right: 0; top: 0; }
+.cal-hour-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--border-color); opacity: .7; }
+.cal-day-cols { position: absolute; left: 46px; right: 0; top: 0; bottom: 0; display: flex; }
+.cal-day-col { position: relative; flex: 1; min-width: 0; border-left: 1px solid var(--border-color); }
+.cal-block {
+  position: absolute; box-sizing: border-box; overflow: hidden; padding: 4px 8px; border-radius: 8px;
+  border-left: 4px solid var(--c); color: var(--c);
+  background: color-mix(in srgb, var(--c) 20%, #000); cursor: pointer;
+  display: flex; flex-direction: column; gap: 1px; font-size: 12px; line-height: 1.25;
+}
+.cal-block b { font-size: 13px; }
+.cal-block span { opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-now { position: absolute; left: 0; right: 0; height: 2px; background: #ef4444; z-index: 2; }
+
+/* ---------- Calendar: imported calendars panel ---------- */
+.cal-import { padding: 14px; margin-bottom: 14px; }
+.cal-import summary { cursor: pointer; font-weight: 700; }
+.cal-import-hint { font-size: 12px; color: var(--text-sub); margin: 10px 0; }
+.cal-import-label { display: block; font-size: 12px; color: var(--text-sub); margin: 12px 0 6px; }
+.cal-import-input {
+  width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 8px; border-radius: 10px;
+  border: 1px solid var(--border-color); background: var(--card-bg-soft); color: var(--text-main); font-size: 14px;
+}
+.cal-import-btn { width: 100%; }
+.cal-import-file { width: 100%; font-size: 13px; color: var(--text-sub); }
+.cal-import-status { margin-top: 10px; font-size: 13px; color: var(--accent-color); }
+.cal-import-status.error { color: #f87171; }
+.cal-src-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-color); }
+.cal-src-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.cal-src-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cal-src-info small { color: var(--text-sub); font-size: 12px; }
+.cal-src-btn { background: none; border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 10px; color: var(--text-main); font-size: 12px; cursor: pointer; }
+.cal-src-btn.danger { color: #f87171; }
