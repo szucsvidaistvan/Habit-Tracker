@@ -21,7 +21,6 @@ const App = {
 
   // Tasks
   tasksList: [],
-  upcomingTasksList: [],
   completedTasksList: [],
   taskSubTab: 'today',
   taskCategoriesList: [],
@@ -1927,13 +1926,6 @@ const App = {
       (a.start_time || a.end_time || '99:99').localeCompare(b.start_time || b.end_time || '99:99')
     );
 
-    // Not due today: a one-time task waiting for a future date. (A repeating task simply
-    // shows up on its own day, so it does not need a separate "upcoming" entry.)
-    this.upcomingTasksList = this.allTasks
-      .filter(task => task.recurrence_type === 'once' && task.due_date && task.due_date > todayStr
-        && (logDatesByTask[task.id] || []).length === 0)
-      .sort((a, b) => a.due_date.localeCompare(b.due_date) || (a.start_time || '').localeCompare(b.start_time || ''));
-
     // Completed within the retention window - most recent completion per task.
     const retentionCutoff = UI.getLocalDateString(new Date(now.getTime() - this.COMPLETED_TASK_RETENTION_DAYS * 86400000));
     const staleCleanups = [];
@@ -1965,14 +1957,13 @@ const App = {
 
     UI.renderTaskCategorySelect(this.taskCategoriesList, this.selectedTaskCategoryId);
     UI.renderTasks(this.tasksList, this.taskCategoriesList);
-    UI.renderUpcomingTasks(this.upcomingTasksList, this.taskCategoriesList);
     UI.renderCompletedTasks(this.completedTasksList, this.taskCategoriesList, this.COMPLETED_TASK_RETENTION_DAYS);
     UI.renderAllTasks(this.getSortedAllTasks(), this.taskCategoriesList, this.doneTaskIds);
     UI.setTaskSubTabCounts({
       today: this.tasksList.length,
-      upcoming: this.upcomingTasksList.length,
       completed: this.completedTasksList.length
     });
+    if (typeof TaskCalendar !== 'undefined') TaskCalendar.refresh();
     this.adjustSliderHeight();
   },
 
@@ -2153,7 +2144,8 @@ const App = {
 
     input.value = '';
     const { error } = await API.createTask(this.currentUser.id, {
-      title, categoryId, recurrenceType: 'once', dueDate: '', endDate: '',
+      title, categoryId, recurrenceType: 'once',
+      dueDate: (typeof TaskCalendar !== 'undefined' && TaskCalendar.active) ? TaskCalendar.selected : '', endDate: '',
       recurrenceDays: [], monthDay: null, startTime: '', endTime: '',
       reminderEnabled: false, position
     });
@@ -2231,7 +2223,6 @@ const App = {
     const apply = (list) => list.forEach(t => { if (String(t.id) === String(taskId)) t.checklist = checklist; });
     apply(this.allTasks || []);
     apply(this.tasksList || []);
-    apply(this.upcomingTasksList || []);
     apply(this.completedTasksList || []);
     UI.renderTasks(this.tasksList, this.taskCategoriesList);
     this.adjustSliderHeight();
@@ -2258,7 +2249,7 @@ const App = {
     await this.saveTaskChecklist(taskId, checklist);
   },
 
-  openAddTaskModal() {
+  openAddTaskModal(dateStr = '') {
     this.editingTaskId = null;
     this.selectedTaskCategoryId = this.taskCategoriesList[0]?.id || null;
     this.selectedRecurrenceDays = [];
@@ -2281,6 +2272,13 @@ const App = {
     this.setTaskRecurrenceType('once');
     this.setTaskScheduled(false); // default: no date, stays until checked off
     this.setNoDateReminder(false);
+
+    if (dateStr && typeof dateStr === 'string') {
+      if (dueInput) dueInput.value = dateStr;
+      this.setTaskScheduled(true);
+      const endInput = document.getElementById('task-end-date-input');
+      if (endInput) endInput.value = dateStr;
+    }
 
     const modal = document.getElementById('task-modal');
     if (modal) modal.style.display = 'flex';

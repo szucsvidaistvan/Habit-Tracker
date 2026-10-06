@@ -562,31 +562,6 @@ const UI = {
     this.initSwipeRows(container);
   },
 
-  // Tasks due on a later day - so they are not only visible once their day arrives.
-  renderUpcomingTasks(upcomingTasks, categories = []) {
-    const container = document.getElementById('tasks-upcoming-container');
-    if (!container) return;
-
-    if (!upcomingTasks || upcomingTasks.length === 0) {
-      container.innerHTML = '<div class="loader">Nothing scheduled for later.</div>';
-      return;
-    }
-
-    container.innerHTML = upcomingTasks.map(t => {
-      const meta = this.getTaskMeta(t, { includeDate: true });
-      const buttons = [
-        this.swipeBtn('edit', `App.editFromAllTasks('${t.id}')`),
-        this.swipeBtn('delete', `App.handleDeleteTask('${t.id}')`)
-      ];
-      return this.taskRow(t, {
-        subLines: [this.taskCategoryName(t.category_id, categories), meta.text],
-        overdue: meta.overdue,
-        buttons
-      });
-    }).join('');
-    this.initSwipeRows(container);
-  },
-
   // Tasks checked off recently. Each one shows how much longer it stays here.
   renderCompletedTasks(completedTasks, categories = [], retentionDays = 3) {
     const container = document.getElementById('tasks-completed-container');
@@ -620,7 +595,7 @@ const UI = {
   },
 
   showTaskSubTab(view) {
-    ['today', 'upcoming', 'completed'].forEach(name => {
+    ['today', 'completed'].forEach(name => {
       const panel = document.getElementById(`tasks-panel-${name}`);
       if (panel) panel.style.display = name === view ? '' : 'none';
       const btn = document.getElementById(`task-subtab-${name}`);
