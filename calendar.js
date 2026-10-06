@@ -143,8 +143,8 @@ const TaskCalendar = {
 
     box.innerHTML = this.modeSwitchHtml()
       + (this.mode === 'month' ? this.monthHtml() : this.daysHtml())
-      + this.importHtml()
-      + '<button type="button" class="btn-secondary cal-export-btn" onclick="TaskCalendar.downloadAll()">Export tasks to calendar app (.ics)</button>';
+      + '<button type="button" class="btn-secondary cal-export-btn" onclick="TaskCalendar.downloadAll()">Export tasks to calendar app (.ics)</button>'
+      + '<p class="cal-import-hint" style="text-align:center">Import other calendars (e.g. Family) in the Profile tab.</p>';
 
     const sc = document.getElementById('cal-timeline-scroll');
     if (sc) sc.scrollTop = this.tlScroll != null ? this.tlScroll : Math.max(0, (this.firstHourToShow() - 0.5) * this.HOUR_PX);

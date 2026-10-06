@@ -170,8 +170,7 @@ Object.assign(TaskCalendar, {
     const list = this.getSources().filter(s => !(source.url && s.url === source.url));
     list.push({ id: String(Date.now()), ...source });
     this.saveSources(list);
-    this.render();
-    App.adjustSliderHeight();
+    this.afterSourcesChanged();
   },
 
   async importFile(input) {
@@ -222,7 +221,7 @@ Object.assign(TaskCalendar, {
       src.events = await this.fetchFeed(src.url);
       src.updated = Date.now();
       this.saveSources(list);
-      this.render();
+      this.afterSourcesChanged();
       if (!quiet) this.setStatus('Updated.');
     } catch (e) {
       if (!quiet) this.setStatus('Could not refresh (offline?). Showing the saved copy.', true);
@@ -237,8 +236,23 @@ Object.assign(TaskCalendar, {
 
   removeSource(id) {
     this.saveSources(this.getSources().filter(s => s.id !== id));
-    this.render();
+    this.afterSourcesChanged();
+  },
+
+  // The panel lives in the Profile tab; the calendar view only needs a redraw when it is open.
+  afterSourcesChanged() {
+    this.renderImportPanel();
+    this.refresh();
     App.adjustSliderHeight();
+  },
+
+  renderImportPanel() {
+    const box = document.getElementById('cal-import-container');
+    if (!box) return;
+    const wasOpen = box.querySelector('details') ? box.querySelector('details').open : null;
+    box.innerHTML = this.importHtml();
+    const d = box.querySelector('details');
+    if (d && wasOpen !== null) d.open = wasOpen;
   },
 
   // ---------- UI panel ----------
@@ -251,7 +265,7 @@ Object.assign(TaskCalendar, {
         <button type="button" class="cal-src-btn danger" onclick="TaskCalendar.removeSource('${s.id}')">Remove</button>
       </div>`).join('');
     const st = this.status || { text: '', isError: false };
-    return `<details class="card cal-import" ${sources.length ? '' : 'open'}>
+    return `<details class="card cal-import">
       <summary>Imported calendars${sources.length ? ` (${sources.length})` : ''}</summary>
       ${rows}
       <p class="cal-import-hint">Imported events are read-only and stay on this device.</p>
@@ -265,3 +279,6 @@ Object.assign(TaskCalendar, {
     </details>`;
   }
 });
+
+
+TaskCalendar.renderImportPanel();
