@@ -1,187 +1,50 @@
-// Habit Tracker - "send-reminders" Edge Function
+// Habit Tracker - "ical-proxy" Edge Function
 //
-// Runs on a schedule (every 5 minutes, via pg_cron - see migration_push_notifications.sql).
-// For every habit / task with a reminder due right now, in the owner's own time zone, sends
-// a real Web Push notification - this reaches the person even if the app/tab is closed.
+// Browsers cannot read iCloud / Google calendar links directly (no CORS headers), so the app
+// asks this function to fetch the .ics for it. Only logged-in users can call it (JWT is verified
+// by Supabase), and only calendar hosts on the allow-list below are fetched.
 //
-// Required secrets (set once with `supabase secrets set`, see README further down):
-//   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
-// Auto-provided by Supabase, no setup needed: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// Deploy:  supabase functions deploy ical-proxy
+// Body:    { "url": "https://p12-caldav.icloud.com/published/2/..." }
+// Returns: { "ics": "BEGIN:VCALENDAR..." }
 
-import { createClient } from 'npm:@supabase/supabase-js@2.48.0';
-import webpush from 'npm:web-push@3.6.7';
+const ALLOWED_HOST_SUFFIXES = ['.icloud.com', 'calendar.google.com'];
+const MAX_BYTES = 5 * 1024 * 1024;
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+};
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY')!;
-const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!;
-const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@example.com';
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-// How wide a window (in the owner's local minutes-since-midnight) counts as "due now".
-// Matches the 5-minute cron tick, with a little slack for cron jitter.
-const WINDOW_MINUTES = 5;
-
-webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-
-function localParts(date: Date, timeZone: string) {
-  // en-CA gives YYYY-MM-DD directly; hour12:false avoids the "24:00" edge case some locales use.
-  const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
-  const timeStr = new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
-  const [hh, mm] = timeStr.split(':').map(Number);
-  const weekday = new Date(`${dateStr}T00:00:00Z`).getUTCDay(); // 0 = Sunday ... matches recurrence_days
-  return { dateStr, minutes: hh * 60 + mm, weekday };
+function allowed(u: URL) {
+  return u.protocol === 'https:' && ALLOWED_HOST_SUFFIXES.some(s => u.hostname === s.replace(/^\./, '') || u.hostname.endsWith(s));
 }
 
-function timeStrToMinutes(t: string | null) {
-  if (!t) return null;
-  const [hh, mm] = t.split(':').map(Number);
-  return hh * 60 + mm;
-}
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  try {
+    const { url } = await req.json();
+    let target = new URL(String(url).replace(/^webcal:\/\//i, 'https://'));
 
-function isDueNow(reminderMinutes: number | null, nowMinutes: number) {
-  if (reminderMinutes == null) return false;
-  const diff = nowMinutes - reminderMinutes;
-  return diff >= 0 && diff < WINDOW_MINUTES;
-}
-
-async function alreadySent(entityType: 'habit' | 'task', entityId: number, dateStr: string) {
-  const { data } = await supabase
-    .from('sent_reminders')
-    .select('entity_id')
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId)
-    .eq('reminder_date', dateStr)
-    .maybeSingle();
-  return !!data;
-}
-
-async function markSent(entityType: 'habit' | 'task', entityId: number, dateStr: string) {
-  await supabase.from('sent_reminders').insert([{ entity_type: entityType, entity_id: entityId, reminder_date: dateStr }]);
-}
-
-async function sendToUser(userId: string, payload: Record<string, unknown>) {
-  const { data: subs } = await supabase.from('push_subscriptions').select('*').eq('user_id', userId);
-  if (!subs || subs.length === 0) return false;
-
-  let sentAny = false;
-  await Promise.all(subs.map(async (sub) => {
-    const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
-    try {
-      await webpush.sendNotification(pushSub, JSON.stringify(payload));
-      sentAny = true;
-    } catch (err) {
-      const status = err && (err as { statusCode?: number }).statusCode;
-      if (status === 404 || status === 410) {
-        // The browser/OS dropped this subscription - stop trying to reach it.
-        await supabase.from('push_subscriptions').delete().eq('id', sub.id);
-      } else {
-        console.error('[send-reminders] push failed for', sub.endpoint, err);
+    // follow redirects by hand so every hop is checked against the allow-list
+    for (let hop = 0; hop < 4; hop++) {
+      if (!allowed(target)) return json({ error: 'This calendar host is not allowed.' }, 400);
+      const res = await fetch(target, { redirect: 'manual', signal: AbortSignal.timeout(10000) });
+      if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
+        target = new URL(res.headers.get('location')!, target);
+        continue;
       }
+      if (!res.ok) return json({ error: `Calendar returned ${res.status}` }, 502);
+      const ics = await res.text();
+      if (ics.length > MAX_BYTES) return json({ error: 'Calendar is too large.' }, 413);
+      if (!ics.includes('BEGIN:VCALENDAR')) return json({ error: 'That link is not a calendar.' }, 422);
+      return json({ ics });
     }
-  }));
-  return sentAny;
-}
-
-Deno.serve(async () => {
-  const now = new Date();
-
-  // One admin call covers every user; user_metadata.timezone is set by the app on login
-  // (Intl.DateTimeFormat().resolvedOptions().timeZone), defaulting to UTC otherwise.
-  const { data: userPage, error: usersError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  if (usersError) {
-    console.error('[send-reminders] could not list users:', usersError);
-    return new Response(JSON.stringify({ error: usersError.message }), { status: 500 });
+    return json({ error: 'Too many redirects.' }, 502);
+  } catch (e) {
+    return json({ error: String(e) }, 400);
   }
-  const timezoneByUser = new Map<string, string>(
-    (userPage?.users || []).map((u) => [u.id, (u.user_metadata as Record<string, unknown> | null)?.timezone as string || 'UTC'])
-  );
-
-  let habitsSent = 0;
-  let tasksSent = 0;
-
-  // ---------- Habits ----------
-  const { data: habits, error: habitsError } = await supabase
-    .from('habits')
-    .select('id, user_id, title, reminder_time, reminder_enabled, is_active')
-    .eq('is_active', true)
-    .eq('reminder_enabled', true)
-    .not('reminder_time', 'is', null);
-
-  if (habitsError) console.error('[send-reminders] habits query error:', habitsError);
-
-  for (const habit of habits || []) {
-    const tz = timezoneByUser.get(habit.user_id) || 'UTC';
-    const { minutes, dateStr } = localParts(now, tz);
-    const reminderMinutes = timeStrToMinutes(habit.reminder_time);
-    if (!isDueNow(reminderMinutes, minutes)) continue;
-
-    const { data: log } = await supabase
-      .from('daily_logs')
-      .select('id')
-      .eq('habit_id', habit.id)
-      .eq('log_date', dateStr)
-      .maybeSingle();
-    if (log) continue; // already checked in today
-
-    if (await alreadySent('habit', habit.id, dateStr)) continue;
-
-    const sent = await sendToUser(habit.user_id, {
-      title: 'Habit Tracker',
-      body: `Don't forget: ${habit.title}`,
-      tag: `habit-${habit.id}`,
-      url: '/'
-    });
-    if (sent) { await markSent('habit', habit.id, dateStr); habitsSent++; }
-  }
-
-  // ---------- Tasks ----------
-  const { data: tasks, error: tasksError } = await supabase
-    .from('tasks')
-    .select('id, user_id, title, recurrence_type, due_date, end_date, recurrence_days, recurrence_month_day, start_time, reminder_enabled');
-
-  if (tasksError) console.error('[send-reminders] tasks query error:', tasksError);
-
-  for (const task of tasks || []) {
-    if (task.reminder_enabled === false || !task.start_time) continue;
-
-    const tz = timezoneByUser.get(task.user_id) || 'UTC';
-    const { minutes, dateStr, weekday } = localParts(now, tz);
-    const reminderMinutes = timeStrToMinutes(task.start_time);
-    if (!isDueNow(reminderMinutes, minutes)) continue;
-
-    let dueToday = false;
-    if (task.recurrence_type === 'weekly') {
-      dueToday = Array.isArray(task.recurrence_days) && task.recurrence_days.includes(weekday);
-    } else if (task.recurrence_type === 'monthly') {
-      const day = Number(dateStr.slice(8, 10));
-      dueToday = day === (task.recurrence_month_day || 1);
-    } else {
-      dueToday = task.due_date === dateStr;
-    }
-    if (!dueToday) continue;
-
-    const { data: log } = await supabase
-      .from('task_logs')
-      .select('id')
-      .eq('task_id', task.id)
-      .eq('log_date', dateStr)
-      .maybeSingle();
-    if (log) continue; // already completed today
-
-    if (await alreadySent('task', task.id, dateStr)) continue;
-
-    const sent = await sendToUser(task.user_id, {
-      title: 'Habit Tracker',
-      body: `Task due: ${task.title}`,
-      tag: `task-${task.id}`,
-      url: '/'
-    });
-    if (sent) { await markSent('task', task.id, dateStr); tasksSent++; }
-  }
-
-  return new Response(JSON.stringify({ ok: true, habitsSent, tasksSent }), {
-    headers: { 'Content-Type': 'application/json' }
-  });
 });
